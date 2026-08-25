@@ -1,5 +1,5 @@
 CC := gcc
-CFLAGS := -I. -std=c89 -Wall -Wextra -Wpedantic
+CFLAGS := -I. -std=c99 -Wall -Wextra -Wpedantic
 
 examples:
 	$(CC) $(CFLAGS) -o examples/assert examples/assert.c
