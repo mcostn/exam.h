@@ -1,6 +1,7 @@
 #ifndef EXAM_H
 #define EXAM_H
 
+#include <stdio.h> /* printf() */
 #include <stdlib.h> /* exit(), EXIT_FAILURE */
 #include <string.h> /* strcmp() */
 #include <stdbool.h>
@@ -82,4 +83,27 @@ struct exam_state
 
 #ifdef EXAM_SOURCE
 struct exam_state exam_state = {0};
+
+int exam_cli_main(int argc, char **argv)
+{
+    for (int i = 1; i < argc; i ++) {
+        if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
+            printf("exam - show and run unit tests\n"
+                   "usage: exam ls"
+                   "options:\n"
+                   "    -h, --help    show this message\n");
+            return EXIT_SUCCESS;
+        } else if (strcmp(argv[i], "ls") == 0) {
+            printf("%ld tests found\n", exam_state.tests_count);
+            for (size_t i = 0; i < exam_state.tests_count; i++) {
+                printf("%s\n", exam_state.tests[i].name);
+            }
+            return EXIT_SUCCESS;
+        } else {
+            printf("unknown option %s\n", argv[i]);
+        }
+    }
+
+    return EXIT_SUCCESS;
+}
 #endif /* EXAM_SOURCE */
