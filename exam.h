@@ -58,6 +58,7 @@ extern struct exam_state exam_state;
             exam_state.tests_capacity = min_cap; \
             exam_state.tests = realloc(exam_state.tests, sizeof(*exam_state.tests) * exam_state.tests_capacity); \
         } \
+        exam_state.tests[idx].category = #category_name;\
         exam_state.tests[idx].name = #test_name; \
         exam_state.tests[idx].func = exam_def_##category_name##_##test_name; \
         exam_state.tests[idx].file = __FILE__; \
@@ -67,6 +68,7 @@ extern struct exam_state exam_state;
 
 struct exam_test
 {
+    char *category;
     char *name;
     void (*func)(void);
     char *file;
@@ -89,14 +91,14 @@ int exam_cli_main(int argc, char **argv)
     for (int i = 1; i < argc; i ++) {
         if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
             printf("exam - show and run unit tests\n"
-                   "usage: exam ls"
+                   "usage: exam ls [-c|--category] [<category_name>]"
                    "options:\n"
                    "    -h, --help    show this message\n");
             return EXIT_SUCCESS;
         } else if (strcmp(argv[i], "ls") == 0) {
             printf("%ld tests found\n", exam_state.tests_count);
             for (size_t i = 0; i < exam_state.tests_count; i++) {
-                printf("%s\n", exam_state.tests[i].name);
+                printf("%s (category=%s)\n", exam_state.tests[i].name, exam_state.tests[i].category);
             }
             return EXIT_SUCCESS;
         } else {
