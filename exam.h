@@ -16,6 +16,7 @@
 #define ASSERT_EQ_UINT EXAM_ASSERT_EQ_UINT
 #define ASSERT_EQ_FLOAT EXAM_ASSERT_EQ_FLOAT
 #define ASSERT_EQ_DOUBLE EXAM_ASSERT_EQ_DOUBLE
+#define ASSERT_EQ_STR EXAM_ASSERT_EQ_STR
 
 #define DEFINE_TEST EXAM_DEFINE_TEST
 #endif /* EXAM_SHORT_NAMES */
@@ -86,26 +87,52 @@ struct exam_state
 #ifdef EXAM_SOURCE
 struct exam_state exam_state = {0};
 
+static void exam_cli_cmd_run();
+static void exam_cli_cmd_ls();
+static void exam_cli_cmd_help();
+
 int exam_cli_main(int argc, char **argv)
 {
     for (int i = 1; i < argc; i ++) {
-        if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
-            printf("exam - show and run unit tests\n"
-                   "usage: exam ls [-c|--category] [<category_name>]"
-                   "options:\n"
-                   "    -h, --help    show this message\n");
-            return EXIT_SUCCESS;
+        if (strcmp(argv[i], "run") == 0) {
+            exam_cli_cmd_run();
         } else if (strcmp(argv[i], "ls") == 0) {
-            printf("%ld tests found\n", exam_state.tests_count);
-            for (size_t i = 0; i < exam_state.tests_count; i++) {
-                printf("%s (category=%s)\n", exam_state.tests[i].name, exam_state.tests[i].category);
-            }
-            return EXIT_SUCCESS;
-        } else {
+            exam_cli_cmd_ls();
+        } else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
+            exam_cli_cmd_help();
+        }else {
             printf("unknown option %s\n", argv[i]);
         }
     }
 
     return EXIT_SUCCESS;
+}
+
+static void exam_cli_cmd_run()
+{
+    for (size_t i = 0; i < exam_state.tests_count; i++) {
+        exam_state.tests[i].func();
+        printf("%s passed\n", exam_state.tests[i].name);
+    }
+    exit(EXIT_SUCCESS);
+}
+
+static void exam_cli_cmd_ls()
+{
+    printf("%ld tests found\n", exam_state.tests_count);
+    for (size_t i = 0; i < exam_state.tests_count; i++) {
+        printf("%s (category=%s)\n", exam_state.tests[i].name, exam_state.tests[i].category);
+    }
+    exit(EXIT_SUCCESS);
+}
+
+static void exam_cli_cmd_help()
+{
+    printf("exam - show and run unit tests\n"
+            "usage: exam run [-c|--category] [<category_name>]"
+            "usage: exam ls [-c|--category] [<category_name>]\n"
+            "options:\n"
+            "    -h, --help    show this message\n");
+    exit(EXIT_SUCCESS);
 }
 #endif /* EXAM_SOURCE */
