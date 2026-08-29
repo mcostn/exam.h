@@ -82,10 +82,17 @@ struct exam_state
     size_t tests_count;
     size_t tests_capacity;
 };
+
+struct exam_cli_state
+{
+    char *category;
+};
 #endif /* EXAM_H */
 
 #ifdef EXAM_SOURCE
 struct exam_state exam_state = {0};
+
+static struct exam_cli_state cli_state = {0};
 
 static void exam_cli_cmd_run();
 static void exam_cli_cmd_ls();
@@ -93,15 +100,36 @@ static void exam_cli_cmd_help();
 
 int exam_cli_main(int argc, char **argv)
 {
+    // options
     for (int i = 1; i < argc; i ++) {
+        if (argv[i][0] != '-') continue;
+
+        if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
+            exam_cli_cmd_help();
+        } else if (strcmp(argv[i], "-c") == 0 || strcmp(argv[i], "--category") == 0) {
+            if (i == argc - 1 || argv[i + 1][0] == '-') {
+                fprintf(stderr, "expected category\n");
+                exit(EXIT_FAILURE);
+            }
+
+            cli_state.category = argv[++i];
+        } else {
+            fprintf(stderr, "unknown option %s\n", argv[i]);
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    // commands
+    for (int i = 1; i < argc; i ++) {
+        if (argv[i][0] == '-') continue;
+
         if (strcmp(argv[i], "run") == 0) {
             exam_cli_cmd_run();
         } else if (strcmp(argv[i], "ls") == 0) {
             exam_cli_cmd_ls();
-        } else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
-            exam_cli_cmd_help();
-        }else {
-            printf("unknown option %s\n", argv[i]);
+        } else {
+            fprintf(stderr, "unknown command %s\n", argv[i]);
+            exit(EXIT_FAILURE);
         }
     }
 
@@ -110,7 +138,11 @@ int exam_cli_main(int argc, char **argv)
 
 static void exam_cli_cmd_run()
 {
+    const char *category = cli_state.category;
     for (size_t i = 0; i < exam_state.tests_count; i++) {
+        if (category != NULL && strcmp(exam_state.tests[i].category, category) != 0)
+            continue;
+
         exam_state.tests[i].func();
         printf("%s passed\n", exam_state.tests[i].name);
     }
@@ -119,20 +151,26 @@ static void exam_cli_cmd_run()
 
 static void exam_cli_cmd_ls()
 {
-    printf("%ld tests found\n", exam_state.tests_count);
+    size_t found = 0;
+    const char *category = cli_state.category;
     for (size_t i = 0; i < exam_state.tests_count; i++) {
+        if (category != NULL && strcmp(exam_state.tests[i].category, category) != 0)
+            continue;
+
         printf("%s (category=%s)\n", exam_state.tests[i].name, exam_state.tests[i].category);
+        found ++;
     }
+    printf("%ld tests found\n", found);
     exit(EXIT_SUCCESS);
 }
 
 static void exam_cli_cmd_help()
 {
     printf("exam - show and run unit tests\n"
-            "usage: exam run [-c|--category] [<category_name>]"
-            "usage: exam ls [-c|--category] [<category_name>]\n"
-            "options:\n"
-            "    -h, --help    show this message\n");
+           "usage: exam run [-c|--category] [<category_name>]"
+           "usage: exam ls [-c|--category] [<category_name>]\n"
+           "options:\n"
+           "    -h, --help    show this message\n");
     exit(EXIT_SUCCESS);
 }
 #endif /* EXAM_SOURCE */
