@@ -21,14 +21,6 @@
 #define DEFINE_TEST EXAM_DEFINE_TEST
 #endif /* EXAM_SHORT_NAMES */
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-extern struct exam_state exam_state;
-#ifdef __cplusplus
-}
-#endif
-
 #define EXAM_ASSERT(cond) \
     do { \
         if (!(cond)) { \
@@ -67,6 +59,15 @@ extern struct exam_state exam_state;
     } \
     static void exam_def_##category_name##_##test_name(void)
 
+enum exam_test_state
+{
+    EXAM_TEST_NONE = 0,
+    EXAM_TEST_RUNNING,
+    EXAM_TEST_PASSED,
+    EXAM_TEST_FAILED,
+    EXAM_TEST_CRASHED,
+};
+
 struct exam_test
 {
     char *category;
@@ -74,6 +75,8 @@ struct exam_test
     void (*func)(void);
     char *file;
     size_t line;
+    enum exam_test_state state;
+    int exit_signal; // in case state = EXAM_TEST_CRASHED
 };
 
 struct exam_state
@@ -87,13 +90,68 @@ struct exam_cli_state
 {
     char *category;
 };
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+extern struct exam_state exam_state;
+extern int exam_run_test(struct exam_test *test);
+extern int exam_cli_main(int argc, char **argv);
+#ifdef __cplusplus
+}
+#endif
 #endif /* EXAM_H */
 
 #ifdef EXAM_SOURCE
+#ifdef __linux__
+#include <sys/types.h>
+#include <unistd.h>
+#include <sys/wait.h>
+#else
+#error "Your platform is currently not supported"
+#endif
+
 struct exam_state exam_state = {0};
 
-static struct exam_cli_state cli_state = {0};
+int exam_run_test(struct exam_test *test)
+{
+    pid_t pid = fork();
+    if (pid == -1) {
+        perror("fork");
+        return EXIT_FAILURE;
+    }
 
+    if (pid == 0) {
+        test->func();
+        _exit(EXIT_SUCCESS);
+    }
+
+    int status;
+    if (waitpid(pid, &status, 0) == -1) {
+        perror("waitpid");
+        return EXIT_FAILURE;
+    }
+
+    if (WIFEXITED(status)) {
+        int exit_status = WEXITSTATUS(status);
+        if (exit_status == EXIT_SUCCESS)
+            test->state = EXAM_TEST_PASSED;
+        else
+            test->state = EXAM_TEST_FAILED;
+        return EXIT_SUCCESS;
+    }
+
+    if (WIFSIGNALED(status)) {
+        int signal = WTERMSIG(status);
+        test->state = EXAM_TEST_CRASHED;
+        test->exit_signal = signal;
+        return EXIT_SUCCESS;
+    }
+
+    return EXIT_SUCCESS;
+}
+
+static struct exam_cli_state cli_state = {0};
 static void exam_cli_cmd_run();
 static void exam_cli_cmd_ls();
 static void exam_cli_cmd_help();
@@ -111,7 +169,6 @@ int exam_cli_main(int argc, char **argv)
                 fprintf(stderr, "expected category\n");
                 exit(EXIT_FAILURE);
             }
-
             cli_state.category = argv[++i];
         } else {
             fprintf(stderr, "unknown option %s\n", argv[i]);
@@ -143,9 +200,24 @@ static void exam_cli_cmd_run()
         if (category != NULL && strcmp(exam_state.tests[i].category, category) != 0)
             continue;
 
-        exam_state.tests[i].func();
-        printf("%s passed\n", exam_state.tests[i].name);
+        struct exam_test *test = &exam_state.tests[i];
+        exam_run_test(test);
+        switch(test->state) {
+            case EXAM_TEST_PASSED:
+                fprintf(stdout, "%s passed\n", test->name);
+                break;
+            case EXAM_TEST_FAILED:
+                fprintf(stderr, "%s failed\n", test->name);
+                break;
+            case EXAM_TEST_CRASHED:
+                fprintf(stderr, "%s crashed (signal %d)\n", test->name, test->exit_signal);
+                break;
+            default:
+                fprintf(stderr, "%s unexpected state (%d)\n", test->name, test->state);
+                break;
+        }
     }
+
     exit(EXIT_SUCCESS);
 }
 
@@ -166,9 +238,10 @@ static void exam_cli_cmd_ls()
 
 static void exam_cli_cmd_help()
 {
-    printf("exam - show and run unit tests\n"
-           "usage: exam run [-c|--category] [<category_name>]"
-           "usage: exam ls [-c|--category] [<category_name>]\n"
+    printf("exam - Show and run unit tests\n"
+           "usage: exam run [-c|--category] [<category_name>]\n"
+           "       exam ls [-c|--category] [<category_name>]\n"
+           "\n"
            "options:\n"
            "    -h, --help    show this message\n");
     exit(EXIT_SUCCESS);

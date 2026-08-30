@@ -14,7 +14,13 @@ DEFINE_TEST(math, sub)
 
 DEFINE_TEST(strings, equal)
 {
-    ASSERT_EQ_STR("str1", "str1");
+    ASSERT_EQ_STR("str1", "str2");
+}
+
+DEFINE_TEST(memory, ptr)
+{
+    int *p = NULL;
+    *p = 10;
 }
 
 int main(int argc, char **argv)
