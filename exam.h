@@ -155,9 +155,15 @@ static struct exam_cli_state cli_state = {0};
 static void exam_cli_cmd_run();
 static void exam_cli_cmd_ls();
 static void exam_cli_cmd_help();
+static void exam_cli_usage();
 
 int exam_cli_main(int argc, char **argv)
 {
+    if (argc == 1) {
+        exam_cli_usage();
+        return EXIT_FAILURE;
+    }
+
     // options
     for (int i = 1; i < argc; i ++) {
         if (argv[i][0] != '-') continue;
@@ -172,6 +178,7 @@ int exam_cli_main(int argc, char **argv)
             cli_state.category = argv[++i];
         } else {
             fprintf(stderr, "unknown option %s\n", argv[i]);
+            exam_cli_usage();
             exit(EXIT_FAILURE);
         }
     }
@@ -186,6 +193,7 @@ int exam_cli_main(int argc, char **argv)
             exam_cli_cmd_ls();
         } else {
             fprintf(stderr, "unknown command %s\n", argv[i]);
+            exam_cli_usage();
             exit(EXIT_FAILURE);
         }
     }
@@ -238,12 +246,17 @@ static void exam_cli_cmd_ls()
 
 static void exam_cli_cmd_help()
 {
+    exam_cli_usage();
+    exit(EXIT_SUCCESS);
+}
+
+static void exam_cli_usage()
+{
     printf("exam - Show and run unit tests\n"
            "usage: exam run [-c|--category] [<category_name>]\n"
            "       exam ls [-c|--category] [<category_name>]\n"
            "\n"
            "options:\n"
            "    -h, --help    show this message\n");
-    exit(EXIT_SUCCESS);
 }
 #endif /* EXAM_SOURCE */
