@@ -256,18 +256,22 @@ static void exam_cli_cmd_run()
             case EXAM_TEST_FAILED:
                 exam_state.failed ++;
                 fprintf(stderr,
-                        "%s[FAIL] %s%s\n",
+                        "%s[FAIL %s:%zu] %s%s\n",
                         exam_cli_color(EXAM_CLI_RED),
+                        test->file,
+                        test->line,
                         test->name,
                         exam_cli_color(EXAM_CLI_RESET));
                 break;
             case EXAM_TEST_CRASHED:
                 exam_state.crashed ++;
                 fprintf(stderr,
-                        "%s[CRASH %d] %s%s\n",
+                        "%s[CRASH %s:%zu] %s (signal %d)%s\n",
                         exam_cli_color(EXAM_CLI_YELLOW),
-                        test->exit_signal,
+                        test->file,
+                        test->line,
                         test->name,
+                        test->exit_signal,
                         exam_cli_color(EXAM_CLI_RESET));
                 break;
             default:
@@ -305,7 +309,7 @@ static void exam_cli_cmd_ls()
                 test->name);
         found ++;
     }
-    printf("%ld tests found\n", found);
+    printf("%zu tests found\n", found);
     exit(EXIT_SUCCESS);
 }
 
