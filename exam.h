@@ -188,7 +188,11 @@ int exam_cli_main(int argc, char **argv)
         } else if (strcmp(argv[i], "--no-color") == 0) {
             cli_state.no_color = true;
         } else {
-            fprintf(stderr, "unknown option %s\n", argv[i]);
+            fprintf(stderr,
+                    "%sunknown option '%s'%s\n",
+                    exam_cli_color(EXAM_CLI_RED),
+                    argv[i],
+                    exam_cli_color(EXAM_CLI_RESET));
             exam_cli_usage();
             exit(EXIT_FAILURE);
         }
@@ -203,7 +207,11 @@ int exam_cli_main(int argc, char **argv)
         } else if (strcmp(argv[i], "ls") == 0) {
             exam_cli_cmd_ls();
         } else {
-            fprintf(stderr, "unknown command %s\n", argv[i]);
+            fprintf(stderr,
+                    "%sunknown command '%s'%s\n",
+                    exam_cli_color(EXAM_CLI_RED),
+                    argv[i],
+                    exam_cli_color(EXAM_CLI_RESET));
             exam_cli_usage();
             exit(EXIT_FAILURE);
         }
@@ -224,24 +232,24 @@ static void exam_cli_cmd_run()
         switch(test->state) {
             case EXAM_TEST_PASSED:
                 fprintf(stdout,
-                        "%s%s passed%s\n",
+                        "%s[PASS] %s%s\n",
                         exam_cli_color(EXAM_CLI_GREEN),
                         test->name,
                         exam_cli_color(EXAM_CLI_RESET));
                 break;
             case EXAM_TEST_FAILED:
                 fprintf(stderr,
-                        "%s%s failed%s\n",
+                        "%s[FAIL] %s%s\n",
                         exam_cli_color(EXAM_CLI_RED),
                         test->name,
                         exam_cli_color(EXAM_CLI_RESET));
                 break;
             case EXAM_TEST_CRASHED:
                 fprintf(stderr,
-                        "%s%s crashed (signal %d)%s\n",
+                        "%s[CRASH %d] %s%s\n",
                         exam_cli_color(EXAM_CLI_YELLOW),
-                        test->name,
                         test->exit_signal,
+                        test->name,
                         exam_cli_color(EXAM_CLI_RESET));
                 break;
             default:
@@ -276,13 +284,32 @@ static void exam_cli_cmd_help()
 
 static void exam_cli_usage()
 {
-    printf("exam - Show and run unit tests\n"
-           "usage: exam run [-c|--category] [<category_name>]\n"
-           "       exam ls [-c|--category] [<category_name>]\n"
+    printf("%sexam%s - Show and run unit tests\n"
+           "%susage%s:\n"
+           "     %sexam run%s\n"
+           "     %sexam ls%s\n"
            "\n"
-           "options:\n"
-           "    --no-color    don't display using colors\n"
-           "    -h, --help    show this message\n");
+           "%soptions%s:\n"
+           "    %s-c, --category <name>%s\n"
+           "                  filter by category\n"
+           "    %s--no-color%s    don't display using colors\n"
+           "    %s-h, --help%s    show this message\n",
+           exam_cli_color(EXAM_CLI_GREEN), /* exam */
+           exam_cli_color(EXAM_CLI_RESET),
+           exam_cli_color(EXAM_CLI_YELLOW), /* usage */
+           exam_cli_color(EXAM_CLI_RESET),
+           exam_cli_color(EXAM_CLI_GREEN), /* run */
+           exam_cli_color(EXAM_CLI_RESET),
+           exam_cli_color(EXAM_CLI_GREEN), /* ls */
+           exam_cli_color(EXAM_CLI_RESET),
+           exam_cli_color(EXAM_CLI_YELLOW), /* options */
+           exam_cli_color(EXAM_CLI_RESET),
+           exam_cli_color(EXAM_CLI_GREEN), /* -c, --category */
+           exam_cli_color(EXAM_CLI_RESET),
+           exam_cli_color(EXAM_CLI_GREEN), /* --no-color */
+           exam_cli_color(EXAM_CLI_RESET),
+           exam_cli_color(EXAM_CLI_GREEN), /* -h, --help */
+           exam_cli_color(EXAM_CLI_RESET));
 }
 
 static const char *exam_cli_color(const char *color)
