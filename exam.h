@@ -84,6 +84,9 @@ struct exam_state
     struct exam_test *tests;
     size_t tests_count;
     size_t tests_capacity;
+    size_t passed;
+    size_t failed;
+    size_t crashed;
 };
 
 struct exam_cli_state
@@ -238,6 +241,7 @@ static void exam_cli_cmd_run()
         exam_run_test(test);
         switch(test->state) {
             case EXAM_TEST_PASSED:
+                exam_state.passed ++;
                 fprintf(stdout,
                         "%s[PASS] %s%s\n",
                         exam_cli_color(EXAM_CLI_GREEN),
@@ -245,6 +249,7 @@ static void exam_cli_cmd_run()
                         exam_cli_color(EXAM_CLI_RESET));
                 break;
             case EXAM_TEST_FAILED:
+                exam_state.failed ++;
                 fprintf(stderr,
                         "%s[FAIL] %s%s\n",
                         exam_cli_color(EXAM_CLI_RED),
@@ -252,6 +257,7 @@ static void exam_cli_cmd_run()
                         exam_cli_color(EXAM_CLI_RESET));
                 break;
             case EXAM_TEST_CRASHED:
+                exam_state.crashed ++;
                 fprintf(stderr,
                         "%s[CRASH %d] %s%s\n",
                         exam_cli_color(EXAM_CLI_YELLOW),
@@ -263,9 +269,19 @@ static void exam_cli_cmd_run()
                 fprintf(stderr, "%s unexpected state (%d)\n", test->name, test->state);
                 break;
         }
+
     }
 
-    exit(EXIT_SUCCESS);
+    fprintf(stdout,
+            "\n%zu passed, %zu failed, %zu crashed\n",
+            exam_state.passed,
+            exam_state.failed,
+            exam_state.crashed);
+
+    if (exam_state.failed > 0 || exam_state.crashed > 0)
+        exit(EXIT_FAILURE);
+    else
+        exit(EXIT_SUCCESS);
 }
 
 static void exam_cli_cmd_ls()
