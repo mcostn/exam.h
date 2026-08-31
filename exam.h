@@ -89,6 +89,7 @@ struct exam_state
 struct exam_cli_state
 {
     char *category;
+    bool no_color;
 };
 
 #ifdef __cplusplus
@@ -151,11 +152,19 @@ int exam_run_test(struct exam_test *test)
     return EXIT_SUCCESS;
 }
 
+// Cli
+#define EXAM_CLI_RESET  "\033[0m"
+#define EXAM_CLI_RED    "\033[31m"
+#define EXAM_CLI_GREEN  "\033[32m"
+#define EXAM_CLI_YELLOW "\033[33m"
+
 static struct exam_cli_state cli_state = {0};
+
 static void exam_cli_cmd_run();
 static void exam_cli_cmd_ls();
 static void exam_cli_cmd_help();
 static void exam_cli_usage();
+static const char *exam_cli_color(const char *color);
 
 int exam_cli_main(int argc, char **argv)
 {
@@ -176,6 +185,8 @@ int exam_cli_main(int argc, char **argv)
                 exit(EXIT_FAILURE);
             }
             cli_state.category = argv[++i];
+        } else if (strcmp(argv[i], "--no-color") == 0) {
+            cli_state.no_color = true;
         } else {
             fprintf(stderr, "unknown option %s\n", argv[i]);
             exam_cli_usage();
@@ -205,20 +216,33 @@ static void exam_cli_cmd_run()
 {
     const char *category = cli_state.category;
     for (size_t i = 0; i < exam_state.tests_count; i++) {
-        if (category != NULL && strcmp(exam_state.tests[i].category, category) != 0)
+        struct exam_test *test = &exam_state.tests[i];
+        if (category != NULL && strcmp(test->category, category) != 0)
             continue;
 
-        struct exam_test *test = &exam_state.tests[i];
         exam_run_test(test);
         switch(test->state) {
             case EXAM_TEST_PASSED:
-                fprintf(stdout, "%s passed\n", test->name);
+                fprintf(stdout,
+                        "%s%s passed%s\n",
+                        exam_cli_color(EXAM_CLI_GREEN),
+                        test->name,
+                        exam_cli_color(EXAM_CLI_RESET));
                 break;
             case EXAM_TEST_FAILED:
-                fprintf(stderr, "%s failed\n", test->name);
+                fprintf(stderr,
+                        "%s%s failed%s\n",
+                        exam_cli_color(EXAM_CLI_RED),
+                        test->name,
+                        exam_cli_color(EXAM_CLI_RESET));
                 break;
             case EXAM_TEST_CRASHED:
-                fprintf(stderr, "%s crashed (signal %d)\n", test->name, test->exit_signal);
+                fprintf(stderr,
+                        "%s%s crashed (signal %d)%s\n",
+                        exam_cli_color(EXAM_CLI_YELLOW),
+                        test->name,
+                        test->exit_signal,
+                        exam_cli_color(EXAM_CLI_RESET));
                 break;
             default:
                 fprintf(stderr, "%s unexpected state (%d)\n", test->name, test->state);
@@ -257,6 +281,15 @@ static void exam_cli_usage()
            "       exam ls [-c|--category] [<category_name>]\n"
            "\n"
            "options:\n"
+           "    --no-color    don't display using colors\n"
            "    -h, --help    show this message\n");
+}
+
+static const char *exam_cli_color(const char *color)
+{
+    if (cli_state.no_color)
+        return "";
+
+    return color;
 }
 #endif /* EXAM_SOURCE */
