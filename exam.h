@@ -167,6 +167,7 @@ int exam_run_test(struct exam_test *test)
 #define EXAM_CLI_RED    "\033[31m"
 #define EXAM_CLI_GREEN  "\033[32m"
 #define EXAM_CLI_YELLOW "\033[33m"
+#define EXAM_CLI_CYAN   "\033[36m"
 
 static struct exam_cli_state cli_state = {0};
 
@@ -289,10 +290,15 @@ static void exam_cli_cmd_ls()
     size_t found = 0;
     const char *category = cli_state.category;
     for (size_t i = 0; i < exam_state.tests_count; i++) {
-        if (category != NULL && strcmp(exam_state.tests[i].category, category) != 0)
+        const struct exam_test *test = &exam_state.tests[i];
+        if (category != NULL && strcmp(test->category, category) != 0)
             continue;
 
-        printf("%s (category=%s)\n", exam_state.tests[i].name, exam_state.tests[i].category);
+        printf("%s%s%s/%s\n",
+                exam_cli_color(EXAM_CLI_CYAN),
+                test->category,
+                exam_cli_color(EXAM_CLI_RESET),
+                test->name);
         found ++;
     }
     printf("%ld tests found\n", found);
