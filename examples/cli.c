@@ -3,6 +3,11 @@
 #define EXAM_CLI_NAME "cli"
 #include "exam.h"
 
+DEFINE_TEST(math, equal)
+{
+    ASSERT_EQ_INT(1, 1);
+}
+
 DEFINE_TEST(math, add)
 {
     ASSERT_EQ_INT(2 + 1, 3);

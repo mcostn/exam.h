@@ -91,6 +91,7 @@ struct exam_state
 
 struct exam_cli_state
 {
+    char *test_name;
     char *category;
     bool no_color;
 };
@@ -192,7 +193,13 @@ int exam_cli_main(int argc, char **argv)
     for (int i = 1; i < argc; i ++) {
         if (argv[i][0] != '-') continue;
 
-        if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
+        if (strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--test-name") == 0) {
+            if (i == argc - 1 || argv[i + 1][0] == '-') {
+                fprintf(stderr, "expected name\n");
+                exit(EXIT_FAILURE);
+            }
+            cli_state.test_name = argv[++i];
+        } else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
             exam_cli_cmd_help();
         } else if (strcmp(argv[i], "-c") == 0 || strcmp(argv[i], "--category") == 0) {
             if (i == argc - 1 || argv[i + 1][0] == '-') {
@@ -238,9 +245,11 @@ int exam_cli_main(int argc, char **argv)
 static void exam_cli_cmd_run()
 {
     const char *category = cli_state.category;
+    const char *name = cli_state.test_name;
     for (size_t i = 0; i < exam_state.tests_count; i++) {
         struct exam_test *test = &exam_state.tests[i];
-        if (category != NULL && strcmp(test->category, category) != 0)
+        if ((category != NULL && strcmp(test->category, category) != 0) ||
+            (name != NULL && strcmp(test->name, name) != 0))
             continue;
 
         exam_run_test(test);
@@ -297,9 +306,11 @@ static void exam_cli_cmd_ls()
 {
     size_t found = 0;
     const char *category = cli_state.category;
+    const char *name = cli_state.test_name;
     for (size_t i = 0; i < exam_state.tests_count; i++) {
         const struct exam_test *test = &exam_state.tests[i];
-        if (category != NULL && strcmp(test->category, category) != 0)
+        if ((category != NULL && strcmp(test->category, category) != 0) ||
+            (name != NULL && strcmp(test->name, name) != 0))
             continue;
 
         printf("%s%s%s/%s\n",
@@ -309,6 +320,7 @@ static void exam_cli_cmd_ls()
                 test->name);
         found ++;
     }
+
     printf("%zu tests found\n", found);
     exit(EXIT_SUCCESS);
 }
@@ -327,6 +339,8 @@ static void exam_cli_usage()
            "     %s"EXAM_CLI_NAME" ls%s\n"
            "\n"
            "%soptions%s:\n"
+           "    %s-t, --test-name <name>%s\n"
+           "                  filter by test name\n"
            "    %s-c, --category <name>%s\n"
            "                  filter by category\n"
            "    %s--no-color%s    don't display using colors\n"
@@ -340,6 +354,8 @@ static void exam_cli_usage()
            exam_cli_color(EXAM_CLI_GREEN), /* ls */
            exam_cli_color(EXAM_CLI_RESET),
            exam_cli_color(EXAM_CLI_YELLOW), /* options */
+           exam_cli_color(EXAM_CLI_RESET),
+           exam_cli_color(EXAM_CLI_GREEN), /* -t, --test-name */
            exam_cli_color(EXAM_CLI_RESET),
            exam_cli_color(EXAM_CLI_GREEN), /* -c, --category */
            exam_cli_color(EXAM_CLI_RESET),
