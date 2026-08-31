@@ -162,7 +162,11 @@ int exam_run_test(struct exam_test *test)
     return EXIT_SUCCESS;
 }
 
-// Cli
+/* Cli */
+#ifndef EXAM_CLI_NAME
+#define EXAM_CLI_NAME "exam"
+#endif
+
 #define EXAM_CLI_RESET  "\033[0m"
 #define EXAM_CLI_RED    "\033[31m"
 #define EXAM_CLI_GREEN  "\033[32m"
@@ -184,7 +188,7 @@ int exam_cli_main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
-    // options
+    /* options */
     for (int i = 1; i < argc; i ++) {
         if (argv[i][0] != '-') continue;
 
@@ -209,7 +213,7 @@ int exam_cli_main(int argc, char **argv)
         }
     }
 
-    // commands
+    /* commands */
     for (int i = 1; i < argc; i ++) {
         if (argv[i][0] == '-') continue;
 
@@ -313,10 +317,10 @@ static void exam_cli_cmd_help()
 
 static void exam_cli_usage()
 {
-    printf("%sexam%s - Show and run unit tests\n"
+    printf("%s"EXAM_CLI_NAME"%s - Find and run unit tests\n"
            "%susage%s:\n"
-           "     %sexam run%s\n"
-           "     %sexam ls%s\n"
+           "     %s"EXAM_CLI_NAME" run%s\n"
+           "     %s"EXAM_CLI_NAME" ls%s\n"
            "\n"
            "%soptions%s:\n"
            "    %s-c, --category <name>%s\n"

@@ -1,5 +1,6 @@
 #define EXAM_SHORT_NAMES
 #define EXAM_SOURCE
+#define EXAM_CLI_NAME "cli"
 #include "exam.h"
 
 DEFINE_TEST(math, add)
