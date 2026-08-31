@@ -101,6 +101,7 @@ extern "C" {
 #endif
 extern struct exam_state exam_state;
 extern int exam_run_test(struct exam_test *test);
+extern void exam_sort_tests(struct exam_test *tests, size_t count);
 extern int exam_cli_main(int argc, char **argv);
 #ifdef __cplusplus
 }
@@ -117,6 +118,8 @@ extern int exam_cli_main(int argc, char **argv);
 #endif
 
 struct exam_state exam_state = {0};
+
+static int exam_test_compare(const void *a, const void *b);
 
 int exam_run_test(struct exam_test *test)
 {
@@ -161,6 +164,21 @@ int exam_run_test(struct exam_test *test)
     }
 
     return EXIT_SUCCESS;
+}
+
+void exam_sort_tests(struct exam_test *tests, size_t count)
+{
+    qsort(tests, count, sizeof(*tests), exam_test_compare);
+}
+
+static int exam_test_compare(const void *a, const void *b)
+{
+    const struct exam_test *test_a = a;
+    const struct exam_test *test_b = b;
+    int result = strcmp(test_a->category, test_b->category);
+    if (result == 0)
+        result = strcmp(test_a->name, test_b->name);
+    return result;
 }
 
 /* Cli */
@@ -220,6 +238,8 @@ int exam_cli_main(int argc, char **argv)
         }
     }
 
+    exam_sort_tests(exam_state.tests, exam_state.tests_count);
+
     /* commands */
     for (int i = 1; i < argc; i ++) {
         if (argv[i][0] == '-') continue;
@@ -257,28 +277,31 @@ static void exam_cli_cmd_run()
             case EXAM_TEST_PASSED:
                 exam_state.passed ++;
                 fprintf(stdout,
-                        "%s[PASS] %s%s\n",
+                        "%s[PASS] %s/%s%s\n",
                         exam_cli_color(EXAM_CLI_GREEN),
+                        test->category,
                         test->name,
                         exam_cli_color(EXAM_CLI_RESET));
                 break;
             case EXAM_TEST_FAILED:
                 exam_state.failed ++;
                 fprintf(stderr,
-                        "%s[FAIL %s:%zu] %s%s\n",
+                        "%s[FAIL %s:%zu] %s/%s%s\n",
                         exam_cli_color(EXAM_CLI_RED),
                         test->file,
                         test->line,
+                        test->category,
                         test->name,
                         exam_cli_color(EXAM_CLI_RESET));
                 break;
             case EXAM_TEST_CRASHED:
                 exam_state.crashed ++;
                 fprintf(stderr,
-                        "%s[CRASH %s:%zu] %s (signal %d)%s\n",
+                        "%s[CRASH %s:%zu] %s/%s (signal %d)%s\n",
                         exam_cli_color(EXAM_CLI_YELLOW),
                         test->file,
                         test->line,
+                        test->category,
                         test->name,
                         test->exit_signal,
                         exam_cli_color(EXAM_CLI_RESET));
