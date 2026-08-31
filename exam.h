@@ -76,7 +76,7 @@ struct exam_test
     char *file;
     size_t line;
     enum exam_test_state state;
-    int exit_signal; // in case state = EXAM_TEST_CRASHED
+    int exit_signal; /* in case state = EXAM_TEST_CRASHED */
 };
 
 struct exam_state
@@ -116,8 +116,14 @@ struct exam_state exam_state = {0};
 
 int exam_run_test(struct exam_test *test)
 {
+    if (test->state != EXAM_TEST_NONE)
+        return EXIT_FAILURE;
+
+    test->state = EXAM_TEST_RUNNING;
+
     pid_t pid = fork();
     if (pid == -1) {
+        test->state = EXAM_TEST_NONE;
         perror("fork");
         return EXIT_FAILURE;
     }
@@ -129,6 +135,7 @@ int exam_run_test(struct exam_test *test)
 
     int status;
     if (waitpid(pid, &status, 0) == -1) {
+        test->state= EXAM_TEST_NONE;
         perror("waitpid");
         return EXIT_FAILURE;
     }
