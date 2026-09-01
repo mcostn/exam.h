@@ -4,6 +4,7 @@
 #include <stdio.h> /* printf() */
 #include <stdlib.h> /* exit(), EXIT_FAILURE */
 #include <string.h> /* strcmp() */
+#include <stdarg.h> /* va_list, va_start(), va_end() */
 #include <stdbool.h>
 
 #ifdef EXAM_SHORT_NAMES
@@ -119,6 +120,7 @@ extern int exam_cli_main(int argc, char **argv);
 
 struct exam_state exam_state = {0};
 
+static void exam_dief(const char *fmt, ...);
 static int exam_test_compare(const void *a, const void *b);
 
 int exam_run_test(struct exam_test *test)
@@ -171,6 +173,16 @@ void exam_sort_tests(struct exam_test *tests, size_t count)
     qsort(tests, count, sizeof(*tests), exam_test_compare);
 }
 
+
+static void exam_dief(const char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    vfprintf(stderr, fmt, args);
+    va_end(args);
+    exit(EXIT_FAILURE);
+}
+
 static int exam_test_compare(const void *a, const void *b)
 {
     const struct exam_test *test_a = a;
@@ -212,39 +224,41 @@ int exam_cli_main(int argc, char **argv)
     int command_count = 1;
     for (int i = 1; i < argc; i ++) {
         if (strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--test-name") == 0) {
-            if (i == argc - 1 || argv[i + 1][0] == '-') {
-                fprintf(stderr, "expected name\n");
-                exit(EXIT_FAILURE);
-            }
+            if (i == argc - 1 || argv[i + 1][0] == '-')
+                exam_dief("%sexpected name%s\n",
+                          exam_cli_color(EXAM_CLI_RED),
+                          exam_cli_color(EXAM_CLI_RESET));
+
             cli_state.test_name = argv[++i];
         } else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
             exam_cli_usage();
             exit(EXIT_SUCCESS);
         } else if (strcmp(argv[i], "-c") == 0 || strcmp(argv[i], "--category") == 0) {
-            if (i == argc - 1 || argv[i + 1][0] == '-') {
-                fprintf(stderr, "expected category\n");
-                exit(EXIT_FAILURE);
-            }
+            if (i == argc - 1 || argv[i + 1][0] == '-')
+                exam_dief("%sexpected category%s\n",
+                          exam_cli_color(EXAM_CLI_RED),
+                          exam_cli_color(EXAM_CLI_RESET));
+
             cli_state.category = argv[++i];
         } else if (strcmp(argv[i], "--no-color") == 0) {
             cli_state.no_color = true;
         } else if (argv[i][0] == '-') {
-            fprintf(stderr,
-                    "%sunknown option '%s'%s\n",
-                    exam_cli_color(EXAM_CLI_RED),
-                    argv[i],
-                    exam_cli_color(EXAM_CLI_RESET));
             exam_cli_usage();
+            exam_dief("%sunknown option '%s'%s\n",
+                      exam_cli_color(EXAM_CLI_RED),
+                      argv[i],
+                      exam_cli_color(EXAM_CLI_RESET));
             exit(EXIT_FAILURE);
         } else {
             argv[command_count++] = argv[i];
         }
     }
 
-    if (command_count > 2) {
-        fprintf(stderr, "expected only one command, but got %d\n", command_count);
-        exit(EXIT_FAILURE);
-    }
+    if (command_count > 2)
+        exam_dief("%sexpected only one command, but got %d%s\n",
+                  exam_cli_color(EXAM_CLI_RED),
+                  command_count,
+                  exam_cli_color(EXAM_CLI_RESET));
 
     /* commands */
     argc = command_count;
@@ -254,12 +268,11 @@ int exam_cli_main(int argc, char **argv)
         } else if (strcmp(argv[i], "ls") == 0) {
             exam_cli_cmd_ls();
         } else {
-            fprintf(stderr,
-                    "%sunknown command '%s'%s\n",
-                    exam_cli_color(EXAM_CLI_RED),
-                    argv[i],
-                    exam_cli_color(EXAM_CLI_RESET));
             exam_cli_usage();
+            exam_dief("%sunknown command '%s'%s\n",
+                      exam_cli_color(EXAM_CLI_RED),
+                      argv[i],
+                      exam_cli_color(EXAM_CLI_RESET));
             exit(EXIT_FAILURE);
         }
     }
