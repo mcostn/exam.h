@@ -196,7 +196,6 @@ static struct exam_cli_state cli_state = {0};
 
 static void exam_cli_cmd_run();
 static void exam_cli_cmd_ls();
-static void exam_cli_cmd_help();
 static void exam_cli_usage();
 static const char *exam_cli_color(const char *color);
 
@@ -207,10 +206,11 @@ int exam_cli_main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
-    /* options */
-    for (int i = 1; i < argc; i ++) {
-        if (argv[i][0] != '-') continue;
+    exam_sort_tests(exam_state.tests, exam_state.tests_count);
 
+    /* options */
+    int command_count = 1;
+    for (int i = 1; i < argc; i ++) {
         if (strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--test-name") == 0) {
             if (i == argc - 1 || argv[i + 1][0] == '-') {
                 fprintf(stderr, "expected name\n");
@@ -218,7 +218,8 @@ int exam_cli_main(int argc, char **argv)
             }
             cli_state.test_name = argv[++i];
         } else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
-            exam_cli_cmd_help();
+            exam_cli_usage();
+            exit(EXIT_SUCCESS);
         } else if (strcmp(argv[i], "-c") == 0 || strcmp(argv[i], "--category") == 0) {
             if (i == argc - 1 || argv[i + 1][0] == '-') {
                 fprintf(stderr, "expected category\n");
@@ -227,7 +228,7 @@ int exam_cli_main(int argc, char **argv)
             cli_state.category = argv[++i];
         } else if (strcmp(argv[i], "--no-color") == 0) {
             cli_state.no_color = true;
-        } else {
+        } else if (argv[i][0] == '-') {
             fprintf(stderr,
                     "%sunknown option '%s'%s\n",
                     exam_cli_color(EXAM_CLI_RED),
@@ -235,15 +236,19 @@ int exam_cli_main(int argc, char **argv)
                     exam_cli_color(EXAM_CLI_RESET));
             exam_cli_usage();
             exit(EXIT_FAILURE);
+        } else {
+            argv[command_count++] = argv[i];
         }
     }
 
-    exam_sort_tests(exam_state.tests, exam_state.tests_count);
+    if (command_count > 2) {
+        fprintf(stderr, "expected only one command, but got %d\n", command_count);
+        exit(EXIT_FAILURE);
+    }
 
     /* commands */
+    argc = command_count;
     for (int i = 1; i < argc; i ++) {
-        if (argv[i][0] == '-') continue;
-
         if (strcmp(argv[i], "run") == 0) {
             exam_cli_cmd_run();
         } else if (strcmp(argv[i], "ls") == 0) {
@@ -314,7 +319,7 @@ static void exam_cli_cmd_run()
     }
 
     fprintf(stdout,
-            "\n%zu passed, %zu failed, %zu crashed\n",
+            "%zu passed, %zu failed, %zu crashed\n",
             exam_state.passed,
             exam_state.failed,
             exam_state.crashed);
@@ -345,12 +350,6 @@ static void exam_cli_cmd_ls()
     }
 
     printf("%zu tests found\n", found);
-    exit(EXIT_SUCCESS);
-}
-
-static void exam_cli_cmd_help()
-{
-    exam_cli_usage();
     exit(EXIT_SUCCESS);
 }
 
