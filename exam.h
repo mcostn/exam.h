@@ -201,7 +201,7 @@ static int exam_test_compare(const void *a, const void *b)
 #define EXAM_CLI_YELLOW "\033[33m"
 #define EXAM_CLI_CYAN   "\033[36m"
 
-static struct exam_cli_state cli_state = {0};
+static struct exam_cli_state exam_cli_state = {0};
 
 static void exam_cli_cmd_run();
 static void exam_cli_cmd_ls();
@@ -221,7 +221,7 @@ int exam_cli_main(int argc, char **argv)
                           exam_cli_color(EXAM_CLI_RED),
                           exam_cli_color(EXAM_CLI_RESET));
 
-            cli_state.test_name = argv[++i];
+            exam_cli_state.test_name = argv[++i];
         } else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
             exam_cli_usage();
             exit(EXIT_SUCCESS);
@@ -231,9 +231,9 @@ int exam_cli_main(int argc, char **argv)
                           exam_cli_color(EXAM_CLI_RED),
                           exam_cli_color(EXAM_CLI_RESET));
 
-            cli_state.category = argv[++i];
+            exam_cli_state.category = argv[++i];
         } else if (strcmp(argv[i], "--no-color") == 0) {
-            cli_state.no_color = true;
+            exam_cli_state.no_color = true;
         } else if (argv[i][0] == '-') {
             exam_cli_usage();
             exam_dief("%sunknown option '%s'%s\n",
@@ -276,8 +276,8 @@ int exam_cli_main(int argc, char **argv)
 
 static void exam_cli_cmd_run()
 {
-    const char *category = cli_state.category;
-    const char *name = cli_state.test_name;
+    const char *category = exam_cli_state.category;
+    const char *name = exam_cli_state.test_name;
     for (size_t i = 0; i < exam_state.tests_count; i++) {
         struct exam_test *test = &exam_state.tests[i];
         if ((category != NULL && strcmp(test->category, category) != 0) ||
@@ -340,8 +340,8 @@ static void exam_cli_cmd_run()
 static void exam_cli_cmd_ls()
 {
     size_t found = 0;
-    const char *category = cli_state.category;
-    const char *name = cli_state.test_name;
+    const char *category = exam_cli_state.category;
+    const char *name = exam_cli_state.test_name;
     for (size_t i = 0; i < exam_state.tests_count; i++) {
         const struct exam_test *test = &exam_state.tests[i];
         if ((category != NULL && strcmp(test->category, category) != 0) ||
@@ -396,7 +396,7 @@ static void exam_cli_usage()
 
 static const char *exam_cli_color(const char *color)
 {
-    if (cli_state.no_color)
+    if (exam_cli_state.no_color)
         return "";
 
     return color;
