@@ -213,11 +213,6 @@ static const char *exam_cli_color(const char *color);
 
 int exam_cli_main(int argc, char **argv)
 {
-    if (argc == 1) {
-        exam_cli_usage();
-        return EXIT_FAILURE;
-    }
-
     exam_sort_tests(exam_state.tests, exam_state.tests_count);
 
     /* options */
@@ -254,11 +249,13 @@ int exam_cli_main(int argc, char **argv)
         }
     }
 
-    if (command_count > 2)
+    if (command_count != 2) {
+        exam_cli_usage();
         exam_dief("%sexpected only one command, but got %d%s\n",
                   exam_cli_color(EXAM_CLI_RED),
-                  command_count,
+                  command_count - 1,
                   exam_cli_color(EXAM_CLI_RESET));
+    }
 
     /* commands */
     argc = command_count;
