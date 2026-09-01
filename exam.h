@@ -1,7 +1,7 @@
 #ifndef EXAM_H
 #define EXAM_H
 
-#include <stdio.h> /* printf() */
+#include <stdio.h> /* printf(), perror() */
 #include <stdlib.h> /* exit(), EXIT_FAILURE */
 #include <string.h> /* strcmp() */
 #include <stdarg.h> /* va_list, va_start(), va_end() */
@@ -101,7 +101,7 @@ struct exam_cli_state
 extern "C" {
 #endif
 extern struct exam_state exam_state;
-extern int exam_run_test(struct exam_test *test);
+extern void exam_run_test(struct exam_test *test);
 extern void exam_sort_tests(struct exam_test *tests, size_t count);
 extern int exam_cli_main(int argc, char **argv);
 #ifdef __cplusplus
@@ -121,21 +121,19 @@ extern int exam_cli_main(int argc, char **argv);
 struct exam_state exam_state = {0};
 
 static void exam_dief(const char *fmt, ...);
+static void exam_die_errno(const char *str);
 static int exam_test_compare(const void *a, const void *b);
 
-int exam_run_test(struct exam_test *test)
+void exam_run_test(struct exam_test *test)
 {
     if (test->state != EXAM_TEST_NONE)
-        return EXIT_FAILURE;
+        exam_dief("tried to run test with an unexpected state: %d", test->state);
 
     test->state = EXAM_TEST_RUNNING;
 
     pid_t pid = fork();
-    if (pid == -1) {
-        test->state = EXAM_TEST_NONE;
-        perror("fork");
-        return EXIT_FAILURE;
-    }
+    if (pid == -1)
+        exam_die_errno("fork");
 
     if (pid == 0) {
         test->func();
@@ -143,11 +141,8 @@ int exam_run_test(struct exam_test *test)
     }
 
     int status;
-    if (waitpid(pid, &status, 0) == -1) {
-        test->state= EXAM_TEST_NONE;
-        perror("waitpid");
-        return EXIT_FAILURE;
-    }
+    if (waitpid(pid, &status, 0) == -1)
+        exam_die_errno("waitpid");
 
     if (WIFEXITED(status)) {
         int exit_status = WEXITSTATUS(status);
@@ -155,17 +150,13 @@ int exam_run_test(struct exam_test *test)
             test->state = EXAM_TEST_PASSED;
         else
             test->state = EXAM_TEST_FAILED;
-        return EXIT_SUCCESS;
     }
 
     if (WIFSIGNALED(status)) {
         int signal = WTERMSIG(status);
         test->state = EXAM_TEST_CRASHED;
         test->exit_signal = signal;
-        return EXIT_SUCCESS;
     }
-
-    return EXIT_SUCCESS;
 }
 
 void exam_sort_tests(struct exam_test *tests, size_t count)
@@ -180,6 +171,12 @@ static void exam_dief(const char *fmt, ...)
     va_start(args, fmt);
     vfprintf(stderr, fmt, args);
     va_end(args);
+    exit(EXIT_FAILURE);
+}
+
+static void exam_die_errno(const char *str)
+{
+    perror(str);
     exit(EXIT_FAILURE);
 }
 
