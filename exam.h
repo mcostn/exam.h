@@ -80,6 +80,12 @@ struct exam_test
     int exit_signal; /* in case state = EXAM_TEST_CRASHED */
 };
 
+struct exam_filter
+{
+    char *category_name;
+    char *test_name;
+};
+
 struct exam_state
 {
     struct exam_test *tests;
@@ -92,8 +98,7 @@ struct exam_state
 
 struct exam_cli_state
 {
-    char *test_name;
-    char *category;
+    struct exam_filter filter;
     bool no_color;
 };
 
@@ -101,8 +106,10 @@ struct exam_cli_state
 extern "C" {
 #endif
 extern struct exam_state exam_state;
-extern void exam_run_test(struct exam_test *test);
+extern bool exam_test_passes_filter(const struct exam_test *test, struct exam_filter filter);
 extern void exam_sort_tests(struct exam_test *tests, size_t count);
+extern void exam_run_tests(struct exam_test *tests, size_t count, struct exam_filter options);
+extern void exam_run_test(struct exam_test *test);
 extern int exam_cli_main(int argc, char **argv);
 #ifdef __cplusplus
 }
@@ -124,10 +131,20 @@ static void exam_dief(const char *fmt, ...);
 static void exam_die_errno(const char *str);
 static int exam_test_compare(const void *a, const void *b);
 
+void exam_run_tests(struct exam_test *tests, size_t count, struct exam_filter filter)
+{
+    for (size_t i = 0; i < count; i ++) {
+        if (!exam_test_passes_filter(&tests[i], filter))
+            continue;
+
+        exam_run_test(&tests[i]);
+    }
+}
+
 void exam_run_test(struct exam_test *test)
 {
     if (test->state != EXAM_TEST_NONE)
-        exam_dief("tried to run test with an unexpected state: %d", test->state);
+        exam_dief("tried to run test with an unexpected state: %d\n", test->state);
 
     test->state = EXAM_TEST_RUNNING;
 
@@ -157,6 +174,23 @@ void exam_run_test(struct exam_test *test)
         test->state = EXAM_TEST_CRASHED;
         test->exit_signal = signal;
     }
+}
+
+bool exam_test_passes_filter(const struct exam_test *test, struct exam_filter filter)
+{
+    bool out = true;
+
+    const char *category_name = filter.category_name;
+    if (category_name != NULL)
+        out = out && (test->category != NULL &&
+                      strcmp(test->category, category_name) == 0);
+
+    const char *test_name = filter.test_name;
+    if (test_name != NULL)
+        out = out && (test->name != NULL &&
+                     strcmp(test->name, test_name) == 0);
+
+    return out;
 }
 
 void exam_sort_tests(struct exam_test *tests, size_t count)
@@ -221,7 +255,7 @@ int exam_cli_main(int argc, char **argv)
                           exam_cli_color(EXAM_CLI_RED),
                           exam_cli_color(EXAM_CLI_RESET));
 
-            exam_cli_state.test_name = argv[++i];
+            exam_cli_state.filter.test_name = argv[++i];
         } else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
             exam_cli_usage();
             exit(EXIT_SUCCESS);
@@ -231,7 +265,7 @@ int exam_cli_main(int argc, char **argv)
                           exam_cli_color(EXAM_CLI_RED),
                           exam_cli_color(EXAM_CLI_RESET));
 
-            exam_cli_state.category = argv[++i];
+            exam_cli_state.filter.category_name = argv[++i];
         } else if (strcmp(argv[i], "--no-color") == 0) {
             exam_cli_state.no_color = true;
         } else if (argv[i][0] == '-') {
@@ -276,15 +310,13 @@ int exam_cli_main(int argc, char **argv)
 
 static void exam_cli_cmd_run()
 {
-    const char *category = exam_cli_state.category;
-    const char *name = exam_cli_state.test_name;
+    exam_run_tests(exam_state.tests, exam_state.tests_count, exam_cli_state.filter);
+
     for (size_t i = 0; i < exam_state.tests_count; i++) {
         struct exam_test *test = &exam_state.tests[i];
-        if ((category != NULL && strcmp(test->category, category) != 0) ||
-            (name != NULL && strcmp(test->name, name) != 0))
+        if (!exam_test_passes_filter(test, exam_cli_state.filter))
             continue;
 
-        exam_run_test(test);
         switch(test->state) {
             case EXAM_TEST_PASSED:
                 exam_state.passed ++;
@@ -319,7 +351,10 @@ static void exam_cli_cmd_run()
                         exam_cli_color(EXAM_CLI_RESET));
                 break;
             default:
-                fprintf(stderr, "%s unexpected state (%d)\n", test->name, test->state);
+                fprintf(stderr,
+                        "%s unexpected state (%d)\n",
+                        test->name,
+                        test->state);
                 break;
         }
 
@@ -340,12 +375,9 @@ static void exam_cli_cmd_run()
 static void exam_cli_cmd_ls()
 {
     size_t found = 0;
-    const char *category = exam_cli_state.category;
-    const char *name = exam_cli_state.test_name;
     for (size_t i = 0; i < exam_state.tests_count; i++) {
         const struct exam_test *test = &exam_state.tests[i];
-        if ((category != NULL && strcmp(test->category, category) != 0) ||
-            (name != NULL && strcmp(test->name, name) != 0))
+        if (!exam_test_passes_filter(test, exam_cli_state.filter))
             continue;
 
         printf("%s%s%s/%s\n",
@@ -353,6 +385,7 @@ static void exam_cli_cmd_ls()
                 test->category,
                 exam_cli_color(EXAM_CLI_RESET),
                 test->name);
+
         found ++;
     }
 
