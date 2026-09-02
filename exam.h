@@ -110,6 +110,8 @@ extern bool exam_test_passes_filter(const struct exam_test *test, struct exam_fi
 extern void exam_sort_tests(struct exam_test *tests, size_t count);
 extern void exam_run_tests(struct exam_test *tests, size_t count, struct exam_filter options);
 extern void exam_run_test(struct exam_test *test);
+
+extern struct exam_cli_state exam_cli_state;
 extern int exam_cli_main(int argc, char **argv);
 #ifdef __cplusplus
 }
@@ -235,7 +237,7 @@ static int exam_test_compare(const void *a, const void *b)
 #define EXAM_CLI_YELLOW "\033[33m"
 #define EXAM_CLI_CYAN   "\033[36m"
 
-static struct exam_cli_state exam_cli_state = {0};
+struct exam_cli_state exam_cli_state = {0};
 
 static void exam_cli_cmd_run();
 static void exam_cli_cmd_ls();
