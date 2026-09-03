@@ -7,21 +7,6 @@
 #include <stdarg.h> /* va_list, va_start(), va_end() */
 #include <stdbool.h>
 
-#ifdef EXAM_SHORT_NAMES
-#define ASSERT EXAM_ASSERT
-#define ASSERT_TRUE EXAM_ASSERT_TRUE
-#define ASSERT_FALSE EXAM_ASSERT_FALSE
-#define ASSERT_NULL EXAM_ASSERT_NULL
-#define ASSERT_NOT_NULL EXAM_ASSERT_NOT_NULL
-#define ASSERT_EQ_INT EXAM_ASSERT_EQ_INT
-#define ASSERT_EQ_UINT EXAM_ASSERT_EQ_UINT
-#define ASSERT_EQ_FLOAT EXAM_ASSERT_EQ_FLOAT
-#define ASSERT_EQ_DOUBLE EXAM_ASSERT_EQ_DOUBLE
-#define ASSERT_EQ_STR EXAM_ASSERT_EQ_STR
-
-#define DEFINE_TEST EXAM_DEFINE_TEST
-#endif /* EXAM_SHORT_NAMES */
-
 #define EXAM_ASSERT(cond) \
     do { \
         if (!(cond)) { \
@@ -98,6 +83,7 @@ struct exam_state
 
 struct exam_cli_state
 {
+    bool parallel;
     struct exam_filter filter;
     bool no_color;
 };
@@ -108,6 +94,7 @@ extern "C" {
 extern struct exam_state exam_state;
 extern bool exam_test_passes_filter(const struct exam_test *test, struct exam_filter filter);
 extern void exam_sort_tests(struct exam_test *tests, size_t count);
+extern void exam_run_tests_parallel(struct exam_test *tests, size_t count, struct exam_filter filter);
 extern void exam_run_tests(struct exam_test *tests, size_t count, struct exam_filter options);
 extern void exam_run_test(struct exam_test *test);
 
@@ -116,12 +103,28 @@ extern int exam_cli_main(int argc, char **argv);
 #ifdef __cplusplus
 }
 #endif
+
+#ifdef EXAM_SHORT_NAMES
+#define ASSERT EXAM_ASSERT
+#define ASSERT_TRUE EXAM_ASSERT_TRUE
+#define ASSERT_FALSE EXAM_ASSERT_FALSE
+#define ASSERT_NULL EXAM_ASSERT_NULL
+#define ASSERT_NOT_NULL EXAM_ASSERT_NOT_NULL
+#define ASSERT_EQ_INT EXAM_ASSERT_EQ_INT
+#define ASSERT_EQ_UINT EXAM_ASSERT_EQ_UINT
+#define ASSERT_EQ_FLOAT EXAM_ASSERT_EQ_FLOAT
+#define ASSERT_EQ_DOUBLE EXAM_ASSERT_EQ_DOUBLE
+#define ASSERT_EQ_STR EXAM_ASSERT_EQ_STR
+
+#define DEFINE_TEST EXAM_DEFINE_TEST
+#endif /* EXAM_SHORT_NAMES */
 #endif /* EXAM_H */
 
 #ifdef EXAM_SOURCE
 #ifdef __linux__
-#include <sys/types.h>
+#include <pthread.h>
 #include <unistd.h>
+#include <sys/types.h>
 #include <sys/wait.h>
 #else
 #error "Your platform is currently not supported"
@@ -129,9 +132,52 @@ extern int exam_cli_main(int argc, char **argv);
 
 struct exam_state exam_state = {0};
 
+static void *exam_run_worker(void *arg);
 static void exam_dief(const char *fmt, ...);
 static void exam_die_errno(const char *str);
 static int exam_test_compare(const void *a, const void *b);
+
+struct exam_test_queue
+{
+    struct exam_test *tests;
+    size_t tests_count;
+    struct exam_filter filter;
+    size_t next_test_index;
+    pthread_mutex_t lock;
+};
+
+void exam_run_tests_parallel(struct exam_test *tests, size_t count, struct exam_filter filter)
+{
+    size_t cpu_count = sysconf(_SC_NPROCESSORS_ONLN);
+    if (cpu_count <= 0)
+        cpu_count = 1;
+
+    size_t worker_count = cpu_count;
+    if (worker_count > count)
+        worker_count = count;
+
+    pthread_t *threads = malloc(worker_count * sizeof(*threads));
+    if (threads == NULL)
+        exam_die_errno("malloc");
+
+    struct exam_test_queue worker = {
+        .tests = tests,
+        .tests_count = count,
+        .filter = filter,
+        .next_test_index = 0
+    };
+    pthread_mutex_init(&worker.lock, NULL);
+
+    for (size_t i = 0; i < worker_count; i ++) {
+        if (pthread_create(&threads[i], NULL, exam_run_worker, &worker) != 0)
+            exam_die_errno("pthread_create");
+    }
+    for (size_t i = 0; i < worker_count; i ++)
+        pthread_join(threads[i], NULL);
+
+    free(threads);
+    pthread_mutex_destroy(&worker.lock);
+}
 
 void exam_run_tests(struct exam_test *tests, size_t count, struct exam_filter filter)
 {
@@ -141,6 +187,30 @@ void exam_run_tests(struct exam_test *tests, size_t count, struct exam_filter fi
 
         exam_run_test(&tests[i]);
     }
+}
+
+void *exam_run_worker(void *arg)
+{
+    struct exam_test_queue *worker = arg;
+
+    while (true) {
+        pthread_mutex_lock(&worker->lock);
+        size_t idx = worker->next_test_index;
+        if (idx < worker->tests_count)
+            worker->next_test_index++;
+        pthread_mutex_unlock(&worker->lock);
+
+        if (idx >= worker->tests_count)
+            break;
+
+        struct exam_test *test = &worker->tests[idx];
+        if (!exam_test_passes_filter(test, worker->filter))
+            continue;
+
+        exam_run_test(test);
+    }
+
+    return NULL;
 }
 
 void exam_run_test(struct exam_test *test)
@@ -251,16 +321,15 @@ int exam_cli_main(int argc, char **argv)
     /* options */
     int command_count = 1;
     for (int i = 1; i < argc; i ++) {
-        if (strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--test-name") == 0) {
+        if (strcmp(argv[i], "-p") == 0 || strcmp(argv[i], "--parallel") == 0) {
+            exam_cli_state.parallel = true;
+        } else if (strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--test-name") == 0) {
             if (i == argc - 1 || argv[i + 1][0] == '-')
                 exam_dief("%sexpected name%s\n",
                           exam_cli_color(EXAM_CLI_RED),
                           exam_cli_color(EXAM_CLI_RESET));
 
             exam_cli_state.filter.test_name = argv[++i];
-        } else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
-            exam_cli_usage();
-            exit(EXIT_SUCCESS);
         } else if (strcmp(argv[i], "-c") == 0 || strcmp(argv[i], "--category") == 0) {
             if (i == argc - 1 || argv[i + 1][0] == '-')
                 exam_dief("%sexpected category%s\n",
@@ -270,6 +339,9 @@ int exam_cli_main(int argc, char **argv)
             exam_cli_state.filter.category_name = argv[++i];
         } else if (strcmp(argv[i], "--no-color") == 0) {
             exam_cli_state.no_color = true;
+        } else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
+            exam_cli_usage();
+            exit(EXIT_SUCCESS);
         } else if (argv[i][0] == '-') {
             exam_cli_usage();
             exam_dief("%sunknown option '%s'%s\n",
@@ -312,7 +384,10 @@ int exam_cli_main(int argc, char **argv)
 
 static void exam_cli_cmd_run()
 {
-    exam_run_tests(exam_state.tests, exam_state.tests_count, exam_cli_state.filter);
+    if (exam_cli_state.parallel)
+        exam_run_tests_parallel(exam_state.tests, exam_state.tests_count, exam_cli_state.filter);
+    else
+        exam_run_tests(exam_state.tests, exam_state.tests_count, exam_cli_state.filter);
 
     for (size_t i = 0; i < exam_state.tests_count; i++) {
         struct exam_test *test = &exam_state.tests[i];
@@ -399,7 +474,7 @@ static void exam_cli_usage()
 {
     printf("%s"EXAM_CLI_NAME"%s - Find and run unit tests\n"
            "%susage%s:\n"
-           "     %s"EXAM_CLI_NAME" run%s\n"
+           "     %s"EXAM_CLI_NAME" run%s [-p|--parallel]\n"
            "     %s"EXAM_CLI_NAME" ls%s\n"
            "\n"
            "%soptions%s:\n"
