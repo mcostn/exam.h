@@ -29,19 +29,14 @@
     static void exam_reg_##category_name##_##test_name(void) __attribute__((constructor)); \
     static void exam_reg_##category_name##_##test_name(void) \
     { \
-        size_t idx = exam_state.tests_count++; \
-        if (exam_state.tests == NULL || exam_state.tests_count > exam_state.tests_capacity) { \
-            size_t min_cap = exam_state.tests_count; \
-            if (min_cap < 4) min_cap = 4; \
-            else min_cap = exam_state.tests_capacity * 2; \
-            exam_state.tests_capacity = min_cap; \
-            exam_state.tests = realloc(exam_state.tests, sizeof(*exam_state.tests) * exam_state.tests_capacity); \
-        } \
-        exam_state.tests[idx].category = #category_name;\
-        exam_state.tests[idx].name = #test_name; \
-        exam_state.tests[idx].func = exam_def_##category_name##_##test_name; \
-        exam_state.tests[idx].file = __FILE__; \
-        exam_state.tests[idx].line = __LINE__; \
+        struct exam_test test = { \
+            .category = #category_name, \
+            .name = #test_name, \
+            .func = exam_def_##category_name##_##test_name, \
+            .file = __FILE__, \
+            .line = __LINE__, \
+        }; \
+        exam_list_append(&exam_state.test_list, &test); \
     } \
     static void exam_def_##category_name##_##test_name(void)
 
@@ -65,6 +60,13 @@ struct exam_test
     int exit_signal; /* in case state = EXAM_TEST_CRASHED */
 };
 
+struct exam_test_list
+{
+    struct exam_test *data;
+    size_t count;
+    size_t capacity;
+};
+
 struct exam_filter
 {
     char *category_name;
@@ -73,9 +75,7 @@ struct exam_filter
 
 struct exam_state
 {
-    struct exam_test *tests;
-    size_t tests_count;
-    size_t tests_capacity;
+    struct exam_test_list test_list;
     size_t passed;
     size_t failed;
     size_t crashed;
@@ -93,10 +93,12 @@ extern "C" {
 #endif
 extern struct exam_state exam_state;
 extern bool exam_test_passes_filter(const struct exam_test *test, struct exam_filter filter);
-extern void exam_sort_tests(struct exam_test *tests, size_t count);
-extern void exam_run_tests_parallel(struct exam_test *tests, size_t count, struct exam_filter filter);
-extern void exam_run_tests(struct exam_test *tests, size_t count, struct exam_filter options);
+extern void exam_run_tests_parallel(struct exam_test_list *list, struct exam_filter filter);
+extern void exam_run_tests(struct exam_test_list *list, struct exam_filter options);
 extern void exam_run_test(struct exam_test *test);
+extern void exam_list_append(struct exam_test_list *list, const struct exam_test *test);
+extern void exam_list_destroy(struct exam_test_list *list);
+extern void exam_list_sort(struct exam_test_list *list);
 
 extern struct exam_cli_state exam_cli_state;
 extern int exam_cli_main(int argc, char **argv);
@@ -139,30 +141,28 @@ static int exam_test_compare(const void *a, const void *b);
 
 struct exam_test_queue
 {
-    struct exam_test *tests;
-    size_t tests_count;
+    struct exam_test_list *test_list;
     struct exam_filter filter;
     size_t next_test_index;
     pthread_mutex_t lock;
 };
 
-void exam_run_tests_parallel(struct exam_test *tests, size_t count, struct exam_filter filter)
+void exam_run_tests_parallel(struct exam_test_list *list, struct exam_filter filter)
 {
     size_t cpu_count = sysconf(_SC_NPROCESSORS_ONLN);
     if (cpu_count <= 0)
         cpu_count = 1;
 
     size_t worker_count = cpu_count;
-    if (worker_count > count)
-        worker_count = count;
+    if (worker_count > list->count)
+        worker_count = list->count;
 
     pthread_t *threads = malloc(worker_count * sizeof(*threads));
     if (threads == NULL)
         exam_die_errno("malloc");
 
     struct exam_test_queue worker = {
-        .tests = tests,
-        .tests_count = count,
+        .test_list = list,
         .filter = filter,
         .next_test_index = 0
     };
@@ -179,13 +179,13 @@ void exam_run_tests_parallel(struct exam_test *tests, size_t count, struct exam_
     pthread_mutex_destroy(&worker.lock);
 }
 
-void exam_run_tests(struct exam_test *tests, size_t count, struct exam_filter filter)
+void exam_run_tests(struct exam_test_list *list, struct exam_filter filter)
 {
-    for (size_t i = 0; i < count; i ++) {
-        if (!exam_test_passes_filter(&tests[i], filter))
+    for (size_t i = 0; i < list->count; i ++) {
+        if (!exam_test_passes_filter(&list->data[i], filter))
             continue;
 
-        exam_run_test(&tests[i]);
+        exam_run_test(&list->data[i]);
     }
 }
 
@@ -196,14 +196,14 @@ void *exam_run_worker(void *arg)
     while (true) {
         pthread_mutex_lock(&worker->lock);
         size_t idx = worker->next_test_index;
-        if (idx < worker->tests_count)
+        if (idx < worker->test_list->count)
             worker->next_test_index++;
         pthread_mutex_unlock(&worker->lock);
 
-        if (idx >= worker->tests_count)
+        if (idx >= worker->test_list->count)
             break;
 
-        struct exam_test *test = &worker->tests[idx];
+        struct exam_test *test = &worker->test_list->data[idx];
         if (!exam_test_passes_filter(test, worker->filter))
             continue;
 
@@ -265,11 +265,40 @@ bool exam_test_passes_filter(const struct exam_test *test, struct exam_filter fi
     return out;
 }
 
-void exam_sort_tests(struct exam_test *tests, size_t count)
+void exam_list_append(struct exam_test_list *list, const struct exam_test *test)
 {
-    qsort(tests, count, sizeof(*tests), exam_test_compare);
+    size_t idx = list->count ++;
+    if (list->data == NULL || list->count > list->capacity) {
+        size_t min_cap = list->count;
+        if (min_cap < 4)
+            min_cap = 4;
+        else
+            min_cap = list->capacity *= 2;
+
+        list->capacity = min_cap;
+        list->data = realloc(list->data, sizeof(*list->data) * list->capacity);
+        if (list->data == NULL)
+            exam_die_errno("realloc");
+    }
+
+    list->data[idx] = *test;
 }
 
+void exam_list_destroy(struct exam_test_list *list)
+{
+    if (list->data == NULL)
+        return;
+
+    free(list->data);
+    list->data = NULL;
+    list->count = 0;
+    list->capacity = 0;
+}
+
+void exam_list_sort(struct exam_test_list *list)
+{
+    qsort(list->data, list->count, sizeof(*list->data), exam_test_compare);
+}
 
 static void exam_dief(const char *fmt, ...)
 {
@@ -316,7 +345,7 @@ static const char *exam_cli_color(const char *color);
 
 int exam_cli_main(int argc, char **argv)
 {
-    exam_sort_tests(exam_state.tests, exam_state.tests_count);
+    exam_list_sort(&exam_state.test_list);
 
     /* options */
     int command_count = 1;
@@ -379,18 +408,19 @@ int exam_cli_main(int argc, char **argv)
         }
     }
 
+    exam_list_destroy(&exam_state.test_list);
     return EXIT_SUCCESS;
 }
 
 static void exam_cli_cmd_run()
 {
     if (exam_cli_state.parallel)
-        exam_run_tests_parallel(exam_state.tests, exam_state.tests_count, exam_cli_state.filter);
+        exam_run_tests_parallel(&exam_state.test_list, exam_cli_state.filter);
     else
-        exam_run_tests(exam_state.tests, exam_state.tests_count, exam_cli_state.filter);
+        exam_run_tests(&exam_state.test_list, exam_cli_state.filter);
 
-    for (size_t i = 0; i < exam_state.tests_count; i++) {
-        struct exam_test *test = &exam_state.tests[i];
+    for (size_t i = 0; i < exam_state.test_list.count; i++) {
+        struct exam_test *test = &exam_state.test_list.data[i];
         if (!exam_test_passes_filter(test, exam_cli_state.filter))
             continue;
 
@@ -452,8 +482,8 @@ static void exam_cli_cmd_run()
 static void exam_cli_cmd_ls()
 {
     size_t found = 0;
-    for (size_t i = 0; i < exam_state.tests_count; i++) {
-        const struct exam_test *test = &exam_state.tests[i];
+    for (size_t i = 0; i < exam_state.test_list.count; i++) {
+        const struct exam_test *test = &exam_state.test_list.data[i];
         if (!exam_test_passes_filter(test, exam_cli_state.filter))
             continue;
 
