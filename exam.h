@@ -5,24 +5,25 @@
 #include <stdlib.h> /* exit(), EXIT_FAILURE */
 #include <string.h> /* strcmp() */
 #include <stdarg.h> /* va_list, va_start(), va_end() */
-#include <stdbool.h>
+#include <stdbool.h> /* true */
+#include <stdint.h> /* intmax_t */
 
-#define EXAM_ASSERT(cond) \
-    do { \
-        if (!(cond)) { \
-            exit(EXIT_FAILURE); \
-        } \
-    } while (0)
-
-#define EXAM_ASSERT_TRUE(cond) EXAM_ASSERT(cond)
-#define EXAM_ASSERT_FALSE(cond) EXAM_ASSERT(!(cond))
-#define EXAM_ASSERT_NULL(p) EXAM_ASSERT((p) == NULL)
-#define EXAM_ASSERT_NOT_NULL(p) EXAM_ASSERT((p) != NULL)
-#define EXAM_ASSERT_EQ_INT(val, exp) EXAM_ASSERT((int)(val) == (int)exp)
-#define EXAM_ASSERT_EQ_UINT(val, exp) EXAM_ASSERT((unsigned int)(val) == (unsigned int)exp)
-#define EXAM_ASSERT_EQ_FLOAT(val, exp) EXAM_ASSERT((float)(val) == (float)exp)
-#define EXAM_ASSERT_EQ_DOUBLE(val, exp) EXAM_ASSERT((double)(val) == (double)exp)
-#define EXAM_ASSERT_EQ_STR(val, exp) EXAM_ASSERT((val) != NULL && (exp) != NULL && strcmp((val), (exp)) == 0)
+#define EXAM_ASSERT_TRUE(cond) _exam_assert_true((cond), #cond, __FILE__, __LINE__)
+#define EXAM_ASSERT_FALSE(cond) _exam_assert_false((cond), #cond, __FILE__, __LINE__)
+#define EXAM_ASSERT_EQ_PTR(a, b) _exam_assert_eq_ptr((a), (b), __FILE__, __LINE__)
+#define EXAM_ASSERT_NEQ_PTR(a, b) _exam_assert_neq_ptr((a), (b), __FILE__, __LINE__)
+#define EXAM_ASSERT_NULL(ptr) _exam_assert_eq_ptr((ptr), NULL, __FILE__, __LINE__)
+#define EXAM_ASSERT_NON_NULL(ptr) _exam_assert_neq_ptr((ptr), NULL, __FILE__, __LINE__)
+#define EXAM_ASSERT_EQ_INT(a, b) _exam_assert_eq_int((a), (b), __FILE__, __LINE__)
+#define EXAM_ASSERT_NEQ_INT(a, b) _exam_assert_neq_int((a), (b), __FILE__, __LINE__)
+#define EXAM_ASSERT_EQ_UINT(a, b) _exam_assert_eq_uint((a), (b), __FILE__, __LINE__)
+#define EXAM_ASSERT_NEQ_UINT(a, b) _exam_assert_neq_uint((a), (b), __FILE__, __LINE__)
+#define EXAM_ASSERT_EQ_FLOAT(a, b) _exam_assert_eq_float((a), (b), __FILE__, __LINE__)
+#define EXAM_ASSERT_NEQ_FLOAT(a, b) _exam_assert_neq_float((a), (b), __FILE__, __LINE__)
+#define EXAM_ASSERT_EQ_DOUBLE(a, b) _exam_assert_eq_double((a), (b), __FILE__, __LINE__)
+#define EXAM_ASSERT_NEQ_DOUBLE(a, b) _exam_assert_neq_double((a), (b), __FILE__, __LINE__)
+#define EXAM_ASSERT_EQ_STR(a, b) _exam_assert_eq_str((a), (b), __FILE__, __LINE__)
+#define EXAM_ASSERT_NEQ_STR(a, b) _exam_assert_neq_str((a), (b), __FILE__, __LINE__)
 
 #define EXAM_DEFINE_TEST(category_name, test_name) \
     static void exam_def_##category_name##_##test_name(void); \
@@ -91,6 +92,15 @@ struct exam_cli_state
 #ifdef __cplusplus
 extern "C" {
 #endif
+extern void _exam_assert_true(bool result, const char *expression, const char *file, size_t line);
+extern void _exam_assert_false(bool result, const char *expression, const char *file, size_t line);
+extern void _exam_assert_eq_ptr(void *a, void *b, const char *file, size_t line);
+extern void _exam_assert_neq_ptr(void *a, void *b, const char *file, size_t line);
+extern void _exam_assert_eq_int(intmax_t a, intmax_t b, const char *file, size_t line);
+extern void _exam_assert_neq_int(intmax_t a, intmax_t b, const char *file, size_t line);
+extern void _exam_assert_eq_uint(uintmax_t a, uintmax_t b, const char *file, size_t line);
+extern void _exam_assert_neq_uint(uintmax_t a, uintmax_t b, const char *file, size_t line);
+
 extern struct exam_state exam_state;
 extern bool exam_test_passes_filter(const struct exam_test *test, struct exam_filter filter);
 extern void exam_run_tests_parallel(struct exam_test_list *list, struct exam_filter filter);
@@ -118,10 +128,191 @@ extern int exam_cli_main(int argc, char **argv);
 
 struct exam_state exam_state = {0};
 
+static int exam_test_compare(const void *a, const void *b);
 static void *exam_run_worker(void *arg);
+
 static void exam_dief(const char *fmt, ...);
 static void exam_die_errno(const char *str);
-static int exam_test_compare(const void *a, const void *b);
+
+void _exam_assert_true(bool res, const char *expression, const char *file, size_t line)
+{
+    if (!res) {
+        fprintf(stderr,
+                "[%s:%zu] %s is not true\n",
+                file,
+                line,
+                expression);
+        exit(EXIT_FAILURE);
+    }
+}
+
+void _exam_assert_false(bool res, const char *expression, const char *file, size_t line)
+{
+    if (res) {
+        fprintf(stderr,
+                "[%s:%zu] %s is not false\n",
+                file,
+                line,
+                expression);
+        exit(EXIT_FAILURE);
+    }
+}
+
+void _exam_assert_eq_ptr(void *a, void *b, const char *file, size_t line)
+{
+    if (a != b) {
+        fprintf(stderr,
+                "[%s:%zu] %p != %p\n",
+                file,
+                line,
+                a,
+                b);
+        exit(EXIT_FAILURE);
+    }
+}
+
+void _exam_assert_neq_ptr(void *a, void *b, const char *file, size_t line)
+{
+    if (a == b) {
+        fprintf(stderr,
+                "[%s:%zu] %p == %p\n",
+                file,
+                line,
+                a,
+                b);
+        exit(EXIT_FAILURE);
+    }
+}
+
+void _exam_assert_eq_int(intmax_t a, intmax_t b, const char *file, size_t line)
+{
+    if (a != b) {
+        fprintf(stderr,
+                "[%s:%zu] %jd != %jd\n",
+                file,
+                line,
+                a,
+                b);
+        exit(EXIT_FAILURE);
+    }
+}
+
+void _exam_assert_neq_int(intmax_t a, intmax_t b, const char *file, size_t line)
+{
+    if (a == b) {
+        fprintf(stderr,
+                "[%s:%zu] %jd == %jd\n",
+                file,
+                line,
+                a,
+                b);
+        exit(EXIT_FAILURE);
+    }
+}
+
+void _exam_assert_eq_uint(uintmax_t a, uintmax_t b, const char *file, size_t line)
+{
+    if (a != b) {
+        fprintf(stderr,
+                "[%s:%zu] %ju != %ju\n",
+                file,
+                line,
+                a,
+                b);
+        exit(EXIT_FAILURE);
+    }
+}
+
+void _exam_assert_neq_uint(uintmax_t a, uintmax_t b, const char *file, size_t line)
+{
+    if (a == b) {
+        fprintf(stderr,
+                "[%s:%zu] %ju == %ju\n",
+                file,
+                line,
+                a,
+                b);
+        exit(EXIT_FAILURE);
+    }
+}
+
+void _exam_assert_eq_float(float a, float b, const char *file, size_t line)
+{
+    if (a != b) {
+        fprintf(stderr,
+                "[%s:%zu] %f != %f\n",
+                file,
+                line,
+                a,
+                b);
+        exit(EXIT_FAILURE);
+    }
+}
+
+void _exam_assert_neq_float(float a, float b, const char *file, size_t line)
+{
+    if (a == b) {
+        fprintf(stderr,
+                "[%s:%zu] %f == %f\n",
+                file,
+                line,
+                a,
+                b);
+        exit(EXIT_FAILURE);
+    }
+}
+
+void _exam_assert_eq_double(double a, double b, const char *file, size_t line)
+{
+    if (a != b) {
+        fprintf(stderr,
+                "[%s:%zu] %f != %f\n",
+                file,
+                line,
+                a,
+                b);
+        exit(EXIT_FAILURE);
+    }
+}
+
+void _exam_assert_neq_double(double a, double b, const char *file, size_t line)
+{
+    if (a == b) {
+        fprintf(stderr,
+                "[%s:%zu] %f == %f\n",
+                file,
+                line,
+                a,
+                b);
+        exit(EXIT_FAILURE);
+    }
+}
+
+void _exam_assert_eq_str(const char *a, const char *b, const char *file, size_t line)
+{
+    if (strcmp(a, b) != 0) {
+        fprintf(stderr,
+                "[%s:%zu] %s != %s\n",
+                file,
+                line,
+                a,
+                b);
+        exit(EXIT_FAILURE);
+    }
+}
+
+void _exam_assert_neq_str(const char *a, const char *b, const char *file, size_t line)
+{
+    if (strcmp(a, b) == 0) {
+        fprintf(stderr,
+                "[%s:%zu] %s == %s\n",
+                file,
+                line,
+                a,
+                b);
+        exit(EXIT_FAILURE);
+    }
+}
 
 struct exam_test_queue
 {
@@ -528,16 +719,22 @@ static const char *exam_cli_color(const char *color)
 #endif /* EXAM_SOURCE */
 
 #ifdef EXAM_SHORT_NAMES
-#define ASSERT EXAM_ASSERT
 #define ASSERT_TRUE EXAM_ASSERT_TRUE
 #define ASSERT_FALSE EXAM_ASSERT_FALSE
+#define ASSERT_EQ_PTR EXAM_ASSERT_EQ_PTR
+#define ASSERT_NEQ_PTR EXAM_ASSERT_NEQ_PTR
 #define ASSERT_NULL EXAM_ASSERT_NULL
-#define ASSERT_NOT_NULL EXAM_ASSERT_NOT_NULL
+#define ASSERT_NON_NULL EXAM_ASSERT_NON_NULL
 #define ASSERT_EQ_INT EXAM_ASSERT_EQ_INT
+#define ASSERT_NEQ_INT EXAM_ASSERT_NEQ_INT
 #define ASSERT_EQ_UINT EXAM_ASSERT_EQ_UINT
+#define ASSERT_NEQ_UINT EXAM_ASSERT_NEQ_UINT
 #define ASSERT_EQ_FLOAT EXAM_ASSERT_EQ_FLOAT
+#define ASSERT_NEQ_FLOAT EXAM_ASSERT_NEQ_FLOAT
 #define ASSERT_EQ_DOUBLE EXAM_ASSERT_EQ_DOUBLE
+#define ASSERT_NEQ_DOUBLE EXAM_ASSERT_NEQ_DOUBLE
 #define ASSERT_EQ_STR EXAM_ASSERT_EQ_STR
+#define ASSERT_NEQ_STR EXAM_ASSERT_NEQ_STR
 
 #define DEFINE_TEST EXAM_DEFINE_TEST
 #endif /* EXAM_SHORT_NAMES */
