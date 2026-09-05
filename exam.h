@@ -2,7 +2,7 @@
 #define EXAM_H
 
 #include <stdio.h> /* printf(), perror() */
-#include <stdlib.h> /* exit(), EXIT_FAILURE */
+#include <stdlib.h> /* malloc(), exit(), EXIT_FAILURE */
 #include <string.h> /* strcmp(), memcmp() */
 #include <stdarg.h> /* va_list, va_start(), va_end() */
 #include <stdbool.h> /* true */
@@ -26,6 +26,10 @@
 #define EXAM_ASSERT_NEQ_STR(a, b) _exam_assert_neq_str((a), (b), __FILE__, __LINE__)
 #define EXAM_ASSERT_EQ_MEM(a, b, size) _exam_assert_eq_mem((a), (b), (size), __FILE__, __LINE__)
 #define EXAM_ASSERT_NEQ_MEM(a, b, size) _exam_assert_neq_mem((a), (b), (size), __FILE__, __LINE__)
+#define EXAM_ASSERT_IN_ARR_INT(x, arr, count) _exam_assert_in_arr_int((x), (arr), (count), __FILE__, __LINE__)
+#define EXAM_ASSERT_NOT_IN_ARR_INT(x, arr, count) _exam_assert_not_in_arr_int((x), (arr), (count), __FILE__, __LINE__)
+#define EXAM_ASSERT_IN_ARR_UINT(x, arr, count) _exam_assert_in_arr_uint((x), (arr), (count), __FILE__, __LINE__)
+#define EXAM_ASSERT_NOT_IN_ARR_UINT(x, arr, count) _exam_assert_not_in_arr_uint((x), (arr), (count), __FILE__, __LINE__)
 
 #define _EXAM_REG_NAME(category_name, test_name) \
     exam_reg_##category_name##_##test_name
@@ -104,6 +108,18 @@ extern void _exam_assert_eq_int(intmax_t a, intmax_t b, const char *file, size_t
 extern void _exam_assert_neq_int(intmax_t a, intmax_t b, const char *file, size_t line);
 extern void _exam_assert_eq_uint(uintmax_t a, uintmax_t b, const char *file, size_t line);
 extern void _exam_assert_neq_uint(uintmax_t a, uintmax_t b, const char *file, size_t line);
+extern void _exam_assert_eq_float(float a, float b, const char *file, size_t line);
+extern void _exam_assert_neq_float(float a, float b, const char *file, size_t line);
+extern void _exam_assert_eq_double(double a, double b, const char *file, size_t line);
+extern void _exam_assert_neq_double(double a, double b, const char *file, size_t line);
+extern void _exam_assert_eq_str(const char *a, const char *b, const char *file, size_t line);
+extern void _exam_assert_neq_str(const char *a, const char *b, const char *file, size_t line);
+extern void _exam_assert_neq_mem(const void *a, const void *b, size_t size, const char *file, size_t line);
+extern void _exam_assert_eq_mem(const void *a, const void *b, size_t size, const char *file, size_t line);
+extern void _exam_assert_in_arr_int(intmax_t x, const intmax_t *arr, size_t count, const char *file, size_t line);
+extern void _exam_assert_not_in_arr_int(intmax_t x, const intmax_t *arr, size_t count, const char *file, size_t line);
+extern void _exam_assert_in_arr_uint(uintmax_t x, const uintmax_t *arr, size_t count, const char *file, size_t line);
+extern void _exam_assert_not_in_arr_uint(uintmax_t x, const uintmax_t *arr, size_t count, const char *file, size_t line);
 
 extern struct exam_state exam_state;
 extern bool exam_test_passes_filter(const struct exam_test *test, struct exam_filter filter);
@@ -341,6 +357,72 @@ void _exam_assert_neq_mem(const void *a, const void *b, size_t size, const char 
                 a,
                 b);
         exit(EXIT_FAILURE);
+    }
+}
+
+void _exam_assert_in_arr_int(intmax_t x, const intmax_t *arr, size_t count, const char *file, size_t line)
+{
+    for (size_t i = 0; i < count; i ++) {
+        if (arr[i] == x)
+            return;
+    }
+
+    fprintf(stderr,
+            "[%s:%zu] %jd not in %p (count=%zu)",
+            file,
+            line,
+            x,
+            (void*)arr,
+            count);
+    exit(EXIT_FAILURE);
+}
+
+void _exam_assert_not_in_arr_int(intmax_t x, const intmax_t *arr, size_t count, const char *file, size_t line)
+{
+    for (size_t i = 0; i < count; i ++) {
+        if (arr[i] == x) {
+            fprintf(stderr,
+                    "[%s:%zu] %jd in %p (count=%zu)",
+                    file,
+                    line,
+                    x,
+                    (void*)arr,
+                    count);
+            exit(EXIT_FAILURE);
+        }
+    }
+}
+
+void _exam_assert_in_arr_uint(uintmax_t x, const uintmax_t *arr, size_t count, const char *file, size_t line)
+{
+    for (size_t i = 0; i < count; i ++) {
+        if (arr[i] == x)
+            return;
+    }
+
+    fprintf(stderr,
+            "[%s:%zu] %ju not in %p (count=%zu)",
+            file,
+            line,
+            x,
+            (void*)arr,
+            count);
+    exit(EXIT_FAILURE);
+}
+
+void _exam_assert_not_in_arr_uint(uintmax_t x, const uintmax_t *arr, size_t count, const char *file, size_t line)
+{
+    for (size_t i = 0; i < count; i ++) {
+        if (arr[i] == x) {
+            fprintf(stderr,
+                    "[%s:%zu] %ju in %p (count=%zu)",
+                    file,
+                    line,
+                    x,
+                    (void*)arr,
+                    count);
+            exit(EXIT_FAILURE);
+        }
     }
 }
 
@@ -763,6 +845,10 @@ static const char *exam_cli_color(const char *color)
 #define ASSERT_NEQ_STR EXAM_ASSERT_NEQ_STR
 #define ASSERT_EQ_MEM EXAM_ASSERT_EQ_MEM
 #define ASSERT_NEQ_MEM EXAM_ASSERT_NEQ_MEM
+#define ASSERT_IN_ARR_INT EXAM_ASSERT_IN_ARR_INT
+#define ASSERT_NOT_IN_ARR_INT EXAM_ASSERT_NOT_IN_ARR_INT
+#define ASSERT_IN_ARR_UINT EXAM_ASSERT_IN_ARR_UINT
+#define ASSERT_NOT_IN_ARR_UINT EXAM_ASSERT_NOT_IN_ARR_UINT
 
 #define DEFINE_TEST EXAM_DEFINE_TEST
 #endif /* EXAM_SHORT_NAMES */
