@@ -27,19 +27,25 @@
 #define EXAM_ASSERT_EQ_MEM(a, b, size) _exam_assert_eq_mem((a), (b), (size), __FILE__, __LINE__)
 #define EXAM_ASSERT_NEQ_MEM(a, b, size) _exam_assert_neq_mem((a), (b), (size), __FILE__, __LINE__)
 
+#define _EXAM_REG_NAME(category_name, test_name) \
+    exam_reg_##category_name##_##test_name
+
+#define _EXAM_DEF_NAME(category_name, test_name) \
+    exam_def_##category_name##_##test_name
+
 #define EXAM_DEFINE_TEST(category_name, test_name) \
-    static void exam_def_##category_name##_##test_name(void); \
-    static void exam_reg_##category_name##_##test_name(void) __attribute__((constructor)); \
-    static void exam_reg_##category_name##_##test_name(void) \
+    static void _EXAM_DEF_NAME(category_name, test_name)(void); \
+    static void _EXAM_REG_NAME(category_name, test_name)(void) __attribute__((constructor)); \
+    static void _EXAM_REG_NAME(category_name, test_name)(void) \
     { \
         struct exam_test test = { \
             .category = #category_name, \
             .name = #test_name, \
-            .func = exam_def_##category_name##_##test_name, \
+            .func = _EXAM_DEF_NAME(category_name, test_name), \
         }; \
         exam_list_append(&exam_state.test_list, &test); \
     } \
-    static void exam_def_##category_name##_##test_name(void)
+    static void _EXAM_DEF_NAME(category_name, test_name)(void)
 
 enum exam_test_state
 {
