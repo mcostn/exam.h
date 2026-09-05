@@ -34,8 +34,6 @@
             .category = #category_name, \
             .name = #test_name, \
             .func = exam_def_##category_name##_##test_name, \
-            .file = __FILE__, \
-            .line = __LINE__, \
         }; \
         exam_list_append(&exam_state.test_list, &test); \
     } \
@@ -55,8 +53,6 @@ struct exam_test
     char *category;
     char *name;
     void (*func)(void);
-    char *file;
-    size_t line;
     enum exam_test_state state;
     int exit_signal; /* in case state = EXAM_TEST_CRASHED */
 };
@@ -324,7 +320,7 @@ struct exam_test_queue
 
 void exam_run_tests_parallel(struct exam_test_list *list, struct exam_filter filter)
 {
-    size_t cpu_count = sysconf(_SC_NPROCESSORS_ONLN);
+    long cpu_count = sysconf(_SC_NPROCESSORS_ONLN);
     if (cpu_count <= 0)
         cpu_count = 1;
 
@@ -612,10 +608,8 @@ static void exam_cli_cmd_run()
             case EXAM_TEST_FAILED:
                 exam_state.failed ++;
                 fprintf(stderr,
-                        "%s[FAIL %s:%zu] %s/%s%s\n",
+                        "%s[FAIL] %s/%s%s\n",
                         exam_cli_color(EXAM_CLI_RED),
-                        test->file,
-                        test->line,
                         test->category,
                         test->name,
                         exam_cli_color(EXAM_CLI_RESET));
@@ -623,10 +617,8 @@ static void exam_cli_cmd_run()
             case EXAM_TEST_CRASHED:
                 exam_state.crashed ++;
                 fprintf(stderr,
-                        "%s[CRASH %s:%zu] %s/%s (signal %d)%s\n",
+                        "%s[CRASH] %s/%s (signal %d)%s\n",
                         exam_cli_color(EXAM_CLI_YELLOW),
-                        test->file,
-                        test->line,
                         test->category,
                         test->name,
                         test->exit_signal,
