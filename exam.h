@@ -3,7 +3,7 @@
 
 #include <stdio.h> /* printf(), perror() */
 #include <stdlib.h> /* exit(), EXIT_FAILURE */
-#include <string.h> /* strcmp() */
+#include <string.h> /* strcmp(), memcmp() */
 #include <stdarg.h> /* va_list, va_start(), va_end() */
 #include <stdbool.h> /* true */
 #include <stdint.h> /* intmax_t */
@@ -24,6 +24,8 @@
 #define EXAM_ASSERT_NEQ_DOUBLE(a, b) _exam_assert_neq_double((a), (b), __FILE__, __LINE__)
 #define EXAM_ASSERT_EQ_STR(a, b) _exam_assert_eq_str((a), (b), __FILE__, __LINE__)
 #define EXAM_ASSERT_NEQ_STR(a, b) _exam_assert_neq_str((a), (b), __FILE__, __LINE__)
+#define EXAM_ASSERT_EQ_MEM(a, b, size) _exam_assert_eq_mem((a), (b), (size), __FILE__, __LINE__)
+#define EXAM_ASSERT_NEQ_MEM(a, b, size) _exam_assert_neq_mem((a), (b), (size), __FILE__, __LINE__)
 
 #define EXAM_DEFINE_TEST(category_name, test_name) \
     static void exam_def_##category_name##_##test_name(void); \
@@ -302,6 +304,32 @@ void _exam_assert_neq_str(const char *a, const char *b, const char *file, size_t
     if (strcmp(a, b) == 0) {
         fprintf(stderr,
                 "[%s:%zu] %s == %s\n",
+                file,
+                line,
+                a,
+                b);
+        exit(EXIT_FAILURE);
+    }
+}
+
+void _exam_assert_eq_mem(const void *a, const void *b, size_t size, const char *file, size_t line)
+{
+    if (memcmp(a, b, size) == 0) {
+        fprintf(stderr,
+                "[%s:%zu] %p != %p\n",
+                file,
+                line,
+                a,
+                b);
+        exit(EXIT_FAILURE);
+    }
+}
+
+void _exam_assert_neq_mem(const void *a, const void *b, size_t size, const char *file, size_t line)
+{
+    if (memcmp(a, b, size) != 0) {
+        fprintf(stderr,
+                "[%s:%zu] %p == %p\n",
                 file,
                 line,
                 a,
@@ -727,6 +755,8 @@ static const char *exam_cli_color(const char *color)
 #define ASSERT_NEQ_DOUBLE EXAM_ASSERT_NEQ_DOUBLE
 #define ASSERT_EQ_STR EXAM_ASSERT_EQ_STR
 #define ASSERT_NEQ_STR EXAM_ASSERT_NEQ_STR
+#define ASSERT_EQ_MEM EXAM_ASSERT_EQ_MEM
+#define ASSERT_NEQ_MEM EXAM_ASSERT_NEQ_MEM
 
 #define DEFINE_TEST EXAM_DEFINE_TEST
 #endif /* EXAM_SHORT_NAMES */
