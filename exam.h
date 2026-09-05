@@ -50,8 +50,8 @@ enum exam_test_state
 
 struct exam_test
 {
-    char *category;
-    char *name;
+    const char *category;
+    const char *name;
     void (*func)(void);
     enum exam_test_state state;
     int exit_signal; /* in case state = EXAM_TEST_CRASHED */
