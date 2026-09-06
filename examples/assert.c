@@ -12,8 +12,8 @@ int main(void)
     EXAM_ASSERT_NON_NULL((void *)1);
     EXAM_ASSERT_EQ_INT(-1, -1);
     EXAM_ASSERT_EQ_UINT(1, 1);
-    EXAM_ASSERT_EQ_FLOAT(1.2f, 1.2f);
-    EXAM_ASSERT_EQ_DOUBLE(1.2, 1.2);
+    EXAM_ASSERT_EQ_FLOAT(1.2f, 1.2f, 0.0f);
+    EXAM_ASSERT_EQ_DOUBLE(1.2, 1.2, 0.0f);
 
     /* short names */
     ASSERT_TRUE(1 == 1);
@@ -23,8 +23,8 @@ int main(void)
     ASSERT_NON_NULL((void *)1);
     ASSERT_EQ_INT(-1, -1);
     ASSERT_EQ_UINT(1, 1);
-    ASSERT_EQ_FLOAT(1.2f, 1.2f);
-    ASSERT_EQ_DOUBLE(1.2, 1.2);
+    ASSERT_EQ_FLOAT(1.2f, 1.2f, 0.0f);
+    ASSERT_EQ_DOUBLE(1.2, 1.2, 0.0f);
 
     return 0;
 }

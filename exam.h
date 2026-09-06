@@ -5,8 +5,9 @@
 #include <stdlib.h> /* malloc(), exit(), EXIT_FAILURE */
 #include <string.h> /* strcmp(), memcmp() */
 #include <stdarg.h> /* va_list, va_start(), va_end() */
-#include <stdbool.h> /* true */
-#include <stdint.h> /* intmax_t */
+#include <stdbool.h> /* bool, true, false */
+#include <stdint.h> /* intmax_t, uintmax_t */
+#include <math.h> /*  isnan(), isinf() */
 
 #define EXAM_ASSERT_TRUE(cond) _exam_assert_true((cond), #cond, __FILE__, __LINE__)
 #define EXAM_ASSERT_FALSE(cond) _exam_assert_false((cond), #cond, __FILE__, __LINE__)
@@ -18,10 +19,10 @@
 #define EXAM_ASSERT_NEQ_INT(a, b) _exam_assert_neq_int((a), (b), __FILE__, __LINE__)
 #define EXAM_ASSERT_EQ_UINT(a, b) _exam_assert_eq_uint((a), (b), __FILE__, __LINE__)
 #define EXAM_ASSERT_NEQ_UINT(a, b) _exam_assert_neq_uint((a), (b), __FILE__, __LINE__)
-#define EXAM_ASSERT_EQ_FLOAT(a, b) _exam_assert_eq_float((a), (b), __FILE__, __LINE__)
-#define EXAM_ASSERT_NEQ_FLOAT(a, b) _exam_assert_neq_float((a), (b), __FILE__, __LINE__)
-#define EXAM_ASSERT_EQ_DOUBLE(a, b) _exam_assert_eq_double((a), (b), __FILE__, __LINE__)
-#define EXAM_ASSERT_NEQ_DOUBLE(a, b) _exam_assert_neq_double((a), (b), __FILE__, __LINE__)
+#define EXAM_ASSERT_EQ_FLOAT(a, b, eps) _exam_assert_eq_float((a), (b), (eps), __FILE__, __LINE__)
+#define EXAM_ASSERT_NEQ_FLOAT(a, b, eps) _exam_assert_neq_float((a), (b), (eps), __FILE__, __LINE__)
+#define EXAM_ASSERT_EQ_DOUBLE(a, b, eps) _exam_assert_eq_double((a), (b), (eps), __FILE__, __LINE__)
+#define EXAM_ASSERT_NEQ_DOUBLE(a, b, eps) _exam_assert_neq_double((a), (b),(eps), __FILE__, __LINE__)
 #define EXAM_ASSERT_EQ_STR(a, b) _exam_assert_eq_str((a), (b), __FILE__, __LINE__)
 #define EXAM_ASSERT_NEQ_STR(a, b) _exam_assert_neq_str((a), (b), __FILE__, __LINE__)
 #define EXAM_ASSERT_EQ_MEM(a, b, size) _exam_assert_eq_mem((a), (b), (size), __FILE__, __LINE__)
@@ -112,10 +113,10 @@ extern void _exam_assert_eq_int(intmax_t a, intmax_t b, const char *file, size_t
 extern void _exam_assert_neq_int(intmax_t a, intmax_t b, const char *file, size_t line);
 extern void _exam_assert_eq_uint(uintmax_t a, uintmax_t b, const char *file, size_t line);
 extern void _exam_assert_neq_uint(uintmax_t a, uintmax_t b, const char *file, size_t line);
-extern void _exam_assert_eq_float(float a, float b, const char *file, size_t line);
-extern void _exam_assert_neq_float(float a, float b, const char *file, size_t line);
-extern void _exam_assert_eq_double(double a, double b, const char *file, size_t line);
-extern void _exam_assert_neq_double(double a, double b, const char *file, size_t line);
+extern void _exam_assert_eq_float(float a, float b, float eps, const char *file, size_t line);
+extern void _exam_assert_neq_float(float a, float b, float eps, const char *file, size_t line);
+extern void _exam_assert_eq_double(double a, double b, double eps, const char *file, size_t line);
+extern void _exam_assert_neq_double(double a, double b, double eps, const char *file, size_t line);
 extern void _exam_assert_eq_str(const char *a, const char *b, const char *file, size_t line);
 extern void _exam_assert_neq_str(const char *a, const char *b, const char *file, size_t line);
 extern void _exam_assert_neq_mem(const void *a, const void *b, size_t size, const char *file, size_t line);
@@ -157,6 +158,9 @@ extern int exam_cli_main(int argc, char **argv);
 struct exam_state exam_state = {0};
 
 static int exam_test_compare(const void *a, const void *b);
+static bool exam_float_cmp(float a, float b, float eps);
+static bool exam_double_cmp(double a, double b, double eps);
+
 static void *exam_run_worker(void *arg);
 
 static void exam_dief(const char *fmt, ...);
@@ -264,9 +268,9 @@ void _exam_assert_neq_uint(uintmax_t a, uintmax_t b, const char *file, size_t li
     }
 }
 
-void _exam_assert_eq_float(float a, float b, const char *file, size_t line)
+void _exam_assert_eq_float(float a, float b, float eps, const char *file, size_t line)
 {
-    if (a != b) {
+    if (!exam_float_cmp(a, b, eps)) {
         fprintf(stderr,
                 "[%s:%zu] %f != %f\n",
                 file,
@@ -277,9 +281,9 @@ void _exam_assert_eq_float(float a, float b, const char *file, size_t line)
     }
 }
 
-void _exam_assert_neq_float(float a, float b, const char *file, size_t line)
+void _exam_assert_neq_float(float a, float b, float eps, const char *file, size_t line)
 {
-    if (a == b) {
+    if (exam_float_cmp(a, b, eps)) {
         fprintf(stderr,
                 "[%s:%zu] %f == %f\n",
                 file,
@@ -290,9 +294,9 @@ void _exam_assert_neq_float(float a, float b, const char *file, size_t line)
     }
 }
 
-void _exam_assert_eq_double(double a, double b, const char *file, size_t line)
+void _exam_assert_eq_double(double a, double b, double eps, const char *file, size_t line)
 {
-    if (a != b) {
+    if (!exam_double_cmp(a, b, eps)) {
         fprintf(stderr,
                 "[%s:%zu] %f != %f\n",
                 file,
@@ -303,9 +307,9 @@ void _exam_assert_eq_double(double a, double b, const char *file, size_t line)
     }
 }
 
-void _exam_assert_neq_double(double a, double b, const char *file, size_t line)
+void _exam_assert_neq_double(double a, double b, double eps, const char *file, size_t line)
 {
-    if (a == b) {
+    if (exam_double_cmp(a, b, eps)) {
         fprintf(stderr,
                 "[%s:%zu] %f == %f\n",
                 file,
@@ -674,6 +678,46 @@ static int exam_test_compare(const void *a, const void *b)
     if (result == 0)
         result = strcmp(test_a->name, test_b->name);
     return result;
+}
+
+static bool exam_float_cmp(float a, float b, float eps)
+{
+    if (isnan(a) && isnan(b))
+        return true;
+    if (isinf(a) && isinf(b))
+        return ((a < 0) == (b < 0));
+
+    float diff = a - b;
+    diff = (diff > 0 ? diff : -diff);
+    if (isnan(diff) || isinf(diff))
+        return false;
+    if (diff <= eps)
+        return true;
+
+    float absA = (a > 0 ? a : -a);
+    float absB = (b > 0 ? b : -b);
+    float largest = (absA > absB ? absA : absB);
+    return diff <= eps * largest;
+}
+
+static bool exam_double_cmp(double a, double b, double eps)
+{
+    if (isnan(a) && isnan(b))
+        return true;
+    if (isinf(a) && isinf(b))
+        return ((a < 0) == (b < 0));
+
+    double diff = a - b;
+    diff = (diff > 0 ? diff : -diff);
+    if (isnan(diff) || isinf(diff))
+        return false;
+    if (diff <= eps)
+        return true;
+
+    double absA = (a > 0 ? a : -a);
+    double absB = (b > 0 ? b : -b);
+    double largest = (absA > absB ? absA : absB);
+    return diff <= eps * largest;
 }
 
 /* Cli */
