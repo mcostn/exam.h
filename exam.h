@@ -26,6 +26,10 @@
 #define EXAM_ASSERT_NEQ_STR(a, b) _exam_assert_neq_str((a), (b), __FILE__, __LINE__)
 #define EXAM_ASSERT_EQ_MEM(a, b, size) _exam_assert_eq_mem((a), (b), (size), __FILE__, __LINE__)
 #define EXAM_ASSERT_NEQ_MEM(a, b, size) _exam_assert_neq_mem((a), (b), (size), __FILE__, __LINE__)
+#define EXAM_ASSERT_IN_RANGE_INT(x, min, max) _exam_assert_in_range_int((x), (min), (max), __FILE__, __LINE__)
+#define EXAM_ASSERT_NOT_IN_RANGE_INT(x, min, max) _exam_assert_not_in_range_int((x), (min), (max), __FILE__, __LINE__)
+#define EXAM_ASSERT_IN_RANGE_UINT(x, min, max) _exam_assert_in_range_uint((x), (min), (max), __FILE__, __LINE__)
+#define EXAM_ASSERT_NOT_IN_RANGE_UINT(x, min, max) _exam_assert_not_in_range_uint((x), (min), (max), __FILE__, __LINE__)
 #define EXAM_ASSERT_IN_ARR_INT(x, arr, count) _exam_assert_in_arr_int((x), (arr), (count), __FILE__, __LINE__)
 #define EXAM_ASSERT_NOT_IN_ARR_INT(x, arr, count) _exam_assert_not_in_arr_int((x), (arr), (count), __FILE__, __LINE__)
 #define EXAM_ASSERT_IN_ARR_UINT(x, arr, count) _exam_assert_in_arr_uint((x), (arr), (count), __FILE__, __LINE__)
@@ -116,6 +120,10 @@ extern void _exam_assert_eq_str(const char *a, const char *b, const char *file, 
 extern void _exam_assert_neq_str(const char *a, const char *b, const char *file, size_t line);
 extern void _exam_assert_neq_mem(const void *a, const void *b, size_t size, const char *file, size_t line);
 extern void _exam_assert_eq_mem(const void *a, const void *b, size_t size, const char *file, size_t line);
+extern void _exam_assert_in_range_int(intmax_t x, intmax_t min, intmax_t max, const char *file, size_t line);
+extern void _exam_assert_not_in_range_int(intmax_t x, intmax_t min, intmax_t max, const char *file, size_t line);
+extern void _exam_assert_in_range_uint(uintmax_t x, uintmax_t min, uintmax_t max, const char *file, size_t line);
+extern void _exam_assert_not_in_range_uint(uintmax_t x, uintmax_t min, uintmax_t max, const char *file, size_t line);
 extern void _exam_assert_in_arr_int(intmax_t x, const intmax_t *arr, size_t count, const char *file, size_t line);
 extern void _exam_assert_not_in_arr_int(intmax_t x, const intmax_t *arr, size_t count, const char *file, size_t line);
 extern void _exam_assert_in_arr_uint(uintmax_t x, const uintmax_t *arr, size_t count, const char *file, size_t line);
@@ -356,6 +364,62 @@ void _exam_assert_neq_mem(const void *a, const void *b, size_t size, const char 
                 line,
                 a,
                 b);
+        exit(EXIT_FAILURE);
+    }
+}
+
+void _exam_assert_in_range_int(intmax_t x, intmax_t min, intmax_t max, const char *file, size_t line)
+{
+    if (x < min || x > max) {
+        fprintf(stderr,
+                "[%s:%zu] %jd is not within the range [%jd, %jd]\n",
+                file,
+                line,
+                x,
+                min,
+                max);
+        exit(EXIT_FAILURE);
+    }
+}
+
+void _exam_assert_not_in_range_int(intmax_t x, intmax_t min, intmax_t max, const char *file, size_t line)
+{
+    if (x >= min && x <= max) {
+        fprintf(stderr,
+                "[%s:%zu] %jd is within the range [%jd, %jd]\n",
+                file,
+                line,
+                x,
+                min,
+                max);
+        exit(EXIT_FAILURE);
+    }
+}
+
+void _exam_assert_in_range_uint(uintmax_t x, uintmax_t min, uintmax_t max, const char *file, size_t line)
+{
+    if (x >= min && x <= max) {
+        fprintf(stderr,
+                "[%s:%zu] %ju is within the range [%ju, %ju]\n",
+                file,
+                line,
+                x,
+                min,
+                max);
+        exit(EXIT_FAILURE);
+    }
+}
+
+void _exam_assert_not_in_range_uint(uintmax_t x, uintmax_t min, uintmax_t max, const char *file, size_t line)
+{
+    if (x >= min && x <= max) {
+        fprintf(stderr,
+                "[%s:%zu] %ju is within the range [%ju, %ju]\n",
+                file,
+                line,
+                x,
+                min,
+                max);
         exit(EXIT_FAILURE);
     }
 }
@@ -845,6 +909,10 @@ static const char *exam_cli_color(const char *color)
 #define ASSERT_NEQ_STR EXAM_ASSERT_NEQ_STR
 #define ASSERT_EQ_MEM EXAM_ASSERT_EQ_MEM
 #define ASSERT_NEQ_MEM EXAM_ASSERT_NEQ_MEM
+#define ASSERT_IN_RANGE_INT EXAM_ASSERT_IN_RANGE_INT
+#define ASSERT_NOT_IN_RANGE_INT EXAM_ASSERT_NOT_IN_RANGE_INT
+#define ASSERT_IN_RANGE_UINT EXAM_ASSERT_IN_RANGE_UINT
+#define ASSERT_NOT_IN_RANGE_UINT EXAM_ASSERT_NOT_IN_RANGE_UINT
 #define ASSERT_IN_ARR_INT EXAM_ASSERT_IN_ARR_INT
 #define ASSERT_NOT_IN_ARR_INT EXAM_ASSERT_NOT_IN_ARR_INT
 #define ASSERT_IN_ARR_UINT EXAM_ASSERT_IN_ARR_UINT
