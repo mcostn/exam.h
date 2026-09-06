@@ -157,14 +157,14 @@ extern int exam_cli_main(int argc, char **argv);
 
 struct exam_state exam_state = {0};
 
-static int exam_test_compare(const void *a, const void *b);
-static bool exam_float_cmp(float a, float b, float eps);
-static bool exam_double_cmp(double a, double b, double eps);
+static int _exam_test_cmp(const void *a, const void *b);
+static bool _exam_float_cmp(float a, float b, float eps);
+static bool _exam_double_cmp(double a, double b, double eps);
 
-static void *exam_run_worker(void *arg);
+static void *_exam_run_worker(void *arg);
 
-static void exam_dief(const char *fmt, ...);
-static void exam_die_errno(const char *str);
+static void _exam_dief(const char *fmt, ...);
+static void _exam_die_errno(const char *str);
 
 void _exam_assert_true(bool res, const char *expression, const char *file, size_t line)
 {
@@ -270,7 +270,7 @@ void _exam_assert_neq_uint(uintmax_t a, uintmax_t b, const char *file, size_t li
 
 void _exam_assert_eq_float(float a, float b, float eps, const char *file, size_t line)
 {
-    if (!exam_float_cmp(a, b, eps)) {
+    if (!_exam_float_cmp(a, b, eps)) {
         fprintf(stderr,
                 "[%s:%zu] %f != %f\n",
                 file,
@@ -283,7 +283,7 @@ void _exam_assert_eq_float(float a, float b, float eps, const char *file, size_t
 
 void _exam_assert_neq_float(float a, float b, float eps, const char *file, size_t line)
 {
-    if (exam_float_cmp(a, b, eps)) {
+    if (_exam_float_cmp(a, b, eps)) {
         fprintf(stderr,
                 "[%s:%zu] %f == %f\n",
                 file,
@@ -296,7 +296,7 @@ void _exam_assert_neq_float(float a, float b, float eps, const char *file, size_
 
 void _exam_assert_eq_double(double a, double b, double eps, const char *file, size_t line)
 {
-    if (!exam_double_cmp(a, b, eps)) {
+    if (!_exam_double_cmp(a, b, eps)) {
         fprintf(stderr,
                 "[%s:%zu] %f != %f\n",
                 file,
@@ -309,7 +309,7 @@ void _exam_assert_eq_double(double a, double b, double eps, const char *file, si
 
 void _exam_assert_neq_double(double a, double b, double eps, const char *file, size_t line)
 {
-    if (exam_double_cmp(a, b, eps)) {
+    if (_exam_double_cmp(a, b, eps)) {
         fprintf(stderr,
                 "[%s:%zu] %f == %f\n",
                 file,
@@ -514,7 +514,7 @@ void exam_run_tests_parallel(struct exam_test_list *list, struct exam_filter fil
 
     pthread_t *threads = malloc(worker_count * sizeof(*threads));
     if (threads == NULL)
-        exam_die_errno("malloc");
+        _exam_die_errno("malloc");
 
     struct exam_test_queue worker = {
         .test_list = list,
@@ -524,8 +524,8 @@ void exam_run_tests_parallel(struct exam_test_list *list, struct exam_filter fil
     pthread_mutex_init(&worker.lock, NULL);
 
     for (size_t i = 0; i < worker_count; i ++) {
-        if (pthread_create(&threads[i], NULL, exam_run_worker, &worker) != 0)
-            exam_die_errno("pthread_create");
+        if (pthread_create(&threads[i], NULL, _exam_run_worker, &worker) != 0)
+            _exam_die_errno("pthread_create");
     }
     for (size_t i = 0; i < worker_count; i ++)
         pthread_join(threads[i], NULL);
@@ -544,7 +544,7 @@ void exam_run_tests(struct exam_test_list *list, struct exam_filter filter)
     }
 }
 
-void *exam_run_worker(void *arg)
+void *_exam_run_worker(void *arg)
 {
     struct exam_test_queue *worker = arg;
 
@@ -571,13 +571,13 @@ void *exam_run_worker(void *arg)
 void exam_run_test(struct exam_test *test)
 {
     if (test->state != EXAM_TEST_NONE)
-        exam_dief("tried to run test with an unexpected state: %d\n", test->state);
+        _exam_dief("tried to run test with an unexpected state: %d\n", test->state);
 
     test->state = EXAM_TEST_RUNNING;
 
     pid_t pid = fork();
     if (pid == -1)
-        exam_die_errno("fork");
+        _exam_die_errno("fork");
 
     if (pid == 0) {
         test->func();
@@ -586,7 +586,7 @@ void exam_run_test(struct exam_test *test)
 
     int status;
     if (waitpid(pid, &status, 0) == -1)
-        exam_die_errno("waitpid");
+        _exam_die_errno("waitpid");
 
     if (WIFEXITED(status)) {
         int exit_status = WEXITSTATUS(status);
@@ -633,7 +633,7 @@ void exam_list_append(struct exam_test_list *list, const struct exam_test *test)
         list->capacity = min_cap;
         list->data = realloc(list->data, sizeof(*list->data) * list->capacity);
         if (list->data == NULL)
-            exam_die_errno("realloc");
+            _exam_die_errno("realloc");
     }
 
     list->data[idx] = *test;
@@ -652,10 +652,10 @@ void exam_list_destroy(struct exam_test_list *list)
 
 void exam_list_sort(struct exam_test_list *list)
 {
-    qsort(list->data, list->count, sizeof(*list->data), exam_test_compare);
+    qsort(list->data, list->count, sizeof(*list->data), _exam_test_cmp);
 }
 
-static void exam_dief(const char *fmt, ...)
+static void _exam_dief(const char *fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
@@ -664,13 +664,13 @@ static void exam_dief(const char *fmt, ...)
     exit(EXIT_FAILURE);
 }
 
-static void exam_die_errno(const char *str)
+static void _exam_die_errno(const char *str)
 {
     perror(str);
     exit(EXIT_FAILURE);
 }
 
-static int exam_test_compare(const void *a, const void *b)
+static int _exam_test_cmp(const void *a, const void *b)
 {
     const struct exam_test *test_a = a;
     const struct exam_test *test_b = b;
@@ -680,7 +680,7 @@ static int exam_test_compare(const void *a, const void *b)
     return result;
 }
 
-static bool exam_float_cmp(float a, float b, float eps)
+static bool _exam_float_cmp(float a, float b, float eps)
 {
     if (isnan(a) && isnan(b))
         return true;
@@ -700,7 +700,7 @@ static bool exam_float_cmp(float a, float b, float eps)
     return diff <= eps * largest;
 }
 
-static bool exam_double_cmp(double a, double b, double eps)
+static bool _exam_double_cmp(double a, double b, double eps)
 {
     if (isnan(a) && isnan(b))
         return true;
@@ -733,9 +733,9 @@ static bool exam_double_cmp(double a, double b, double eps)
 
 struct exam_cli_state exam_cli_state = {0};
 
-static void exam_cli_cmd_run();
-static void exam_cli_cmd_ls();
-static void exam_cli_usage();
+static void _exam_cli_cmd_run();
+static void _exam_cli_cmd_ls();
+static void _exam_cli_usage();
 static const char *exam_cli_color(const char *color);
 
 int exam_cli_main(int argc, char **argv)
@@ -749,14 +749,14 @@ int exam_cli_main(int argc, char **argv)
             exam_cli_state.parallel = true;
         } else if (strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--test-name") == 0) {
             if (i == argc - 1 || argv[i + 1][0] == '-')
-                exam_dief("%sexpected name%s\n",
+                _exam_dief("%sexpected name%s\n",
                           exam_cli_color(EXAM_CLI_RED),
                           exam_cli_color(EXAM_CLI_RESET));
 
             exam_cli_state.filter.test_name = argv[++i];
         } else if (strcmp(argv[i], "-c") == 0 || strcmp(argv[i], "--category") == 0) {
             if (i == argc - 1 || argv[i + 1][0] == '-')
-                exam_dief("%sexpected category%s\n",
+                _exam_dief("%sexpected category%s\n",
                           exam_cli_color(EXAM_CLI_RED),
                           exam_cli_color(EXAM_CLI_RESET));
 
@@ -764,11 +764,11 @@ int exam_cli_main(int argc, char **argv)
         } else if (strcmp(argv[i], "--no-color") == 0) {
             exam_cli_state.no_color = true;
         } else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
-            exam_cli_usage();
+            _exam_cli_usage();
             exit(EXIT_SUCCESS);
         } else if (argv[i][0] == '-') {
-            exam_cli_usage();
-            exam_dief("%sunknown option '%s'%s\n",
+            _exam_cli_usage();
+            _exam_dief("%sunknown option '%s'%s\n",
                       exam_cli_color(EXAM_CLI_RED),
                       argv[i],
                       exam_cli_color(EXAM_CLI_RESET));
@@ -779,8 +779,8 @@ int exam_cli_main(int argc, char **argv)
     }
 
     if (command_count != 2) {
-        exam_cli_usage();
-        exam_dief("%sexpected only one command, but got %d%s\n",
+        _exam_cli_usage();
+        _exam_dief("%sexpected only one command, but got %d%s\n",
                   exam_cli_color(EXAM_CLI_RED),
                   command_count - 1,
                   exam_cli_color(EXAM_CLI_RESET));
@@ -790,15 +790,15 @@ int exam_cli_main(int argc, char **argv)
     argc = command_count;
     for (int i = 1; i < argc; i ++) {
         if (strcmp(argv[i], "run") == 0) {
-            exam_cli_cmd_run();
+            _exam_cli_cmd_run();
         } else if (strcmp(argv[i], "ls") == 0) {
-            exam_cli_cmd_ls();
+            _exam_cli_cmd_ls();
         } else {
-            exam_cli_usage();
-            exam_dief("%sunknown command '%s'%s\n",
-                      exam_cli_color(EXAM_CLI_RED),
-                      argv[i],
-                      exam_cli_color(EXAM_CLI_RESET));
+            _exam_cli_usage();
+            _exam_dief("%sunknown command '%s'%s\n",
+                       exam_cli_color(EXAM_CLI_RED),
+                       argv[i],
+                       exam_cli_color(EXAM_CLI_RESET));
             exit(EXIT_FAILURE);
         }
     }
@@ -807,7 +807,7 @@ int exam_cli_main(int argc, char **argv)
     return EXIT_SUCCESS;
 }
 
-static void exam_cli_cmd_run()
+static void _exam_cli_cmd_run()
 {
     if (exam_cli_state.parallel)
         exam_run_tests_parallel(&exam_state.test_list, exam_cli_state.filter);
@@ -870,7 +870,7 @@ static void exam_cli_cmd_run()
         exit(EXIT_SUCCESS);
 }
 
-static void exam_cli_cmd_ls()
+static void _exam_cli_cmd_ls()
 {
     size_t found = 0;
     for (size_t i = 0; i < exam_state.test_list.count; i++) {
@@ -891,7 +891,7 @@ static void exam_cli_cmd_ls()
     exit(EXIT_SUCCESS);
 }
 
-static void exam_cli_usage()
+static void _exam_cli_usage()
 {
     printf("%s"EXAM_CLI_NAME"%s - Find and run unit tests\n"
            "%susage%s:\n"
