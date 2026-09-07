@@ -367,14 +367,20 @@ void _exam_assert_neq_str(const char *a, const char *b, const char *file, size_t
 
 void _exam_assert_eq_mem(const void *a, const void *b, size_t size, const char *file, size_t line)
 {
-    if (memcmp(a, b, size) != 0) {
-        fprintf(stderr,
-                "[%s:%zu] %p != %p\n",
-                file,
-                line,
-                a,
-                b);
-        exit(EXIT_FAILURE);
+    const unsigned char *expected = a;
+    const unsigned char *actual = b;
+
+    for (size_t i = 0; i < size; i ++) {
+        if (expected[i] != actual[i]) {
+            fprintf(stderr,
+                    "[%s:%zu] memory differs at offset %zu: expected=0x%02x actual=0x%02x\n",
+                    file,
+                    line,
+                    i,
+                    expected[i],
+                    actual[i]);
+            exit(EXIT_FAILURE);
+        }
     }
 }
 
@@ -382,11 +388,10 @@ void _exam_assert_neq_mem(const void *a, const void *b, size_t size, const char 
 {
     if (memcmp(a, b, size) == 0) {
         fprintf(stderr,
-                "[%s:%zu] %p == %p\n",
+                "[%s:%zu] memory regions are equal (%zu bytes)\n",
                 file,
                 line,
-                a,
-                b);
+                size);
         exit(EXIT_FAILURE);
     }
 }
