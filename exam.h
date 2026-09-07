@@ -209,7 +209,7 @@ void _exam_assert_false(bool res, const char *expression, const char *file, size
     }
 }
 
-void _exam_assert_eq_ptr(void *a, void *b, const char *file, size_t line)
+void _exam_assert_eq_ptr(const void *a, const void *b, const char *file, size_t line)
 {
     if (a != b) {
         fprintf(stderr,
@@ -222,7 +222,7 @@ void _exam_assert_eq_ptr(void *a, void *b, const char *file, size_t line)
     }
 }
 
-void _exam_assert_neq_ptr(void *a, void *b, const char *file, size_t line)
+void _exam_assert_neq_ptr(const void *a, const void *b, const char *file, size_t line)
 {
     if (a == b) {
         fprintf(stderr,
