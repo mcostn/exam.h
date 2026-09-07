@@ -166,8 +166,11 @@ extern int exam_cli_main(int argc, char **argv);
 struct exam_state exam_state = {0};
 
 static int _exam_test_cmp(const void *a, const void *b);
+
 static bool _exam_float_cmp(float a, float b, float eps);
+static bool _exam_float_in_range(float x, float min, float max, float eps);
 static bool _exam_double_cmp(double a, double b, double eps);
+static bool _exam_double_in_range(double x, double min, double max, double eps);
 
 static void *_exam_run_worker(void *arg);
 
@@ -438,8 +441,7 @@ void _exam_assert_not_in_range_uint(uintmax_t x, uintmax_t min, uintmax_t max, c
 
 void _exam_assert_in_range_float(float x, float min, float max, float eps, const char *file, size_t line)
 {
-    if ((!_exam_float_cmp(x, min, eps) && x < min) ||
-        (!_exam_float_cmp(x, max, eps) && x > max)) {
+    if (!_exam_float_in_range(x, min, max, eps)) {
         fprintf(stderr,
                 "[%s:%zu] %f is not within the range [%f, %f]\n",
                 file,
@@ -453,8 +455,7 @@ void _exam_assert_in_range_float(float x, float min, float max, float eps, const
 
 void _exam_assert_not_in_range_float(float x, float min, float max, float eps, const char *file, size_t line)
 {
-    if ((_exam_float_cmp(x, min, eps) && x > min) ||
-        (_exam_float_cmp(x, max, eps) && x < max)) {
+    if (_exam_float_in_range(x, min, max, eps)) {
         fprintf(stderr,
                 "[%s:%zu] %f is within the range [%f, %f]\n",
                 file,
@@ -468,8 +469,7 @@ void _exam_assert_not_in_range_float(float x, float min, float max, float eps, c
 
 void _exam_assert_in_range_double(double x, double min, double max, double eps, const char *file, size_t line)
 {
-    if ((!_exam_double_cmp(x, min, eps) && x < min) ||
-        (!_exam_double_cmp(x, max, eps) && x > max)) {
+    if (!_exam_double_in_range(x, min, max, eps)) {
         fprintf(stderr,
                 "[%s:%zu] %f is not within the range [%f, %f]\n",
                 file,
@@ -483,8 +483,7 @@ void _exam_assert_in_range_double(double x, double min, double max, double eps, 
 
 void _exam_assert_not_in_range_double(double x, double min, double max, double eps, const char *file, size_t line)
 {
-    if ((_exam_double_cmp(x, min, eps) && x > min) ||
-        (_exam_double_cmp(x, max, eps) && x < max)) {
+    if (_exam_double_in_range(x, min, max, eps)) {
         fprintf(stderr,
                 "[%s:%zu] %f is within the range [%f, %f]\n",
                 file,
@@ -834,6 +833,12 @@ static bool _exam_float_cmp(float a, float b, float eps)
     return diff <= eps * largest;
 }
 
+static bool _exam_float_in_range(float x, float min, float max, float eps)
+{
+    return (_exam_float_cmp(x, min, eps) || x > min) &&
+           (_exam_float_cmp(x, max, eps) || x < max);
+}
+
 static bool _exam_double_cmp(double a, double b, double eps)
 {
     if (isnan(a) && isnan(b))
@@ -852,6 +857,12 @@ static bool _exam_double_cmp(double a, double b, double eps)
     double absB = (b > 0 ? b : -b);
     double largest = (absA > absB ? absA : absB);
     return diff <= eps * largest;
+}
+
+static bool _exam_double_in_range(double x, double min, double max, double eps)
+{
+    return (_exam_double_cmp(x, min, eps) || x > min) &&
+           (_exam_double_cmp(x, max, eps) || x < max);
 }
 
 /* Cli */
