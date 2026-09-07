@@ -31,10 +31,18 @@
 #define EXAM_ASSERT_NOT_IN_RANGE_INT(x, min, max) _exam_assert_not_in_range_int((x), (min), (max), __FILE__, __LINE__)
 #define EXAM_ASSERT_IN_RANGE_UINT(x, min, max) _exam_assert_in_range_uint((x), (min), (max), __FILE__, __LINE__)
 #define EXAM_ASSERT_NOT_IN_RANGE_UINT(x, min, max) _exam_assert_not_in_range_uint((x), (min), (max), __FILE__, __LINE__)
+#define EXAM_ASSERT_IN_RANGE_FLOAT(x, min, max, eps) _exam_assert_in_range_float((x), (min), (max), (eps), __FILE__, __LINE__)
+#define EXAM_ASSERT_NOT_IN_RANGE_FLOAT(x, min, max, eps) _exam_assert_not_in_range_float((x), (min), (max), (eps), __FILE__, __LINE__)
+#define EXAM_ASSERT_IN_RANGE_DOUBLE(x, min, max, eps) _exam_assert_in_range_double((x), (min), (max), (eps), __FILE__, __LINE__)
+#define EXAM_ASSERT_NOT_IN_RANGE_DOUBLE(x, min, max, eps) _exam_assert_not_in_range_double((x), (min), (max), (eps), __FILE__, __LINE__)
 #define EXAM_ASSERT_IN_ARR_INT(x, arr, count) _exam_assert_in_arr_int((x), (arr), (count), __FILE__, __LINE__)
 #define EXAM_ASSERT_NOT_IN_ARR_INT(x, arr, count) _exam_assert_not_in_arr_int((x), (arr), (count), __FILE__, __LINE__)
 #define EXAM_ASSERT_IN_ARR_UINT(x, arr, count) _exam_assert_in_arr_uint((x), (arr), (count), __FILE__, __LINE__)
 #define EXAM_ASSERT_NOT_IN_ARR_UINT(x, arr, count) _exam_assert_not_in_arr_uint((x), (arr), (count), __FILE__, __LINE__)
+#define EXAM_ASSERT_IN_ARR_FLOAT(x, arr, count, eps) _exam_assert_in_arr_float((x), (arr), (count), (eps), __FILE__, __LINE__)
+#define EXAM_ASSERT_NOT_IN_ARR_FLOAT(x, arr, count, eps) _exam_assert_not_in_arr_float((x), (arr), (count), (eps), __FILE__, __LINE__)
+#define EXAM_ASSERT_IN_ARR_DOUBLE(x, arr, count, eps) _exam_assert_in_arr_double((x), (arr), (count), (eps), __FILE__, __LINE__)
+#define EXAM_ASSERT_NOT_IN_ARR_DOUBLE(x, arr, count, eps) _exam_assert_not_in_arr_double((x), (arr), (count), (eps), __FILE__, __LINE__)
 
 #define _EXAM_REG_NAME(category_name, test_name) \
     exam_reg_##category_name##_##test_name
@@ -428,6 +436,66 @@ void _exam_assert_not_in_range_uint(uintmax_t x, uintmax_t min, uintmax_t max, c
     }
 }
 
+void _exam_assert_in_range_float(float x, float min, float max, float eps, const char *file, size_t line)
+{
+    if ((!_exam_float_cmp(x, min, eps) && x < min) ||
+        (!_exam_float_cmp(x, max, eps && x > max))) {
+        fprintf(stderr,
+                "[%s:%zu] %f is not within the range [%f, %f]\n",
+                file,
+                line,
+                x,
+                min,
+                max);
+        exit(EXIT_FAILURE);
+    }
+}
+
+void _exam_assert_not_in_range_float(float x, float min, float max, float eps, const char *file, size_t line)
+{
+    if ((_exam_float_cmp(x, min, eps) && x > min) ||
+        (_exam_float_cmp(x, max, eps && x < max))) {
+        fprintf(stderr,
+                "[%s:%zu] %f is within the range [%f, %f]\n",
+                file,
+                line,
+                x,
+                min,
+                max);
+        exit(EXIT_FAILURE);
+    }
+}
+
+void _exam_assert_in_range_double(double x, double min, double max, double eps, const char *file, size_t line)
+{
+    if ((!_exam_double_cmp(x, min, eps) && x < min) ||
+        (!_exam_double_cmp(x, max, eps && x > max))) {
+        fprintf(stderr,
+                "[%s:%zu] %f is not within the range [%f, %f]\n",
+                file,
+                line,
+                x,
+                min,
+                max);
+        exit(EXIT_FAILURE);
+    }
+}
+
+void _exam_assert_not_in_range_double(double x, double min, double max, double eps, const char *file, size_t line)
+{
+    if ((_exam_double_cmp(x, min, eps) && x > min) ||
+        (_exam_double_cmp(x, max, eps && x < max))) {
+        fprintf(stderr,
+                "[%s:%zu] %f is within the range [%f, %f]\n",
+                file,
+                line,
+                x,
+                min,
+                max);
+        exit(EXIT_FAILURE);
+    }
+}
+
 void _exam_assert_in_arr_int(intmax_t x, const intmax_t *arr, size_t count, const char *file, size_t line)
 {
     for (size_t i = 0; i < count; i ++) {
@@ -484,6 +552,72 @@ void _exam_assert_not_in_arr_uint(uintmax_t x, const uintmax_t *arr, size_t coun
         if (arr[i] == x) {
             fprintf(stderr,
                     "[%s:%zu] %ju in %p (count=%zu)",
+                    file,
+                    line,
+                    x,
+                    (void*)arr,
+                    count);
+            exit(EXIT_FAILURE);
+        }
+    }
+}
+
+void _exam_assert_in_arr_float(float x, const float *arr, size_t count, float eps, const char *file, size_t line)
+{
+    for (size_t i = 0; i < count; i ++) {
+        if (_exam_float_cmp(x, arr[i], eps))
+            return;
+    }
+
+    fprintf(stderr,
+            "[%s:%zu] %f not in %p (count=%zu)",
+            file,
+            line,
+            x,
+            (void*)arr,
+            count);
+    exit(EXIT_FAILURE);
+}
+
+void _exam_assert_not_in_arr_float(float x, const float *arr, size_t count, float eps, const char *file, size_t line)
+{
+    for (size_t i = 0; i < count; i ++) {
+        if (_exam_float_cmp(x, arr[i], eps)) {
+            fprintf(stderr,
+                    "[%s:%zu] %f in %p (count=%zu)",
+                    file,
+                    line,
+                    x,
+                    (void*)arr,
+                    count);
+            exit(EXIT_FAILURE);
+        }
+    }
+}
+
+void _exam_assert_in_arr_double(double x, const double *arr, size_t count, double eps, const char *file, size_t line)
+{
+    for (size_t i = 0; i < count; i ++) {
+        if (_exam_double_cmp(x, arr[i], eps))
+            return;
+    }
+
+    fprintf(stderr,
+            "[%s:%zu] %f not in %p (count=%zu)",
+            file,
+            line,
+            x,
+            (void*)arr,
+            count);
+    exit(EXIT_FAILURE);
+}
+
+void _exam_assert_not_in_arr_double(double x, const double *arr, size_t count, double eps, const char *file, size_t line)
+{
+    for (size_t i = 0; i < count; i ++) {
+        if (_exam_double_cmp(x, arr[i], eps)) {
+            fprintf(stderr,
+                    "[%s:%zu] %f in %p (count=%zu)",
                     file,
                     line,
                     x,
@@ -957,10 +1091,18 @@ static const char *exam_cli_color(const char *color)
 #define ASSERT_NOT_IN_RANGE_INT EXAM_ASSERT_NOT_IN_RANGE_INT
 #define ASSERT_IN_RANGE_UINT EXAM_ASSERT_IN_RANGE_UINT
 #define ASSERT_NOT_IN_RANGE_UINT EXAM_ASSERT_NOT_IN_RANGE_UINT
+#define ASSERT_IN_RANGE_FLOAT EXAM_ASSERT_IN_RANGE_FLOAT
+#define ASSERT_NOT_IN_RANGE_FLOAT EXAM_ASSERT_NOT_IN_RANGE_FLOAT
+#define ASSERT_IN_RANGE_DOUBLE EXAM_ASSERT_IN_RANGE_DOUBLE
+#define ASSERT_NOT_IN_RANGE_DOUBLE EXAM_ASSERT_NOT_IN_RANGE_DOUBLE
 #define ASSERT_IN_ARR_INT EXAM_ASSERT_IN_ARR_INT
 #define ASSERT_NOT_IN_ARR_INT EXAM_ASSERT_NOT_IN_ARR_INT
 #define ASSERT_IN_ARR_UINT EXAM_ASSERT_IN_ARR_UINT
 #define ASSERT_NOT_IN_ARR_UINT EXAM_ASSERT_NOT_IN_ARR_UINT
+#define ASSERT_IN_ARR_FLOAT EXAM_ASSERT_IN_ARR_FLOAT
+#define ASSERT_NOT_IN_ARR_FLOAT EXAM_ASSERT_NOT_IN_ARR_FLOAT
+#define ASSERT_IN_ARR_DOUBLE EXAM_ASSERT_IN_ARR_DOUBLE
+#define ASSERT_NOT_IN_ARR_DOUBLE EXAM_ASSERT_NOT_IN_ARR_DOUBLE
 
 #define DEFINE_TEST EXAM_DEFINE_TEST
 #endif /* EXAM_SHORT_NAMES */
