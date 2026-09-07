@@ -133,10 +133,18 @@ extern void _exam_assert_in_range_int(intmax_t x, intmax_t min, intmax_t max, co
 extern void _exam_assert_not_in_range_int(intmax_t x, intmax_t min, intmax_t max, const char *file, size_t line);
 extern void _exam_assert_in_range_uint(uintmax_t x, uintmax_t min, uintmax_t max, const char *file, size_t line);
 extern void _exam_assert_not_in_range_uint(uintmax_t x, uintmax_t min, uintmax_t max, const char *file, size_t line);
+extern void _exam_assert_in_range_float(float x, float min, float max, float eps, const char *file, size_t line);
+extern void _exam_assert_not_in_range_float(float x, float min, float max, float eps, const char *file, size_t line);
+extern void _exam_assert_in_range_double(double x, double min, double max, double eps, const char *file, size_t line);
+extern void _exam_assert_not_in_range_double(double x, double min, double max, double eps, const char *file, size_t line);
 extern void _exam_assert_in_arr_int(intmax_t x, const intmax_t *arr, size_t count, const char *file, size_t line);
 extern void _exam_assert_not_in_arr_int(intmax_t x, const intmax_t *arr, size_t count, const char *file, size_t line);
 extern void _exam_assert_in_arr_uint(uintmax_t x, const uintmax_t *arr, size_t count, const char *file, size_t line);
 extern void _exam_assert_not_in_arr_uint(uintmax_t x, const uintmax_t *arr, size_t count, const char *file, size_t line);
+extern void _exam_assert_in_arr_float(float x, const float *arr, size_t count, float eps, const char *file, size_t line);
+extern void _exam_assert_not_in_arr_float(float x, const float *arr, size_t count, float eps, const char *file, size_t line);
+extern void _exam_assert_in_arr_double(double x, const double *arr, size_t count, double eps, const char *file, size_t line);
+extern void _exam_assert_not_in_arr_double(double x, const double *arr, size_t count, double eps, const char *file, size_t line);
 
 extern struct exam_state exam_state;
 extern bool exam_test_passes_filter(const struct exam_test *test, struct exam_filter filter);
