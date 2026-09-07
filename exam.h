@@ -356,7 +356,7 @@ void _exam_assert_neq_str(const char *a, const char *b, const char *file, size_t
 
 void _exam_assert_eq_mem(const void *a, const void *b, size_t size, const char *file, size_t line)
 {
-    if (memcmp(a, b, size) == 0) {
+    if (memcmp(a, b, size) != 0) {
         fprintf(stderr,
                 "[%s:%zu] %p != %p\n",
                 file,
@@ -369,7 +369,7 @@ void _exam_assert_eq_mem(const void *a, const void *b, size_t size, const char *
 
 void _exam_assert_neq_mem(const void *a, const void *b, size_t size, const char *file, size_t line)
 {
-    if (memcmp(a, b, size) != 0) {
+    if (memcmp(a, b, size) == 0) {
         fprintf(stderr,
                 "[%s:%zu] %p == %p\n",
                 file,
