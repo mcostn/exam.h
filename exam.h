@@ -410,9 +410,9 @@ void _exam_assert_not_in_range_int(intmax_t x, intmax_t min, intmax_t max, const
 
 void _exam_assert_in_range_uint(uintmax_t x, uintmax_t min, uintmax_t max, const char *file, size_t line)
 {
-    if (x >= min && x <= max) {
+    if (x < min || x > max) {
         fprintf(stderr,
-                "[%s:%zu] %ju is within the range [%ju, %ju]\n",
+                "[%s:%zu] %ju is not within the range [%ju, %ju]\n",
                 file,
                 line,
                 x,
