@@ -830,6 +830,9 @@ static int _exam_test_cmp(const void *a, const void *b)
 
 static bool _exam_float_cmp(float a, float b, float eps)
 {
+    if (eps < 0)
+        _exam_dief("invalid epsilon: %f", eps);
+
     if (isnan(a) && isnan(b))
         return true;
     if (isinf(a) && isinf(b))
@@ -850,12 +853,18 @@ static bool _exam_float_cmp(float a, float b, float eps)
 
 static bool _exam_float_in_range(float x, float min, float max, float eps)
 {
+    if (eps < 0)
+        _exam_dief("invalid epsilon: %f", eps);
+
     return (_exam_float_cmp(x, min, eps) || x > min) &&
            (_exam_float_cmp(x, max, eps) || x < max);
 }
 
 static bool _exam_double_cmp(double a, double b, double eps)
 {
+    if (eps < 0)
+        _exam_dief("invalid epsilon: %f", eps);
+
     if (isnan(a) && isnan(b))
         return true;
     if (isinf(a) && isinf(b))
@@ -876,6 +885,9 @@ static bool _exam_double_cmp(double a, double b, double eps)
 
 static bool _exam_double_in_range(double x, double min, double max, double eps)
 {
+    if (eps < 0)
+        _exam_dief("invalid epsilon: %f", eps);
+
     return (_exam_double_cmp(x, min, eps) || x > min) &&
            (_exam_double_cmp(x, max, eps) || x < max);
 }
