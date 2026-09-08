@@ -776,10 +776,12 @@ void exam_list_append(struct exam_test_list *list, const struct exam_test *test)
         else
             min_cap = list->capacity *= 2;
 
-        list->capacity = min_cap;
-        list->data = realloc(list->data, sizeof(*list->data) * list->capacity);
-        if (list->data == NULL)
+        struct exam_test *data = realloc(list->data, sizeof(*list->data) * min_cap);
+        if (data == NULL)
             _exam_die_errno("realloc");
+
+        list->data = data;
+        list->capacity = min_cap;
     }
 
     list->data[idx] = *test;
