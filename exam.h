@@ -398,6 +398,9 @@ void _exam_assert_neq_mem(const void *a, const void *b, size_t size, const char 
 
 void _exam_assert_in_range_int(intmax_t x, intmax_t min, intmax_t max, const char *file, size_t line)
 {
+    if (min > max)
+        _exam_dief("invalid range [%jd, %jd]\n", min, max);
+
     if (x < min || x > max) {
         fprintf(stderr,
                 "[%s:%zu] %jd is not within the range [%jd, %jd]\n",
@@ -412,6 +415,9 @@ void _exam_assert_in_range_int(intmax_t x, intmax_t min, intmax_t max, const cha
 
 void _exam_assert_not_in_range_int(intmax_t x, intmax_t min, intmax_t max, const char *file, size_t line)
 {
+    if (min > max)
+        _exam_dief("invalid range [%jd, %jd]\n", min, max);
+
     if (x >= min && x <= max) {
         fprintf(stderr,
                 "[%s:%zu] %jd is within the range [%jd, %jd]\n",
@@ -426,6 +432,9 @@ void _exam_assert_not_in_range_int(intmax_t x, intmax_t min, intmax_t max, const
 
 void _exam_assert_in_range_uint(uintmax_t x, uintmax_t min, uintmax_t max, const char *file, size_t line)
 {
+    if (min > max)
+        _exam_dief("invalid range [%ju, %ju]\n", min, max);
+
     if (x < min || x > max) {
         fprintf(stderr,
                 "[%s:%zu] %ju is not within the range [%ju, %ju]\n",
@@ -440,6 +449,9 @@ void _exam_assert_in_range_uint(uintmax_t x, uintmax_t min, uintmax_t max, const
 
 void _exam_assert_not_in_range_uint(uintmax_t x, uintmax_t min, uintmax_t max, const char *file, size_t line)
 {
+    if (min > max)
+        _exam_dief("invalid range [%ju, %ju]\n", min, max);
+
     if (x >= min && x <= max) {
         fprintf(stderr,
                 "[%s:%zu] %ju is within the range [%ju, %ju]\n",
@@ -454,6 +466,9 @@ void _exam_assert_not_in_range_uint(uintmax_t x, uintmax_t min, uintmax_t max, c
 
 void _exam_assert_in_range_float(float x, float min, float max, float eps, const char *file, size_t line)
 {
+    if (min > max)
+        _exam_dief("invalid range [%f, %f]\n", min, max);
+
     if (!_exam_float_in_range(x, min, max, eps)) {
         fprintf(stderr,
                 "[%s:%zu] %f is not within the range [%f, %f]\n",
@@ -468,6 +483,9 @@ void _exam_assert_in_range_float(float x, float min, float max, float eps, const
 
 void _exam_assert_not_in_range_float(float x, float min, float max, float eps, const char *file, size_t line)
 {
+    if (min > max)
+        _exam_dief("invalid range [%f, %f]\n", min, max);
+
     if (_exam_float_in_range(x, min, max, eps)) {
         fprintf(stderr,
                 "[%s:%zu] %f is within the range [%f, %f]\n",
@@ -482,6 +500,9 @@ void _exam_assert_not_in_range_float(float x, float min, float max, float eps, c
 
 void _exam_assert_in_range_double(double x, double min, double max, double eps, const char *file, size_t line)
 {
+    if (min > max)
+        _exam_dief("invalid range [%f, %f]\n", min, max);
+
     if (!_exam_double_in_range(x, min, max, eps)) {
         fprintf(stderr,
                 "[%s:%zu] %f is not within the range [%f, %f]\n",
@@ -496,6 +517,9 @@ void _exam_assert_in_range_double(double x, double min, double max, double eps, 
 
 void _exam_assert_not_in_range_double(double x, double min, double max, double eps, const char *file, size_t line)
 {
+    if (min > max)
+        _exam_dief("invalid range [%f, %f]\n", min, max);
+
     if (_exam_double_in_range(x, min, max, eps)) {
         fprintf(stderr,
                 "[%s:%zu] %f is within the range [%f, %f]\n",
