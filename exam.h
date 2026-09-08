@@ -891,8 +891,8 @@ static bool _exam_double_in_range(double x, double min, double max, double eps)
 
 struct exam_cli_state exam_cli_state = {0};
 
-static void _exam_cli_cmd_run();
-static void _exam_cli_cmd_ls();
+static int _exam_cli_cmd_run();
+static int _exam_cli_cmd_ls();
 static void _exam_cli_usage();
 static const char *exam_cli_color(const char *color);
 
@@ -923,14 +923,14 @@ int exam_cli_main(int argc, char **argv)
             exam_cli_state.no_color = true;
         } else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
             _exam_cli_usage();
-            exit(EXIT_SUCCESS);
+            return EXIT_SUCCESS;
         } else if (argv[i][0] == '-') {
             _exam_cli_usage();
             _exam_dief("%sunknown option '%s'%s\n",
                       exam_cli_color(EXAM_CLI_RED),
                       argv[i],
                       exam_cli_color(EXAM_CLI_RESET));
-            exit(EXIT_FAILURE);
+            return EXIT_FAILURE;
         } else {
             argv[command_count++] = argv[i];
         }
@@ -948,16 +948,16 @@ int exam_cli_main(int argc, char **argv)
     argc = command_count;
     for (int i = 1; i < argc; i ++) {
         if (strcmp(argv[i], "run") == 0) {
-            _exam_cli_cmd_run();
+            return _exam_cli_cmd_run();
         } else if (strcmp(argv[i], "ls") == 0) {
-            _exam_cli_cmd_ls();
+            return _exam_cli_cmd_ls();
         } else {
             _exam_cli_usage();
             _exam_dief("%sunknown command '%s'%s\n",
                        exam_cli_color(EXAM_CLI_RED),
                        argv[i],
                        exam_cli_color(EXAM_CLI_RESET));
-            exit(EXIT_FAILURE);
+            return EXIT_FAILURE;
         }
     }
 
@@ -965,7 +965,7 @@ int exam_cli_main(int argc, char **argv)
     return EXIT_SUCCESS;
 }
 
-static void _exam_cli_cmd_run()
+static int _exam_cli_cmd_run()
 {
     if (exam_cli_state.parallel)
         exam_run_tests_parallel(&exam_state.test_list, exam_cli_state.filter);
@@ -1023,12 +1023,12 @@ static void _exam_cli_cmd_run()
             exam_state.crashed);
 
     if (exam_state.failed > 0 || exam_state.crashed > 0)
-        exit(EXIT_FAILURE);
+        return EXIT_FAILURE;
     else
-        exit(EXIT_SUCCESS);
+        return EXIT_SUCCESS;
 }
 
-static void _exam_cli_cmd_ls()
+static int _exam_cli_cmd_ls()
 {
     size_t found = 0;
     for (size_t i = 0; i < exam_state.test_list.count; i++) {
@@ -1046,7 +1046,7 @@ static void _exam_cli_cmd_ls()
     }
 
     printf("%zu tests found\n", found);
-    exit(EXIT_SUCCESS);
+    return EXIT_SUCCESS;
 }
 
 static void _exam_cli_usage()
