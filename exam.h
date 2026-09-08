@@ -175,6 +175,7 @@ struct exam_state exam_state = {0};
 
 static int _exam_test_cmp(const void *a, const void *b);
 
+static bool _exam_str_cmp(const char *a, const char *b);
 static bool _exam_float_cmp(float a, float b, float eps);
 static bool _exam_float_in_range(float x, float min, float max, float eps);
 static bool _exam_double_cmp(double a, double b, double eps);
@@ -341,7 +342,7 @@ void _exam_assert_neq_double(double a, double b, double eps, const char *file, s
 
 void _exam_assert_eq_str(const char *a, const char *b, const char *file, size_t line)
 {
-    if (strcmp(a, b) != 0) {
+    if (!_exam_str_cmp(a, b)) {
         fprintf(stderr,
                 "[%s:%zu] %s != %s\n",
                 file,
@@ -354,7 +355,7 @@ void _exam_assert_eq_str(const char *a, const char *b, const char *file, size_t 
 
 void _exam_assert_neq_str(const char *a, const char *b, const char *file, size_t line)
 {
-    if (strcmp(a, b) == 0) {
+    if (_exam_str_cmp(a, b)) {
         fprintf(stderr,
                 "[%s:%zu] %s == %s\n",
                 file,
@@ -850,6 +851,14 @@ static int _exam_test_cmp(const void *a, const void *b)
     if (result == 0)
         result = strcmp(test_a->name, test_b->name);
     return result;
+}
+
+static bool _exam_str_cmp(const char *a, const char *b)
+{
+    if (a == NULL || b == NULL)
+        return a == b;
+
+    return strcmp(a, b) == 0;
 }
 
 static bool _exam_float_cmp(float a, float b, float eps)
