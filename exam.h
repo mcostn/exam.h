@@ -115,8 +115,8 @@ extern "C" {
 #endif
 extern void _exam_assert_true(bool result, const char *expression, const char *file, size_t line);
 extern void _exam_assert_false(bool result, const char *expression, const char *file, size_t line);
-extern void _exam_assert_eq_ptr(void *a, void *b, const char *file, size_t line);
-extern void _exam_assert_neq_ptr(void *a, void *b, const char *file, size_t line);
+extern void _exam_assert_eq_ptr(const void *a, const void *b, const char *file, size_t line);
+extern void _exam_assert_neq_ptr(const void *a, const void *b, const char *file, size_t line);
 extern void _exam_assert_eq_int(intmax_t a, intmax_t b, const char *file, size_t line);
 extern void _exam_assert_neq_int(intmax_t a, intmax_t b, const char *file, size_t line);
 extern void _exam_assert_eq_uint(uintmax_t a, uintmax_t b, const char *file, size_t line);
