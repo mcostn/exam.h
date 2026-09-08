@@ -292,7 +292,7 @@ void _exam_assert_eq_float(float a, float b, float eps, const char *file, size_t
 {
     if (!_exam_float_cmp(a, b, eps)) {
         fprintf(stderr,
-                "[%s:%zu] %f != %f\n",
+                "[%s:%zu] %.9g != %.9g\n",
                 file,
                 line,
                 a,
@@ -305,7 +305,7 @@ void _exam_assert_neq_float(float a, float b, float eps, const char *file, size_
 {
     if (_exam_float_cmp(a, b, eps)) {
         fprintf(stderr,
-                "[%s:%zu] %f == %f\n",
+                "[%s:%zu] %.9g == %.9g\n",
                 file,
                 line,
                 a,
@@ -318,7 +318,7 @@ void _exam_assert_eq_double(double a, double b, double eps, const char *file, si
 {
     if (!_exam_double_cmp(a, b, eps)) {
         fprintf(stderr,
-                "[%s:%zu] %f != %f\n",
+                "[%s:%zu] %.17g != %.17g\n",
                 file,
                 line,
                 a,
@@ -331,7 +331,7 @@ void _exam_assert_neq_double(double a, double b, double eps, const char *file, s
 {
     if (_exam_double_cmp(a, b, eps)) {
         fprintf(stderr,
-                "[%s:%zu] %f == %f\n",
+                "[%s:%zu] %.17g == %.17g\n",
                 file,
                 line,
                 a,
@@ -468,11 +468,11 @@ void _exam_assert_not_in_range_uint(uintmax_t x, uintmax_t min, uintmax_t max, c
 void _exam_assert_in_range_float(float x, float min, float max, float eps, const char *file, size_t line)
 {
     if (min > max)
-        _exam_dief("invalid range [%f, %f]\n", min, max);
+        _exam_dief("invalid range [%.9g, %.9g]\n", min, max);
 
     if (!_exam_float_in_range(x, min, max, eps)) {
         fprintf(stderr,
-                "[%s:%zu] %f is not within the range [%f, %f]\n",
+                "[%s:%zu] %.9g is not within the range [%.9g, %.9g]\n",
                 file,
                 line,
                 x,
@@ -485,11 +485,11 @@ void _exam_assert_in_range_float(float x, float min, float max, float eps, const
 void _exam_assert_not_in_range_float(float x, float min, float max, float eps, const char *file, size_t line)
 {
     if (min > max)
-        _exam_dief("invalid range [%f, %f]\n", min, max);
+        _exam_dief("invalid range [%.9g, %.9g]\n", min, max);
 
     if (_exam_float_in_range(x, min, max, eps)) {
         fprintf(stderr,
-                "[%s:%zu] %f is within the range [%f, %f]\n",
+                "[%s:%zu] %.9g is within the range [%.9g, %.9g]\n",
                 file,
                 line,
                 x,
@@ -502,11 +502,11 @@ void _exam_assert_not_in_range_float(float x, float min, float max, float eps, c
 void _exam_assert_in_range_double(double x, double min, double max, double eps, const char *file, size_t line)
 {
     if (min > max)
-        _exam_dief("invalid range [%f, %f]\n", min, max);
+        _exam_dief("invalid range [%.17g, %.17g]\n", min, max);
 
     if (!_exam_double_in_range(x, min, max, eps)) {
         fprintf(stderr,
-                "[%s:%zu] %f is not within the range [%f, %f]\n",
+                "[%s:%zu] %.17g is not within the range [%.17g, %.17g]\n",
                 file,
                 line,
                 x,
@@ -519,11 +519,11 @@ void _exam_assert_in_range_double(double x, double min, double max, double eps, 
 void _exam_assert_not_in_range_double(double x, double min, double max, double eps, const char *file, size_t line)
 {
     if (min > max)
-        _exam_dief("invalid range [%f, %f]\n", min, max);
+        _exam_dief("invalid range [%.17g, %.17g]\n", min, max);
 
     if (_exam_double_in_range(x, min, max, eps)) {
         fprintf(stderr,
-                "[%s:%zu] %f is within the range [%f, %f]\n",
+                "[%s:%zu] %.17g is within the range [%.17g, %.17g]\n",
                 file,
                 line,
                 x,
@@ -607,7 +607,7 @@ void _exam_assert_in_arr_float(float x, const float *arr, size_t count, float ep
     }
 
     fprintf(stderr,
-            "[%s:%zu] %f not in %p (count=%zu)",
+            "[%s:%zu] %.9g not in %p (count=%zu)",
             file,
             line,
             x,
@@ -621,7 +621,7 @@ void _exam_assert_not_in_arr_float(float x, const float *arr, size_t count, floa
     for (size_t i = 0; i < count; i ++) {
         if (_exam_float_cmp(x, arr[i], eps)) {
             fprintf(stderr,
-                    "[%s:%zu] %f in %p (count=%zu)",
+                    "[%s:%zu] %.9g in %p (count=%zu)",
                     file,
                     line,
                     x,
@@ -640,7 +640,7 @@ void _exam_assert_in_arr_double(double x, const double *arr, size_t count, doubl
     }
 
     fprintf(stderr,
-            "[%s:%zu] %f not in %p (count=%zu)",
+            "[%s:%zu] %.17g not in %p (count=%zu)",
             file,
             line,
             x,
@@ -654,7 +654,7 @@ void _exam_assert_not_in_arr_double(double x, const double *arr, size_t count, d
     for (size_t i = 0; i < count; i ++) {
         if (_exam_double_cmp(x, arr[i], eps)) {
             fprintf(stderr,
-                    "[%s:%zu] %f in %p (count=%zu)",
+                    "[%s:%zu] %.17g in %p (count=%zu)",
                     file,
                     line,
                     x,
@@ -864,7 +864,7 @@ static bool _exam_str_cmp(const char *a, const char *b)
 static bool _exam_float_cmp(float a, float b, float eps)
 {
     if (eps < 0)
-        _exam_dief("invalid epsilon: %f\n", eps);
+        _exam_dief("invalid epsilon: %.9g\n", eps);
 
     if (isnan(a) && isnan(b))
         return true;
@@ -887,7 +887,7 @@ static bool _exam_float_cmp(float a, float b, float eps)
 static bool _exam_float_in_range(float x, float min, float max, float eps)
 {
     if (eps < 0)
-        _exam_dief("invalid epsilon: %f\n", eps);
+        _exam_dief("invalid epsilon: %.9g\n", eps);
 
     return (_exam_float_cmp(x, min, eps) || x > min) &&
            (_exam_float_cmp(x, max, eps) || x < max);
@@ -896,7 +896,7 @@ static bool _exam_float_in_range(float x, float min, float max, float eps)
 static bool _exam_double_cmp(double a, double b, double eps)
 {
     if (eps < 0)
-        _exam_dief("invalid epsilon: %f\n", eps);
+        _exam_dief("invalid epsilon: %.17g\n", eps);
 
     if (isnan(a) && isnan(b))
         return true;
@@ -919,7 +919,7 @@ static bool _exam_double_cmp(double a, double b, double eps)
 static bool _exam_double_in_range(double x, double min, double max, double eps)
 {
     if (eps < 0)
-        _exam_dief("invalid epsilon: %f\n", eps);
+        _exam_dief("invalid epsilon: %.17g\n", eps);
 
     return (_exam_double_cmp(x, min, eps) || x > min) &&
            (_exam_double_cmp(x, max, eps) || x < max);
