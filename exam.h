@@ -180,6 +180,7 @@ static bool _exam_float_cmp(float a, float b, float eps);
 static bool _exam_float_in_range(float x, float min, float max, float eps);
 static bool _exam_double_cmp(double a, double b, double eps);
 static bool _exam_double_in_range(double x, double min, double max, double eps);
+static const char *_exam_str_repr(const char *str);
 
 static void *_exam_run_worker(void *arg);
 
@@ -344,11 +345,11 @@ void _exam_assert_eq_str(const char *a, const char *b, const char *file, size_t 
 {
     if (!_exam_str_cmp(a, b)) {
         fprintf(stderr,
-                "[%s:%zu] %s != %s\n",
+                "[%s:%zu] \"%s\" != \"%s\"\n",
                 file,
                 line,
-                a,
-                b);
+                _exam_str_repr(a),
+                _exam_str_repr(b));
         exit(EXIT_FAILURE);
     }
 }
@@ -360,8 +361,8 @@ void _exam_assert_neq_str(const char *a, const char *b, const char *file, size_t
                 "[%s:%zu] %s == %s\n",
                 file,
                 line,
-                a,
-                b);
+                _exam_str_repr(a),
+                _exam_str_repr(b));
         exit(EXIT_FAILURE);
     }
 }
@@ -923,6 +924,14 @@ static bool _exam_double_in_range(double x, double min, double max, double eps)
 
     return (_exam_double_cmp(x, min, eps) || x > min) &&
            (_exam_double_cmp(x, max, eps) || x < max);
+}
+
+static const char *_exam_str_repr(const char *str)
+{
+    if (str == NULL)
+        return "NULL";
+
+    return str;
 }
 
 /* Cli */
