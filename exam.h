@@ -3,7 +3,7 @@
 
 #include <stdio.h> /* printf(), perror() */
 #include <stdlib.h> /* malloc(), exit(), EXIT_FAILURE */
-#include <string.h> /* strcmp(), memcmp() */
+#include <string.h> /* strcmp(), memcmp(), strerror() */
 #include <stdarg.h> /* va_list, va_start(), va_end() */
 #include <stdbool.h> /* bool, true, false */
 #include <stdint.h> /* intmax_t, uintmax_t */
@@ -186,6 +186,7 @@ static void *_exam_run_worker(void *arg);
 
 static void _exam_dief(const char *fmt, ...);
 static void _exam_die_errno(const char *str);
+static void _exam_die_strerror(const char *str, int error);
 
 void _exam_assert_true(bool res, const char *expression, const char *file, size_t line)
 {
@@ -696,14 +697,21 @@ void exam_run_tests_parallel(struct exam_test_list *list, struct exam_filter fil
     pthread_mutex_init(&worker.lock, NULL);
 
     for (size_t i = 0; i < worker_count; i ++) {
-        if (pthread_create(&threads[i], NULL, _exam_run_worker, &worker) != 0)
-            _exam_die_errno("pthread_create");
+        int rc = pthread_create(&threads[i], NULL, _exam_run_worker, &worker) != 0;
+        if (rc != 0)
+            _exam_die_strerror("pthread_create", rc);
     }
-    for (size_t i = 0; i < worker_count; i ++)
-        pthread_join(threads[i], NULL);
+    for (size_t i = 0; i < worker_count; i ++) {
+        int rc = pthread_join(threads[i], NULL);
+        if (rc != 0)
+            _exam_die_strerror("pthread_join", rc);
+    }
 
     free(threads);
-    pthread_mutex_destroy(&worker.lock);
+
+    int rc = pthread_mutex_destroy(&worker.lock);
+    if (rc != 0)
+        _exam_die_strerror("pthread_mutex_destroy", rc);
 }
 
 void exam_run_tests(struct exam_test_list *list, struct exam_filter filter)
@@ -841,6 +849,12 @@ static void _exam_dief(const char *fmt, ...)
 static void _exam_die_errno(const char *str)
 {
     perror(str);
+    exit(EXIT_FAILURE);
+}
+
+static void _exam_die_strerror(const char *str, int error)
+{
+    fprintf(stderr, "%s: %s\n", str, strerror(error));
     exit(EXIT_FAILURE);
 }
 
