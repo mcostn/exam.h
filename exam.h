@@ -954,6 +954,8 @@ static const char *exam_cli_color(const char *color);
 
 int exam_cli_main(int argc, char **argv)
 {
+    exam_state = (struct exam_state){0};
+    exam_cli_state = (struct exam_cli_state){0};
     exam_list_sort(&exam_state.test_list);
 
     /* options */
