@@ -185,7 +185,7 @@ static const char *_exam_str_repr(const char *str);
 static void *_exam_run_worker(void *arg);
 
 static void _exam_dief(const char *fmt, ...);
-static void _exam_die_errno(const char *str);
+static void _exam_die_perror(const char *str);
 static void _exam_die_strerror(const char *str, int error);
 
 static void _exam_fail_test(const char *file, size_t line, const char *fmt, ...);
@@ -257,9 +257,9 @@ void _exam_assert_neq_uint(uintmax_t a, uintmax_t b, const char *file, size_t li
 void _exam_assert_eq_float(float a, float b, float eps, const char *file, size_t line)
 {
     if (!_exam_float_cmp(a, b, eps))
-        _exam_fail_test(file, line, 
+        _exam_fail_test(file, line,
                         "%.9g != %.9g",
-                          a, b);
+                         a, b);
 }
 
 void _exam_assert_neq_float(float a, float b, float eps, const char *file, size_t line)
@@ -310,7 +310,7 @@ void _exam_assert_eq_mem(const void *a, const void *b, size_t size, const char *
     for (size_t i = 0; i < size; i ++) {
         if (expected[i] != actual[i])
             _exam_fail_test(file, line,
-                            "memory differs at offset %zu: expected=0x%02x actual=0x%02x\n",
+                            "memory differs at offset %zu: expected=0x%02x actual=0x%02x",
                             i, expected[i], actual[i]);
     }
 }
@@ -319,25 +319,25 @@ void _exam_assert_neq_mem(const void *a, const void *b, size_t size, const char 
 {
     if (memcmp(a, b, size) == 0)
         _exam_fail_test(file, line,
-                        "memory regions are equal (%zu bytes)\n",
+                        "memory regions are equal (%zu bytes)",
                         size);
 }
 
 void _exam_assert_in_range_int(intmax_t x, intmax_t min, intmax_t max, const char *file, size_t line)
 {
     if (min > max)
-        _exam_dief("invalid range [%jd, %jd]\n", min, max);
+        _exam_dief("invalid range [%jd, %jd]", min, max);
 
     if (x < min || x > max)
         _exam_fail_test(file, line,
-                        "%jd is not within the range [%jd, %jd]\n",
+                        "%jd is not within the range [%jd, %jd]",
                         x, min, max);
 }
 
 void _exam_assert_not_in_range_int(intmax_t x, intmax_t min, intmax_t max, const char *file, size_t line)
 {
     if (min > max)
-        _exam_dief("invalid range [%jd, %jd]\n", min, max);
+        _exam_dief("invalid range [%jd, %jd]", min, max);
 
     if (x >= min && x <= max)
         _exam_fail_test(file, line,
@@ -348,7 +348,7 @@ void _exam_assert_not_in_range_int(intmax_t x, intmax_t min, intmax_t max, const
 void _exam_assert_in_range_uint(uintmax_t x, uintmax_t min, uintmax_t max, const char *file, size_t line)
 {
     if (min > max)
-        _exam_dief("invalid range [%ju, %ju]\n", min, max);
+        _exam_dief("invalid range [%ju, %ju]", min, max);
 
     if (x < min || x > max)
         _exam_fail_test(file, line,
@@ -359,7 +359,7 @@ void _exam_assert_in_range_uint(uintmax_t x, uintmax_t min, uintmax_t max, const
 void _exam_assert_not_in_range_uint(uintmax_t x, uintmax_t min, uintmax_t max, const char *file, size_t line)
 {
     if (min > max)
-        _exam_dief("invalid range [%ju, %ju]\n", min, max);
+        _exam_dief("invalid range [%ju, %ju]", min, max);
 
     if (x >= min && x <= max)
         _exam_fail_test(file, line, 
@@ -370,7 +370,7 @@ void _exam_assert_not_in_range_uint(uintmax_t x, uintmax_t min, uintmax_t max, c
 void _exam_assert_in_range_float(float x, float min, float max, float eps, const char *file, size_t line)
 {
     if (min > max)
-        _exam_dief("invalid range [%.9g, %.9g]\n", min, max);
+        _exam_dief("invalid range [%.9g, %.9g]", min, max);
 
     if (!_exam_float_in_range(x, min, max, eps))
         _exam_fail_test(file, line,
@@ -381,7 +381,7 @@ void _exam_assert_in_range_float(float x, float min, float max, float eps, const
 void _exam_assert_not_in_range_float(float x, float min, float max, float eps, const char *file, size_t line)
 {
     if (min > max)
-        _exam_dief("invalid range [%.9g, %.9g]\n", min, max);
+        _exam_dief("invalid range [%.9g, %.9g]", min, max);
 
     if (_exam_float_in_range(x, min, max, eps))
         _exam_fail_test(file, line,
@@ -392,7 +392,7 @@ void _exam_assert_not_in_range_float(float x, float min, float max, float eps, c
 void _exam_assert_in_range_double(double x, double min, double max, double eps, const char *file, size_t line)
 {
     if (min > max)
-        _exam_dief("invalid range [%.17g, %.17g]\n", min, max);
+        _exam_dief("invalid range [%.17g, %.17g]", min, max);
 
     if (!_exam_double_in_range(x, min, max, eps))
         _exam_fail_test(file, line,
@@ -403,7 +403,7 @@ void _exam_assert_in_range_double(double x, double min, double max, double eps, 
 void _exam_assert_not_in_range_double(double x, double min, double max, double eps, const char *file, size_t line)
 {
     if (min > max)
-        _exam_dief("invalid range [%.17g, %.17g]\n", min, max);
+        _exam_dief("invalid range [%.17g, %.17g]", min, max);
 
     if (_exam_double_in_range(x, min, max, eps))
         _exam_fail_test(file, line,
@@ -499,17 +499,6 @@ void _exam_assert_not_in_arr_double(double x, const double *arr, size_t count, d
     }
 }
 
-static void _exam_fail_test(const char *file, size_t line, const char *fmt, ...)
-{
-    fprintf(stderr, "[%s:%zu] ", file, line);
-    va_list args;
-    va_start(args, fmt);
-    vfprintf(stderr, fmt, args);
-    va_end(args);
-    fprintf(stderr, "\n");
-    exit(EXIT_FAILURE);
-}
-
 struct exam_test_queue
 {
     struct exam_test_list *test_list;
@@ -530,7 +519,7 @@ void exam_run_tests_parallel(struct exam_test_list *list, struct exam_filter fil
 
     pthread_t *threads = malloc(worker_count * sizeof(*threads));
     if (threads == NULL)
-        _exam_die_errno("malloc");
+        _exam_die_perror("malloc");
 
     struct exam_test_queue worker = {
         .test_list = list,
@@ -599,13 +588,13 @@ void *_exam_run_worker(void *arg)
 void exam_run_test(struct exam_test *test)
 {
     if (test->state != EXAM_TEST_NONE)
-        _exam_dief("tried to run test with an unexpected state: %d\n", test->state);
+        _exam_dief("tried to run test with an unexpected state: %d", test->state);
 
     test->state = EXAM_TEST_RUNNING;
 
     pid_t pid = fork();
     if (pid == -1)
-        _exam_die_errno("fork");
+        _exam_die_perror("fork");
 
     if (pid == 0) {
         test->func();
@@ -614,7 +603,7 @@ void exam_run_test(struct exam_test *test)
 
     int status;
     if (waitpid(pid, &status, 0) == -1)
-        _exam_die_errno("waitpid");
+        _exam_die_perror("waitpid");
 
     if (WIFEXITED(status)) {
         int exit_status = WEXITSTATUS(status);
@@ -651,7 +640,7 @@ bool exam_test_passes_filter(const struct exam_test *test, struct exam_filter fi
 void exam_list_append(struct exam_test_list *list, const struct exam_test *test)
 {
     if (list->count == SIZE_MAX)
-        _exam_dief("test list too large\n");
+        _exam_dief("test list too large");
 
     size_t new_count = list->count + 1;
     if (list->data == NULL || new_count > list->capacity) {
@@ -660,18 +649,18 @@ void exam_list_append(struct exam_test_list *list, const struct exam_test *test)
             new_cap = 4;
         } else {
             if (new_cap > SIZE_MAX / 2)
-                _exam_dief("test list too large\n");
+                _exam_dief("test list too large");
 
             new_cap *= 2;
         }
         if (new_cap < new_count)
             new_cap = new_count;
         if (new_cap > SIZE_MAX / sizeof(*list->data))
-            _exam_dief("test list too large\n");
+            _exam_dief("test list too large");
 
         struct exam_test *data = realloc(list->data, sizeof(*list->data) * new_cap);
         if (data == NULL)
-            _exam_die_errno("realloc");
+            _exam_die_perror("realloc");
 
         list->data = data;
         list->capacity = new_cap;
@@ -702,10 +691,11 @@ static void _exam_dief(const char *fmt, ...)
     va_start(args, fmt);
     vfprintf(stderr, fmt, args);
     va_end(args);
+    fputc('\n', stderr);
     exit(EXIT_FAILURE);
 }
 
-static void _exam_die_errno(const char *str)
+static void _exam_die_perror(const char *str)
 {
     perror(str);
     exit(EXIT_FAILURE);
@@ -714,6 +704,19 @@ static void _exam_die_errno(const char *str)
 static void _exam_die_strerror(const char *str, int error)
 {
     fprintf(stderr, "%s: %s\n", str, strerror(error));
+    exit(EXIT_FAILURE);
+}
+
+static void _exam_fail_test(const char *file, size_t line, const char *fmt, ...)
+{
+    fprintf(stderr, "[%s:%zu] ", file, line);
+
+    va_list args;
+    va_start(args, fmt);
+    vfprintf(stderr, fmt, args);
+    va_end(args);
+
+    fputc('\n', stderr);
     exit(EXIT_FAILURE);
 }
 
@@ -738,7 +741,7 @@ static bool _exam_str_cmp(const char *a, const char *b)
 static bool _exam_float_cmp(float a, float b, float eps)
 {
     if (eps < 0)
-        _exam_dief("invalid epsilon: %.9g\n", eps);
+        _exam_dief("invalid epsilon: %.9g", eps);
 
     if (isnan(a) && isnan(b))
         return true;
@@ -761,7 +764,7 @@ static bool _exam_float_cmp(float a, float b, float eps)
 static bool _exam_float_in_range(float x, float min, float max, float eps)
 {
     if (eps < 0)
-        _exam_dief("invalid epsilon: %.9g\n", eps);
+        _exam_dief("invalid epsilon: %.9g", eps);
 
     return (_exam_float_cmp(x, min, eps) || x > min) &&
            (_exam_float_cmp(x, max, eps) || x < max);
@@ -770,7 +773,7 @@ static bool _exam_float_in_range(float x, float min, float max, float eps)
 static bool _exam_double_cmp(double a, double b, double eps)
 {
     if (eps < 0)
-        _exam_dief("invalid epsilon: %.17g\n", eps);
+        _exam_dief("invalid epsilon: %.17g", eps);
 
     if (isnan(a) && isnan(b))
         return true;
@@ -793,7 +796,7 @@ static bool _exam_double_cmp(double a, double b, double eps)
 static bool _exam_double_in_range(double x, double min, double max, double eps)
 {
     if (eps < 0)
-        _exam_dief("invalid epsilon: %.17g\n", eps);
+        _exam_dief("invalid epsilon: %.17g", eps);
 
     return (_exam_double_cmp(x, min, eps) || x > min) &&
            (_exam_double_cmp(x, max, eps) || x < max);
@@ -837,14 +840,14 @@ int exam_cli_main(int argc, char **argv)
             exam_cli_state.parallel = true;
         } else if (strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--test-name") == 0) {
             if (i == argc - 1 || argv[i + 1][0] == '-')
-                _exam_dief("%sexpected name%s\n",
+                _exam_dief("%sexpected name%s",
                           exam_cli_color(EXAM_CLI_RED),
                           exam_cli_color(EXAM_CLI_RESET));
 
             exam_cli_state.filter.test_name = argv[++i];
         } else if (strcmp(argv[i], "-c") == 0 || strcmp(argv[i], "--category") == 0) {
             if (i == argc - 1 || argv[i + 1][0] == '-')
-                _exam_dief("%sexpected category%s\n",
+                _exam_dief("%sexpected category%s",
                           exam_cli_color(EXAM_CLI_RED),
                           exam_cli_color(EXAM_CLI_RESET));
 
@@ -856,7 +859,7 @@ int exam_cli_main(int argc, char **argv)
             return EXIT_SUCCESS;
         } else if (argv[i][0] == '-') {
             _exam_cli_usage();
-            _exam_dief("%sunknown option '%s'%s\n",
+            _exam_dief("%sunknown option '%s'%s",
                       exam_cli_color(EXAM_CLI_RED),
                       argv[i],
                       exam_cli_color(EXAM_CLI_RESET));
@@ -868,7 +871,7 @@ int exam_cli_main(int argc, char **argv)
 
     if (command_count != 2) {
         _exam_cli_usage();
-        _exam_dief("%sexpected only one command, but got %d%s\n",
+        _exam_dief("%sexpected only one command, but got %d%s",
                   exam_cli_color(EXAM_CLI_RED),
                   command_count - 1,
                   exam_cli_color(EXAM_CLI_RESET));
@@ -883,7 +886,7 @@ int exam_cli_main(int argc, char **argv)
             return _exam_cli_cmd_ls();
         } else {
             _exam_cli_usage();
-            _exam_dief("%sunknown command '%s'%s\n",
+            _exam_dief("%sunknown command '%s'%s",
                        exam_cli_color(EXAM_CLI_RED),
                        argv[i],
                        exam_cli_color(EXAM_CLI_RESET));
