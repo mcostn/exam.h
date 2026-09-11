@@ -194,7 +194,7 @@ void _exam_assert_true(bool res, const char *expression, const char *file, size_
 {
     if (!res)
         _exam_fail_test(file, line,
-                        "%s it not true",
+                        "%s is not true",
                         expression);
 }
 
@@ -310,7 +310,7 @@ void _exam_assert_eq_mem(const void *a, const void *b, size_t size, const char *
     for (size_t i = 0; i < size; i ++) {
         if (expected[i] != actual[i])
             _exam_fail_test(file, line,
-                            "emory differs at offset %zu: expected=0x%02x actual=0x%02x\n",
+                            "memory differs at offset %zu: expected=0x%02x actual=0x%02x\n",
                             i, expected[i], actual[i]);
     }
 }
@@ -319,7 +319,7 @@ void _exam_assert_neq_mem(const void *a, const void *b, size_t size, const char 
 {
     if (memcmp(a, b, size) == 0)
         _exam_fail_test(file, line,
-                        "emory regions are equal (%zu bytes)\n",
+                        "memory regions are equal (%zu bytes)\n",
                         size);
 }
 
