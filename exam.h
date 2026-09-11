@@ -537,22 +537,27 @@ void exam_run_tests_parallel(struct exam_test_list *list, struct exam_filter fil
         .filter = filter,
         .next_test_index = 0
     };
-    pthread_mutex_init(&worker.lock, NULL);
+
+    int rc = 0;
+
+    rc = pthread_mutex_init(&worker.lock, NULL);
+    if (rc != 0)
+        _exam_die_strerror("pthread_mutex_init", rc);
 
     for (size_t i = 0; i < worker_count; i ++) {
-        int rc = pthread_create(&threads[i], NULL, _exam_run_worker, &worker) != 0;
+        rc = pthread_create(&threads[i], NULL, _exam_run_worker, &worker) != 0;
         if (rc != 0)
             _exam_die_strerror("pthread_create", rc);
     }
     for (size_t i = 0; i < worker_count; i ++) {
-        int rc = pthread_join(threads[i], NULL);
+        rc = pthread_join(threads[i], NULL);
         if (rc != 0)
             _exam_die_strerror("pthread_join", rc);
     }
 
     free(threads);
 
-    int rc = pthread_mutex_destroy(&worker.lock);
+    rc = pthread_mutex_destroy(&worker.lock);
     if (rc != 0)
         _exam_die_strerror("pthread_mutex_destroy", rc);
 }
