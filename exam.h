@@ -650,23 +650,34 @@ bool exam_test_passes_filter(const struct exam_test *test, struct exam_filter fi
 
 void exam_list_append(struct exam_test_list *list, const struct exam_test *test)
 {
-    size_t idx = list->count ++;
-    if (list->data == NULL || list->count > list->capacity) {
-        size_t min_cap = list->count;
-        if (min_cap < 4)
-            min_cap = 4;
-        else
-            min_cap = list->capacity *= 2;
+    if (list->count == SIZE_MAX)
+        _exam_dief("test list too large\n");
 
-        struct exam_test *data = realloc(list->data, sizeof(*list->data) * min_cap);
+    size_t new_count = list->count + 1;
+    if (list->data == NULL || new_count > list->capacity) {
+        size_t new_cap = list->capacity;
+        if (new_cap < 4) {
+            new_cap = 4;
+        } else {
+            if (new_cap > SIZE_MAX / 2)
+                _exam_dief("test list too large\n");
+
+            new_cap *= 2;
+        }
+        if (new_cap < new_count)
+            new_cap = new_count;
+        if (new_cap > SIZE_MAX / sizeof(*list->data))
+            _exam_dief("test list too large\n");
+
+        struct exam_test *data = realloc(list->data, sizeof(*list->data) * new_cap);
         if (data == NULL)
             _exam_die_errno("realloc");
 
         list->data = data;
-        list->capacity = min_cap;
+        list->capacity = new_cap;
     }
 
-    list->data[idx] = *test;
+    list->data[list->count++] = *test;
 }
 
 void exam_list_destroy(struct exam_test_list *list)
