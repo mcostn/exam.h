@@ -1,12 +1,13 @@
 #ifndef EXAM_H
 #define EXAM_H
 
-#include <stdio.h> /* printf(), perror() */
-#include <stdlib.h> /* malloc(), exit(), EXIT_FAILURE */
+#include <stdio.h> /* printf(), fprintf(), vfprintf(), fputc(), perror(), stdout, stderr */
+#include <stdlib.h> /* malloc(), realloc(), free(), qsort(), exit(), strtoull(), EXIT_FAILURE */
 #include <string.h> /* strcmp(), memcmp(), strerror() */
 #include <stdarg.h> /* va_list, va_start(), va_end() */
 #include <stdbool.h> /* bool, true, false */
 #include <stdint.h> /* intmax_t, uintmax_t */
+#include <errno.h> /* errno */
 #include <math.h> /*  isnan(), isinf() */
 
 #define EXAM_ASSERT_TRUE(cond) _exam_assert_true((cond), #cond, __FILE__, __LINE__)
@@ -103,11 +104,26 @@ struct exam_state
     size_t crashed;
 };
 
+enum exam_color
+{
+    EXAM_COLOR_AUTO = 0,
+    EXAM_COLOR_ALWAYS,
+    EXAM_COLOR_NEVER,
+};
+
+enum exam_cli_action
+{
+    EXAM_ACTION_RUN = 0,
+    EXAM_ACTION_LIST,
+    EXAM_ACTION_HELP,
+};
+
 struct exam_cli_state
 {
-    bool parallel;
+    size_t jobs;
+    enum exam_cli_action action;
+    enum exam_color color;
     struct exam_filter filter;
-    bool no_color;
 };
 
 #ifdef __cplusplus
@@ -164,7 +180,7 @@ extern int exam_cli_main(int argc, char **argv);
 #ifdef EXAM_SOURCE
 #ifdef __linux__
 #include <pthread.h>
-#include <unistd.h>
+#include <unistd.h> /* isatty(), STDOUT_FILENO */
 #include <sys/types.h>
 #include <sys/wait.h>
 #else
@@ -534,7 +550,7 @@ void exam_run_tests_parallel(struct exam_test_list *list, struct exam_filter fil
         _exam_die_strerror("pthread_mutex_init", rc);
 
     for (size_t i = 0; i < worker_count; i ++) {
-        rc = pthread_create(&threads[i], NULL, _exam_run_worker, &worker) != 0;
+        rc = pthread_create(&threads[i], NULL, _exam_run_worker, &worker);
         if (rc != 0)
             _exam_die_strerror("pthread_create", rc);
     }
@@ -823,87 +839,104 @@ static const char *_exam_str_repr(const char *str)
 
 struct exam_cli_state exam_cli_state = {0};
 
-static int _exam_cli_cmd_run();
-static int _exam_cli_cmd_ls();
+static int _exam_cli_run();
+static int _exam_cli_list();
 static void _exam_cli_usage();
-static const char *exam_cli_color(const char *color);
+static const char *_exam_cli_color(const char *color);
+static bool _exam_cli_is_option(const char *str, const char *short_name, const char *long_name);
+static bool _exam_cli_is_color();
 
 int exam_cli_main(int argc, char **argv)
 {
-    exam_cli_state = (struct exam_cli_state){0};
     exam_list_sort(&exam_state.test_list);
+    exam_cli_state = (struct exam_cli_state){0};
 
-    /* options */
-    int command_count = 1;
-    for (int i = 1; i < argc; i ++) {
-        if (strcmp(argv[i], "-p") == 0 || strcmp(argv[i], "--parallel") == 0) {
-            exam_cli_state.parallel = true;
-        } else if (strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--test-name") == 0) {
-            if (i == argc - 1 || argv[i + 1][0] == '-')
-                _exam_dief("%sexpected name%s",
-                          exam_cli_color(EXAM_CLI_RED),
-                          exam_cli_color(EXAM_CLI_RESET));
+    int rc = EXIT_SUCCESS;
+    for (int i = 1; i < argc; ++i) {
+        if (_exam_cli_is_option(argv[i], "-j", "--jobs")) {
+            if (i == argc - 1) {
+                fprintf(stderr, "usage: -j, --jobs N\n");
+                rc = EXIT_FAILURE;
+                goto cleanup;
+            }
 
-            exam_cli_state.filter.test_name = argv[++i];
-        } else if (strcmp(argv[i], "-c") == 0 || strcmp(argv[i], "--category") == 0) {
-            if (i == argc - 1 || argv[i + 1][0] == '-')
-                _exam_dief("%sexpected category%s",
-                          exam_cli_color(EXAM_CLI_RED),
-                          exam_cli_color(EXAM_CLI_RESET));
+            const char *jobs_str = argv[++i];
+            if (*jobs_str == '\0' || *jobs_str == '-') {
+                fprintf(stderr, "invalid jobs count '%s'\n", jobs_str);
+                rc = EXIT_FAILURE;
+                goto cleanup;
+            }
 
-            exam_cli_state.filter.category_name = argv[++i];
-        } else if (strcmp(argv[i], "--no-color") == 0) {
-            exam_cli_state.no_color = true;
-        } else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
-            _exam_cli_usage();
-            return EXIT_SUCCESS;
-        } else if (argv[i][0] == '-') {
-            _exam_cli_usage();
-            _exam_dief("%sunknown option '%s'%s",
-                      exam_cli_color(EXAM_CLI_RED),
-                      argv[i],
-                      exam_cli_color(EXAM_CLI_RESET));
-            return EXIT_FAILURE;
+            errno = 0;
+            char *end;
+            unsigned long long value = strtoull(jobs_str, &end, 10);
+            if (errno == ERANGE || end == jobs_str || *end != '\0' ||
+                value == 0 || value > SIZE_MAX) {
+                fprintf(stderr, "invalid jobs count '%s'\n", jobs_str);
+                rc = EXIT_FAILURE;
+                goto cleanup;
+            }
+
+            exam_cli_state.jobs = (size_t)value;
+        } else if (_exam_cli_is_option(argv[i], "-l", "--list")) {
+            exam_cli_state.action = EXAM_ACTION_LIST;
+        } else if (_exam_cli_is_option(argv[i], NULL, "--color")) {
+            if (i == argc - 1) {
+                fprintf(stderr, "usage: --color WHEN (can be auto, always or never)\n");
+                rc = EXIT_FAILURE;
+                goto cleanup;
+            }
+
+            const char *color_str = argv[++i];
+            if (strcmp(color_str, "auto") == 0) {
+                exam_cli_state.color = EXAM_COLOR_AUTO;
+            } else if (strcmp(color_str, "always") == 0) {
+                exam_cli_state.color = EXAM_COLOR_ALWAYS;
+            } else if (strcmp(color_str, "never") == 0) {
+                exam_cli_state.color = EXAM_COLOR_NEVER;
+            } else {
+                fprintf(stderr,
+                        "unknown color '%s'\n"
+                        "usage: --color WHEN (can be auto, always or never)\n",
+                        color_str);
+                rc = EXIT_FAILURE;
+                goto cleanup;
+            }
+        } else if (_exam_cli_is_option(argv[i], "-h", "--help")) {
+            exam_cli_state.action = EXAM_ACTION_HELP;
         } else {
-            argv[command_count++] = argv[i];
+            fprintf(stderr, "unknown option '%s'\n", argv[i]);
+            rc = EXIT_FAILURE;
+            _exam_cli_usage();
+            goto cleanup;
         }
     }
 
-    if (command_count != 2) {
-        _exam_cli_usage();
-        _exam_dief("%sexpected only one command, but got %d%s",
-                  exam_cli_color(EXAM_CLI_RED),
-                  command_count - 1,
-                  exam_cli_color(EXAM_CLI_RESET));
-    }
-
-    /* commands */
-    argc = command_count;
-    for (int i = 1; i < argc; i ++) {
-        if (strcmp(argv[i], "run") == 0) {
-            return _exam_cli_cmd_run();
-        } else if (strcmp(argv[i], "ls") == 0) {
-            return _exam_cli_cmd_ls();
-        } else {
+    switch (exam_cli_state.action) {
+        case EXAM_ACTION_RUN:
+            rc = _exam_cli_run();
+            break;
+        case EXAM_ACTION_LIST:
+            rc = _exam_cli_list();
+            break;
+        case EXAM_ACTION_HELP:
+            rc = EXIT_SUCCESS;
             _exam_cli_usage();
-            _exam_dief("%sunknown command '%s'%s",
-                       exam_cli_color(EXAM_CLI_RED),
-                       argv[i],
-                       exam_cli_color(EXAM_CLI_RESET));
-            return EXIT_FAILURE;
-        }
+            break;
+        default:
+            rc = EXIT_FAILURE;
+            fprintf(stderr, "unexpected action %d\n", exam_cli_state.action);
+            break;
     }
 
+cleanup:
     exam_list_destroy(&exam_state.test_list);
-    return EXIT_SUCCESS;
+    return rc;
 }
 
-static int _exam_cli_cmd_run()
+static int _exam_cli_run()
 {
-    if (exam_cli_state.parallel)
-        exam_run_tests_parallel(&exam_state.test_list, exam_cli_state.filter);
-    else
-        exam_run_tests(&exam_state.test_list, exam_cli_state.filter);
+    exam_run_tests(&exam_state.test_list, exam_cli_state.filter);
 
     for (size_t i = 0; i < exam_state.test_list.count; i++) {
         struct exam_test *test = &exam_state.test_list.data[i];
@@ -915,29 +948,29 @@ static int _exam_cli_cmd_run()
                 exam_state.passed ++;
                 fprintf(stdout,
                         "%s[PASS] %s/%s%s\n",
-                        exam_cli_color(EXAM_CLI_GREEN),
+                        _exam_cli_color(EXAM_CLI_GREEN),
                         test->category,
                         test->name,
-                        exam_cli_color(EXAM_CLI_RESET));
+                        _exam_cli_color(EXAM_CLI_RESET));
                 break;
             case EXAM_TEST_FAILED:
                 exam_state.failed ++;
                 fprintf(stderr,
                         "%s[FAIL] %s/%s%s\n",
-                        exam_cli_color(EXAM_CLI_RED),
+                        _exam_cli_color(EXAM_CLI_RED),
                         test->category,
                         test->name,
-                        exam_cli_color(EXAM_CLI_RESET));
+                        _exam_cli_color(EXAM_CLI_RESET));
                 break;
             case EXAM_TEST_CRASHED:
                 exam_state.crashed ++;
                 fprintf(stderr,
                         "%s[CRASH] %s/%s (signal %d)%s\n",
-                        exam_cli_color(EXAM_CLI_YELLOW),
+                        _exam_cli_color(EXAM_CLI_YELLOW),
                         test->category,
                         test->name,
                         test->exit_signal,
-                        exam_cli_color(EXAM_CLI_RESET));
+                        _exam_cli_color(EXAM_CLI_RESET));
                 break;
             default:
                 fprintf(stderr,
@@ -957,22 +990,22 @@ static int _exam_cli_cmd_run()
 
     if (exam_state.failed > 0 || exam_state.crashed > 0)
         return EXIT_FAILURE;
-    else
-        return EXIT_SUCCESS;
+
+    return EXIT_SUCCESS;
 }
 
-static int _exam_cli_cmd_ls()
+static int _exam_cli_list()
 {
     size_t found = 0;
-    for (size_t i = 0; i < exam_state.test_list.count; i++) {
+    for (size_t i = 0; i < exam_state.test_list.count; ++i) {
         const struct exam_test *test = &exam_state.test_list.data[i];
         if (!exam_test_passes_filter(test, exam_cli_state.filter))
             continue;
 
         printf("%s%s%s/%s\n",
-                exam_cli_color(EXAM_CLI_CYAN),
+                _exam_cli_color(EXAM_CLI_CYAN),
                 test->category,
-                exam_cli_color(EXAM_CLI_RESET),
+                _exam_cli_color(EXAM_CLI_RESET),
                 test->name);
 
         found ++;
@@ -984,44 +1017,43 @@ static int _exam_cli_cmd_ls()
 
 static void _exam_cli_usage()
 {
-    printf("%s"EXAM_CLI_NAME"%s - Find and run unit tests\n"
-           "%susage%s:\n"
-           "     %s"EXAM_CLI_NAME" run%s [-p|--parallel]\n"
-           "     %s"EXAM_CLI_NAME" ls%s\n"
-           "\n"
-           "%soptions%s:\n"
-           "    %s-t, --test-name <name>%s\n"
-           "                  filter by test name\n"
-           "    %s-c, --category <name>%s\n"
-           "                  filter by category\n"
-           "    %s--no-color%s    don't display using colors\n"
-           "    %s-h, --help%s    show this message\n",
-           exam_cli_color(EXAM_CLI_GREEN), /* exam */
-           exam_cli_color(EXAM_CLI_RESET),
-           exam_cli_color(EXAM_CLI_YELLOW), /* usage */
-           exam_cli_color(EXAM_CLI_RESET),
-           exam_cli_color(EXAM_CLI_GREEN), /* run */
-           exam_cli_color(EXAM_CLI_RESET),
-           exam_cli_color(EXAM_CLI_GREEN), /* ls */
-           exam_cli_color(EXAM_CLI_RESET),
-           exam_cli_color(EXAM_CLI_YELLOW), /* options */
-           exam_cli_color(EXAM_CLI_RESET),
-           exam_cli_color(EXAM_CLI_GREEN), /* -t, --test-name */
-           exam_cli_color(EXAM_CLI_RESET),
-           exam_cli_color(EXAM_CLI_GREEN), /* -c, --category */
-           exam_cli_color(EXAM_CLI_RESET),
-           exam_cli_color(EXAM_CLI_GREEN), /* --no-color */
-           exam_cli_color(EXAM_CLI_RESET),
-           exam_cli_color(EXAM_CLI_GREEN), /* -h, --help */
-           exam_cli_color(EXAM_CLI_RESET));
+    printf("usage: "EXAM_CLI_NAME" [options] [filter...]\n"
+           "options:\n"
+           "    -j, --jobs N        run up to N jobs at once\n"
+           "    -l, --list          list available tests\n"
+           "        --color WHEN    colorize output: auto, always, never\n"
+           "    -h, --help          show this message\n");
 }
 
-static const char *exam_cli_color(const char *color)
+static const char *_exam_cli_color(const char *color)
 {
-    if (exam_cli_state.no_color)
-        return "";
+    if (_exam_cli_is_color())
+        return color;
 
-    return color;
+    return "";
+}
+
+static bool _exam_cli_is_option(const char *str, const char *short_name, const char *long_name)
+{
+    if (str == NULL)
+        return false;
+
+    if (short_name != NULL && strcmp(str, short_name) == 0)
+        return true;
+    if (long_name != NULL && strcmp(str, long_name) == 0)
+        return true;
+
+    return false;
+}
+
+static bool _exam_cli_is_color()
+{
+    if (exam_cli_state.color == EXAM_COLOR_NEVER)
+        return false;
+    if (exam_cli_state.color == EXAM_COLOR_ALWAYS)
+        return true;
+
+    return isatty(STDOUT_FILENO) || isatty(STDERR_FILENO);
 }
 #endif /* EXAM_SOURCE */
 
