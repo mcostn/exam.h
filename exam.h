@@ -164,9 +164,7 @@ extern void _exam_assert_not_in_arr_double(double x, const double *arr, size_t c
 
 extern struct exam_state exam_state;
 extern bool exam_test_passes_filter(const struct exam_test *test, struct exam_filter filter);
-extern void exam_run_tests_parallel(struct exam_test_list *list, struct exam_filter filter);
-extern void exam_run_tests(struct exam_test_list *list, struct exam_filter options);
-extern void exam_run_test(struct exam_test *test);
+extern void exam_run_tests(struct exam_test_list *list, struct exam_filter filter, size_t jobs);
 extern void exam_list_append(struct exam_test_list *list, const struct exam_test *test);
 extern void exam_list_destroy(struct exam_test_list *list);
 extern void exam_list_sort(struct exam_test_list *list);
@@ -179,7 +177,6 @@ extern int exam_cli_main(int argc, char **argv);
 
 #ifdef EXAM_SOURCE
 #ifdef __linux__
-#include <pthread.h>
 #include <unistd.h> /* isatty(), STDOUT_FILENO */
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -198,11 +195,8 @@ static bool _exam_double_cmp(double a, double b, double eps);
 static bool _exam_double_in_range(double x, double min, double max, double eps);
 static const char *_exam_str_repr(const char *str);
 
-static void *_exam_run_worker(void *arg);
-
 static void _exam_dief(const char *fmt, ...);
 static void _exam_die_perror(const char *str);
-static void _exam_die_strerror(const char *str, int error);
 
 static void _exam_fail_test(const char *file, size_t line, const char *fmt, ...);
 
@@ -515,125 +509,75 @@ void _exam_assert_not_in_arr_double(double x, const double *arr, size_t count, d
     }
 }
 
-struct exam_test_queue
+struct exam_test_process
 {
-    struct exam_test_list *test_list;
-    struct exam_filter filter;
-    size_t next_test_index;
-    pthread_mutex_t lock;
+    pid_t pid;
+    size_t test_index;
 };
 
-void exam_run_tests_parallel(struct exam_test_list *list, struct exam_filter filter)
+static pid_t _exam_start_test(struct exam_test *test);
+static void _exam_finish_test(struct exam_test *test, int status);
+
+void exam_run_tests(struct exam_test_list *list, struct exam_filter filter, size_t jobs)
 {
-    long cpu_count = sysconf(_SC_NPROCESSORS_ONLN);
-    if (cpu_count <= 0)
-        cpu_count = 1;
+    if (list->count == 0)
+        return;
 
-    size_t worker_count = cpu_count;
-    if (worker_count > list->count)
-        worker_count = list->count;
-
-    pthread_t *threads = malloc(worker_count * sizeof(*threads));
-    if (threads == NULL)
-        _exam_die_perror("malloc");
-
-    struct exam_test_queue worker = {
-        .test_list = list,
-        .filter = filter,
-        .next_test_index = 0
-    };
-
-    int rc = 0;
-
-    rc = pthread_mutex_init(&worker.lock, NULL);
-    if (rc != 0)
-        _exam_die_strerror("pthread_mutex_init", rc);
-
-    for (size_t i = 0; i < worker_count; i ++) {
-        rc = pthread_create(&threads[i], NULL, _exam_run_worker, &worker);
-        if (rc != 0)
-            _exam_die_strerror("pthread_create", rc);
+    if (jobs == 0) {
+        long cpu_count = sysconf(_SC_NPROCESSORS_ONLN);
+        if (cpu_count <= 0)
+            jobs = 1;
+        else
+            jobs = cpu_count;
     }
-    for (size_t i = 0; i < worker_count; i ++) {
-        rc = pthread_join(threads[i], NULL);
-        if (rc != 0)
-            _exam_die_strerror("pthread_join", rc);
-    }
+    if (jobs > list->count)
+        jobs = list->count;
 
-    free(threads);
+    struct exam_test_process *running = calloc(jobs, sizeof(*running));
+    if (running == NULL)
+        _exam_die_perror("calloc");
 
-    rc = pthread_mutex_destroy(&worker.lock);
-    if (rc != 0)
-        _exam_die_strerror("pthread_mutex_destroy", rc);
-}
+    size_t next_idx = 0;
+    size_t running_count = 0;
+    while (next_idx < list->count || running_count > 0) {
+        while (running_count < jobs && next_idx < list->count) {
+            size_t idx = next_idx++;
+            struct exam_test *test = &list->data[idx];
+            if (!exam_test_passes_filter(test, filter))
+                continue;
 
-void exam_run_tests(struct exam_test_list *list, struct exam_filter filter)
-{
-    for (size_t i = 0; i < list->count; i ++) {
-        if (!exam_test_passes_filter(&list->data[i], filter))
-            continue;
+            running[running_count++] = (struct exam_test_process){
+                .pid = _exam_start_test(test),
+                .test_index = idx,
+            };
+        }
 
-        exam_run_test(&list->data[i]);
-    }
-}
-
-void *_exam_run_worker(void *arg)
-{
-    struct exam_test_queue *worker = arg;
-
-    while (true) {
-        pthread_mutex_lock(&worker->lock);
-        size_t idx = worker->next_test_index;
-        if (idx < worker->test_list->count)
-            worker->next_test_index++;
-        pthread_mutex_unlock(&worker->lock);
-
-        if (idx >= worker->test_list->count)
+        if (running_count == 0)
             break;
 
-        struct exam_test *test = &worker->test_list->data[idx];
-        if (!exam_test_passes_filter(test, worker->filter))
-            continue;
+        int status;
+        pid_t pid = waitpid(-1, &status, 0);
+        if (pid == -1)
+            _exam_die_perror("wait");
 
-        exam_run_test(test);
+        bool found = false;
+        for (size_t i = 0; i < running_count; ++i) {
+            if (running[i].pid != pid)
+                continue;
+
+            struct exam_test *test = &list->data[running[i].test_index];
+            _exam_finish_test(test, status);
+
+            running[i] = running[--running_count];
+            found = true;
+            break;
+        }
+
+        if (!found)
+            _exam_dief("wait returned unknown child pid: %ld", (long)pid);
     }
 
-    return NULL;
-}
-
-void exam_run_test(struct exam_test *test)
-{
-    if (test->state != EXAM_TEST_NONE)
-        _exam_dief("tried to run test with an unexpected state: %d", test->state);
-
-    test->state = EXAM_TEST_RUNNING;
-
-    pid_t pid = fork();
-    if (pid == -1)
-        _exam_die_perror("fork");
-
-    if (pid == 0) {
-        test->func();
-        _exit(EXIT_SUCCESS);
-    }
-
-    int status;
-    if (waitpid(pid, &status, 0) == -1)
-        _exam_die_perror("waitpid");
-
-    if (WIFEXITED(status)) {
-        int exit_status = WEXITSTATUS(status);
-        if (exit_status == EXIT_SUCCESS)
-            test->state = EXAM_TEST_PASSED;
-        else
-            test->state = EXAM_TEST_FAILED;
-    }
-
-    if (WIFSIGNALED(status)) {
-        int signal = WTERMSIG(status);
-        test->state = EXAM_TEST_CRASHED;
-        test->exit_signal = signal;
-    }
+    free(running);
 }
 
 bool exam_test_passes_filter(const struct exam_test *test, struct exam_filter filter)
@@ -701,6 +645,43 @@ void exam_list_sort(struct exam_test_list *list)
     qsort(list->data, list->count, sizeof(*list->data), _exam_test_cmp);
 }
 
+static pid_t _exam_start_test(struct exam_test *test)
+{
+    if (test->state != EXAM_TEST_NONE)
+        _exam_dief("tried to run test with an unexpected state: %d",
+                   test->state);
+
+    test->state = EXAM_TEST_RUNNING;
+
+    pid_t pid = fork();
+    if (pid == -1)
+        _exam_die_perror("fork");
+
+    if (pid == 0) {
+        test->func();
+        _exit(EXIT_SUCCESS);
+    }
+
+    return pid;
+}
+
+static void _exam_finish_test(struct exam_test *test, int status)
+{
+    if (WIFEXITED(status)) {
+        if (WEXITSTATUS(status) == EXIT_SUCCESS)
+            test->state = EXAM_TEST_PASSED;
+        else
+            test->state = EXAM_TEST_FAILED;
+    } else if (WIFSIGNALED(status)) {
+        test->state = EXAM_TEST_CRASHED;
+        test->exit_signal = WTERMSIG(status);
+    } else {
+        _exam_dief("unexpected wait status for test %s/%s",
+                   test->category,
+                   test->name);
+    }
+}
+
 static void _exam_dief(const char *fmt, ...)
 {
     va_list args;
@@ -714,12 +695,6 @@ static void _exam_dief(const char *fmt, ...)
 static void _exam_die_perror(const char *str)
 {
     perror(str);
-    exit(EXIT_FAILURE);
-}
-
-static void _exam_die_strerror(const char *str, int error)
-{
-    fprintf(stderr, "%s: %s\n", str, strerror(error));
     exit(EXIT_FAILURE);
 }
 
@@ -936,7 +911,7 @@ cleanup:
 
 static int _exam_cli_run()
 {
-    exam_run_tests(&exam_state.test_list, exam_cli_state.filter);
+    exam_run_tests(&exam_state.test_list, exam_cli_state.filter, exam_cli_state.jobs);
 
     for (size_t i = 0; i < exam_state.test_list.count; i++) {
         struct exam_test *test = &exam_state.test_list.data[i];
