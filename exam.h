@@ -879,6 +879,36 @@ int exam_cli_main(int argc, char **argv)
             }
         } else if (_exam_cli_is_option(argv[i], "-h", "--help")) {
             exam_cli_state.action = EXAM_ACTION_HELP;
+        } else if (_exam_cli_is_option(argv[i], "-n", "--name")) {
+            if (i == argc - 1) {
+                fprintf(stderr, "usage: --name NAME\n");
+                rc = EXIT_FAILURE;
+                goto cleanup;
+            }
+
+            char *name = argv[++i];
+            if (name[0] == '-') {
+                fprintf(stderr, "usage: --name NAME\n");
+                rc = EXIT_FAILURE;
+                goto cleanup;
+            }
+
+            exam_cli_state.filter.test_name = name;
+        } else if (_exam_cli_is_option(argv[i], "-c", "--category")) {
+            if (i == argc - 1) {
+                fprintf(stderr, "usage: --category CATEGORY\n");
+                rc = EXIT_FAILURE;
+                goto cleanup;
+            }
+
+            char *name = argv[++i];
+            if (name[0] == '-') {
+                fprintf(stderr, "usage: --category CATEGORY\n");
+                rc = EXIT_FAILURE;
+                goto cleanup;
+            }
+
+            exam_cli_state.filter.category_name = name;
         } else {
             fprintf(stderr, "unknown option '%s'\n", argv[i]);
             rc = EXIT_FAILURE;
@@ -997,7 +1027,10 @@ static void _exam_cli_usage()
            "    -j, --jobs N        run up to N jobs at once\n"
            "    -l, --list          list available tests\n"
            "        --color WHEN    colorize output: auto, always, never\n"
-           "    -h, --help          show this message\n");
+           "    -h, --help          show this message\n"
+           "filters:\n"
+           "    -n, --name NAME          test name\n"
+           "    -c, --category CATEGORY  category name\n");
 }
 
 static const char *_exam_cli_color(const char *color)
