@@ -731,7 +731,7 @@ static bool _exam_str_cmp(const char *a, const char *b)
 
 static bool _exam_float_cmp(float a, float b, float eps)
 {
-    if (eps < 0)
+    if (!isfinite(eps) || eps < 0)
         _exam_dief("invalid epsilon: %.9g", eps);
 
     if (isnan(a) && isnan(b))
@@ -754,7 +754,7 @@ static bool _exam_float_cmp(float a, float b, float eps)
 
 static bool _exam_float_in_range(float x, float min, float max, float eps)
 {
-    if (eps < 0)
+    if (!isfinite(eps) || eps < 0)
         _exam_dief("invalid epsilon: %.9g", eps);
 
     return (_exam_float_cmp(x, min, eps) || x > min) &&
@@ -763,7 +763,7 @@ static bool _exam_float_in_range(float x, float min, float max, float eps)
 
 static bool _exam_double_cmp(double a, double b, double eps)
 {
-    if (eps < 0)
+    if (!isfinite(eps) || eps < 0)
         _exam_dief("invalid epsilon: %.17g", eps);
 
     if (isnan(a) && isnan(b))
@@ -786,7 +786,7 @@ static bool _exam_double_cmp(double a, double b, double eps)
 
 static bool _exam_double_in_range(double x, double min, double max, double eps)
 {
-    if (eps < 0)
+    if (!isfinite(eps) || eps < 0)
         _exam_dief("invalid epsilon: %.17g", eps);
 
     return (_exam_double_cmp(x, min, eps) || x > min) &&
