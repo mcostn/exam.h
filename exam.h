@@ -1,14 +1,8 @@
 #ifndef EXAM_H
 #define EXAM_H
-
-#include <stdio.h> /* printf(), fprintf(), vfprintf(), fputc(), perror(), stdout, stderr */
-#include <stdlib.h> /* malloc(), realloc(), free(), qsort(), exit(), strtoull(), EXIT_FAILURE */
-#include <string.h> /* strcmp(), memcmp(), strerror() */
-#include <stdarg.h> /* va_list, va_start(), va_end() */
-#include <stdbool.h> /* bool, true, false */
-#include <stdint.h> /* intmax_t, uintmax_t */
-#include <errno.h> /* errno */
-#include <math.h> /*  isnan(), isinf() */
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 
 #define EXAM_ASSERT_TRUE(cond) _exam_assert_true((cond), #cond, __FILE__, __LINE__)
 #define EXAM_ASSERT_FALSE(cond) _exam_assert_false((cond), #cond, __FILE__, __LINE__)
@@ -176,6 +170,13 @@ extern int exam_cli_main(int argc, char **argv);
 #endif
 
 #ifdef EXAM_SOURCE
+#include <stdio.h> /* printf(), fprintf(), vfprintf(), fputc(), perror(), stdout, stderr */
+#include <stdlib.h> /* malloc(), realloc(), free(), qsort(), exit(), strtoull(), EXIT_FAILURE */
+#include <string.h> /* strcmp(), memcmp(), strerror() */
+#include <stdarg.h> /* va_list, va_start(), va_end() */
+#include <errno.h> /* errno */
+#include <math.h> /*  isnan(), isinf(), isfinite() */
+
 #ifdef __linux__
 #include <unistd.h> /* isatty(), STDOUT_FILENO */
 #include <sys/types.h>
