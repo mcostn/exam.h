@@ -188,17 +188,17 @@ extern int exam_cli_main(int argc, char **argv);
 struct exam_state exam_state = {0};
 
 static int _exam_test_cmp(const void *a, const void *b);
-
 static bool _exam_str_cmp(const char *a, const char *b);
 static bool _exam_float_cmp(float a, float b, float eps);
-static bool _exam_float_in_range(float x, float min, float max, float eps);
 static bool _exam_double_cmp(double a, double b, double eps);
+
+static bool _exam_float_in_range(float x, float min, float max, float eps);
 static bool _exam_double_in_range(double x, double min, double max, double eps);
+
 static const char *_exam_str_repr(const char *str);
 
 static void _exam_dief(const char *fmt, ...);
 static void _exam_die_perror(const char *str);
-
 static void _exam_fail_test(const char *file, size_t line, const char *fmt, ...);
 
 void _exam_assert_true(bool res, const char *expression, const char *file, size_t line)

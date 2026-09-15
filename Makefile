@@ -1,13 +1,28 @@
-CC := gcc
-CFLAGS := -I. -std=c99 -Wall -Wextra -Wpedantic
-LDFLAGS := -pthread
+CC     ?= gcc
+CFLAGS ?= -I. -std=c99 -Wall -Wextra -Wpedantic
 
-examples:
-	$(CC) $(CFLAGS) $(LDFLAGS) -o examples/assert examples/assert.c
-	$(CC) $(CFLAGS) $(LDFLAGS) -o examples/test examples/test.c
-	$(CC) $(CFLAGS) $(LDFLAGS) -o examples/cli examples/cli.c
+EXAMPLES := \
+	examples/assert \
+	examples/test \
+	examples/cli
+
+TESTS := \
+	tests/exam
+
+.PHONY: all examples tests clean
+
+all: examples tests
+
+examples: $(EXAMPLES)
+
+tests: $(TESTS)
+
+examples/%: examples/%.c exam.h
+	$(CC) $(CFLAGS) -o $@ $<
+
+tests/%: tests/%.c exam.h
+	$(CC) $(CFLAGS) -o $@ $<
 
 clean:
-	rm examples/assert examples/test examples/cli
+	$(RM) $(EXAMPLES) $(TESTS)
 
-.PHONY: examples clean

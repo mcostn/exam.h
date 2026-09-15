@@ -1,5 +1,8 @@
+# Build Artifacts
 *.o
 
-examples/assert
-examples/test
-examples/cli
+# Executables
+/examples/assert
+/examples/test
+/examples/cli
+/tests/exam
