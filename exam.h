@@ -833,30 +833,24 @@ int exam_cli_main(int argc, char **argv)
     int rc = EXIT_SUCCESS;
     for (int i = 1; i < argc; ++i) {
         if (_exam_cli_is_option(argv[i], "-j", "--jobs")) {
-            if (i == argc - 1) {
-                fprintf(stderr, "usage: -j, --jobs N\n");
-                rc = EXIT_FAILURE;
-                goto cleanup;
+            size_t value = 0;
+
+            if (i + 1 < argc && argv[i + 1][0] != '-') {
+                const char *jobs_str = argv[++i];
+
+                errno = 0;
+                char *end;
+                unsigned long long parsed = strtoull(jobs_str, &end, 10);
+                if (errno == ERANGE || end == jobs_str || *end != '\0' || parsed > SIZE_MAX) {
+                    fprintf(stderr, "invalid jobs count '%s'\n", jobs_str);
+                    rc = EXIT_FAILURE;
+                    goto cleanup;
+                }
+
+                value = (size_t)parsed;
             }
 
-            const char *jobs_str = argv[++i];
-            if (*jobs_str == '\0' || *jobs_str == '-') {
-                fprintf(stderr, "invalid jobs count '%s'\n", jobs_str);
-                rc = EXIT_FAILURE;
-                goto cleanup;
-            }
-
-            errno = 0;
-            char *end;
-            unsigned long long value = strtoull(jobs_str, &end, 10);
-            if (errno == ERANGE || end == jobs_str || *end != '\0' ||
-                value == 0 || value > SIZE_MAX) {
-                fprintf(stderr, "invalid jobs count '%s'\n", jobs_str);
-                rc = EXIT_FAILURE;
-                goto cleanup;
-            }
-
-            exam_cli_state.jobs = (size_t)value;
+            exam_cli_state.jobs = value;
         } else if (_exam_cli_is_option(argv[i], "-l", "--list")) {
             exam_cli_state.action = EXAM_ACTION_LIST;
         } else if (_exam_cli_is_option(argv[i], NULL, "--color")) {
