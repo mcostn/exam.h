@@ -86,8 +86,8 @@ struct exam_test_list
 
 struct exam_filter
 {
-    char *category_name;
-    char *test_name;
+    const char *category_name;
+    const char *test_name;
 };
 
 struct exam_state
