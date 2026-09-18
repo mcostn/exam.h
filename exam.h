@@ -68,13 +68,22 @@ enum exam_test_state
     EXAM_TEST_CRASHED,
 };
 
+#ifndef EXAM_TEST_OUTPUT_SIZE
+#define EXAM_TEST_OUTPUT_SIZE 1024
+#endif
+
 struct exam_test
 {
     const char *category;
     const char *name;
     void (*func)(void);
+
     enum exam_test_state state;
-    int exit_signal; /* in case state = EXAM_TEST_CRASHED */
+    int exit_signal;
+
+    char output[EXAM_TEST_OUTPUT_SIZE + 1];
+    size_t output_size;
+    bool output_truncated;
 };
 
 struct exam_test_list
@@ -179,6 +188,7 @@ extern int exam_cli_main(int argc, char **argv);
 
 #ifdef __linux__
 #include <unistd.h> /* isatty(), STDOUT_FILENO */
+#include <fcntl.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #else
@@ -517,10 +527,12 @@ struct exam_test_process
 {
     pid_t pid;
     size_t test_index;
+    int out_fd;
 };
 
-static pid_t _exam_start_test(struct exam_test *test);
-static void _exam_finish_test(struct exam_test *test, int status);
+static struct exam_test_process _exam_start_test(struct exam_test *test, size_t idx);
+static void _exam_finish_test(struct exam_test *test, int status, int out_fd);
+static void _exam_read_output(struct exam_test *test, int out_fd);
 
 void exam_run_tests(struct exam_test_list *list, struct exam_filter filter, size_t jobs)
 {
@@ -550,10 +562,7 @@ void exam_run_tests(struct exam_test_list *list, struct exam_filter filter, size
             if (!exam_test_passes_filter(test, filter))
                 continue;
 
-            running[running_count++] = (struct exam_test_process){
-                .pid = _exam_start_test(test),
-                .test_index = idx,
-            };
+            running[running_count++] = _exam_start_test(test, idx);
         }
 
         if (running_count == 0)
@@ -570,7 +579,7 @@ void exam_run_tests(struct exam_test_list *list, struct exam_filter filter, size
                 continue;
 
             struct exam_test *test = &list->data[running[i].test_index];
-            _exam_finish_test(test, status);
+            _exam_finish_test(test, status, running[i].out_fd);
 
             running[i] = running[--running_count];
             found = true;
@@ -649,27 +658,53 @@ void exam_list_sort(struct exam_test_list *list)
     qsort(list->data, list->count, sizeof(*list->data), _exam_test_cmp);
 }
 
-static pid_t _exam_start_test(struct exam_test *test)
+static struct exam_test_process _exam_start_test(struct exam_test *test, size_t idx)
 {
     if (test->state != EXAM_TEST_NONE)
         _exam_dief("tried to run test with an unexpected state: %d",
                    test->state);
 
+    int fildes[2];
+    if (pipe(fildes) == -1)
+        _exam_die_perror("pipe");
+
     test->state = EXAM_TEST_RUNNING;
+    test->output[0] = '\0';
+    test->output_size = 0;
+    test->output_truncated = false;
+
+    struct exam_test_process process = {0};
+    process.test_index = idx;
 
     pid_t pid = fork();
-    if (pid == -1)
-        _exam_die_perror("fork");
+    switch (pid) {
+        case -1:
+            _exam_die_perror("fork");
+            break; // unreachable
+        case 0:
+            close(fildes[0]);
+            if (dup2(fildes[1], STDOUT_FILENO) == -1)
+                _exam_die_perror("dup2");
+            if (dup2(fildes[1], STDERR_FILENO) == -1)
+                _exam_die_perror("dup2");
+            close(fildes[1]);
 
-    if (pid == 0) {
-        test->func();
-        _exit(EXIT_SUCCESS);
+            test->func();
+            fflush(stdout);
+            fflush(stderr);
+            _exit(EXIT_SUCCESS);
+            break;
+        default:
+            close(fildes[1]);
+            process.pid = pid;
+            process.out_fd = fildes[0];
+            break;
     }
 
-    return pid;
+    return process;
 }
 
-static void _exam_finish_test(struct exam_test *test, int status)
+static void _exam_finish_test(struct exam_test *test, int status, int out_fd)
 {
     if (WIFEXITED(status)) {
         if (WEXITSTATUS(status) == EXIT_SUCCESS)
@@ -683,6 +718,41 @@ static void _exam_finish_test(struct exam_test *test, int status)
         _exam_dief("unexpected wait status for test %s/%s",
                    test->category,
                    test->name);
+    }
+
+    _exam_read_output(test, out_fd);
+    close(out_fd);
+}
+
+static void _exam_read_output(struct exam_test *test, int out_fd)
+{
+    char buf[256];
+    for (;;) {
+        ssize_t n = read(out_fd, buf, sizeof(buf));
+        if (n == -1) {
+            if (errno == EINTR)
+                continue;
+            if (errno == EAGAIN || errno == EWOULDBLOCK)
+                return;
+
+            _exam_die_perror("read");
+        }
+        if (n == 0)
+            return;
+
+        if (n > 0) {
+            size_t remaining = EXAM_TEST_OUTPUT_SIZE - test->output_size;
+            size_t copy = n < (ssize_t)remaining ? (size_t)n : remaining;
+
+            if (copy > 0) {
+                memcpy(test->output + test->output_size, buf, copy);
+                test->output_size += copy;
+                test->output[test->output_size] = '\0';
+            }
+
+            if ((size_t)n > copy)
+                test->output_truncated = true;
+        }
     }
 }
 
@@ -964,6 +1034,17 @@ static int _exam_cli_run()
                         test->category,
                         test->name,
                         _exam_cli_color(EXAM_CLI_RESET));
+
+                if (test->output_size > 0) {
+                    fprintf(stderr,
+                            "%s%s%s",
+                            _exam_cli_color(EXAM_CLI_RED),
+                            test->output,
+                            _exam_cli_color(EXAM_CLI_RESET));
+                    if (test->output[test->output_size - 1] != '\n')
+                        fputc('\n', stderr);
+                }
+
                 break;
             case EXAM_TEST_CRASHED:
                 exam_state.crashed ++;
@@ -974,6 +1055,17 @@ static int _exam_cli_run()
                         test->name,
                         test->exit_signal,
                         _exam_cli_color(EXAM_CLI_RESET));
+
+                if (test->output_size > 0) {
+                    fprintf(stderr,
+                            "%s%s%s",
+                            _exam_cli_color(EXAM_CLI_YELLOW),
+                            test->output,
+                            _exam_cli_color(EXAM_CLI_RESET));
+                    if (test->output[test->output_size - 1] != '\n')
+                        fputc('\n', stderr);
+                }
+
                 break;
             default:
                 fprintf(stderr,
