@@ -102,6 +102,12 @@ struct exam_filter
 struct exam_state
 {
     struct exam_test_list test_list;
+
+    void (*on_start)(void);
+    void (*on_finish)(void);
+    void (*on_test_start)(const struct exam_test *test);
+    void (*on_test_finish)(const struct exam_test *test);
+
     size_t passed;
     size_t failed;
     size_t crashed;
@@ -539,6 +545,9 @@ void exam_run_tests(struct exam_test_list *list, struct exam_filter filter, size
     if (list->count == 0)
         return;
 
+    if (exam_state.on_start)
+        exam_state.on_start();
+
     if (jobs == 0) {
         long cpu_count = sysconf(_SC_NPROCESSORS_ONLN);
         if (cpu_count <= 0)
@@ -589,8 +598,10 @@ void exam_run_tests(struct exam_test_list *list, struct exam_filter filter, size
         if (!found)
             _exam_dief("wait returned unknown child pid: %ld", (long)pid);
     }
-
     free(running);
+
+    if (exam_state.on_finish)
+        exam_state.on_finish();
 }
 
 bool exam_test_passes_filter(const struct exam_test *test, struct exam_filter filter)
@@ -664,6 +675,9 @@ static struct exam_test_process _exam_start_test(struct exam_test *test, size_t 
         _exam_dief("tried to run test with an unexpected state: %d",
                    test->state);
 
+    if (exam_state.on_test_start)
+        exam_state.on_test_start(test);
+
     int fildes[2];
     if (pipe(fildes) == -1)
         _exam_die_perror("pipe");
@@ -722,6 +736,9 @@ static void _exam_finish_test(struct exam_test *test, int status, int out_fd)
 
     _exam_read_output(test, out_fd);
     close(out_fd);
+
+    if (exam_state.on_test_finish)
+        exam_state.on_test_finish(test);
 }
 
 static void _exam_read_output(struct exam_test *test, int out_fd)
@@ -891,6 +908,10 @@ struct exam_cli_state exam_cli_state = {0};
 static int _exam_cli_run();
 static int _exam_cli_list();
 static void _exam_cli_usage();
+
+static void _exam_cli_on_finish();
+static void _exam_cli_on_test_finish(const struct exam_test *test);
+
 static const char *_exam_cli_color(const char *color);
 static bool _exam_cli_is_option(const char *str, const char *short_name, const char *long_name);
 static bool _exam_cli_is_color();
@@ -898,6 +919,9 @@ static bool _exam_cli_is_color();
 int exam_cli_main(int argc, char **argv)
 {
     exam_list_sort(&exam_state.test_list);
+    exam_state.on_finish = _exam_cli_on_finish;
+    exam_state.on_test_finish = _exam_cli_on_test_finish;
+
     exam_cli_state = (struct exam_cli_state){0};
 
     int rc = EXIT_SUCCESS;
@@ -1010,82 +1034,8 @@ cleanup:
 static int _exam_cli_run()
 {
     exam_run_tests(&exam_state.test_list, exam_cli_state.filter, exam_cli_state.jobs);
-
-    for (size_t i = 0; i < exam_state.test_list.count; i++) {
-        struct exam_test *test = &exam_state.test_list.data[i];
-        if (!exam_test_passes_filter(test, exam_cli_state.filter))
-            continue;
-
-        switch(test->state) {
-            case EXAM_TEST_PASSED:
-                exam_state.passed ++;
-                fprintf(stdout,
-                        "%s[PASS] %s/%s%s\n",
-                        _exam_cli_color(EXAM_CLI_GREEN),
-                        test->category,
-                        test->name,
-                        _exam_cli_color(EXAM_CLI_RESET));
-                break;
-            case EXAM_TEST_FAILED:
-                exam_state.failed ++;
-                fprintf(stderr,
-                        "%s[FAIL] %s/%s%s\n",
-                        _exam_cli_color(EXAM_CLI_RED),
-                        test->category,
-                        test->name,
-                        _exam_cli_color(EXAM_CLI_RESET));
-
-                if (test->output_size > 0) {
-                    fprintf(stderr,
-                            "%s%s%s",
-                            _exam_cli_color(EXAM_CLI_RED),
-                            test->output,
-                            _exam_cli_color(EXAM_CLI_RESET));
-                    if (test->output[test->output_size - 1] != '\n')
-                        fputc('\n', stderr);
-                }
-
-                break;
-            case EXAM_TEST_CRASHED:
-                exam_state.crashed ++;
-                fprintf(stderr,
-                        "%s[CRASH] %s/%s (signal %d)%s\n",
-                        _exam_cli_color(EXAM_CLI_YELLOW),
-                        test->category,
-                        test->name,
-                        test->exit_signal,
-                        _exam_cli_color(EXAM_CLI_RESET));
-
-                if (test->output_size > 0) {
-                    fprintf(stderr,
-                            "%s%s%s",
-                            _exam_cli_color(EXAM_CLI_YELLOW),
-                            test->output,
-                            _exam_cli_color(EXAM_CLI_RESET));
-                    if (test->output[test->output_size - 1] != '\n')
-                        fputc('\n', stderr);
-                }
-
-                break;
-            default:
-                fprintf(stderr,
-                        "%s unexpected state (%d)\n",
-                        test->name,
-                        test->state);
-                break;
-        }
-
-    }
-
-    fprintf(stdout,
-            "%zu passed, %zu failed, %zu crashed\n",
-            exam_state.passed,
-            exam_state.failed,
-            exam_state.crashed);
-
     if (exam_state.failed > 0 || exam_state.crashed > 0)
         return EXIT_FAILURE;
-
     return EXIT_SUCCESS;
 }
 
@@ -1121,6 +1071,78 @@ static void _exam_cli_usage()
            "filters:\n"
            "    -n, --name NAME          test name\n"
            "    -c, --category CATEGORY  category name\n");
+}
+
+static void _exam_cli_on_finish()
+{
+    fprintf(stdout,
+            "%zu passed, %zu failed, %zu crashed\n",
+            exam_state.passed,
+            exam_state.failed,
+            exam_state.crashed);
+}
+
+static void _exam_cli_on_test_finish(const struct exam_test *test)
+{
+    switch(test->state) {
+        case EXAM_TEST_PASSED:
+            exam_state.passed ++;
+            fprintf(stdout,
+                    "%s[PASS] %s/%s%s\n",
+                    _exam_cli_color(EXAM_CLI_GREEN),
+                    test->category,
+                    test->name,
+                    _exam_cli_color(EXAM_CLI_RESET));
+            break;
+        case EXAM_TEST_FAILED:
+            exam_state.failed ++;
+            fprintf(stderr,
+                    "%s[FAIL] %s/%s%s\n",
+                    _exam_cli_color(EXAM_CLI_RED),
+                    test->category,
+                    test->name,
+                    _exam_cli_color(EXAM_CLI_RESET));
+
+            if (test->output_size > 0) {
+                fprintf(stderr,
+                        "%s%s%s",
+                        _exam_cli_color(EXAM_CLI_RED),
+                        test->output,
+                        _exam_cli_color(EXAM_CLI_RESET));
+                if (test->output[test->output_size - 1] != '\n')
+                    fputc('\n', stderr);
+            }
+
+            break;
+        case EXAM_TEST_CRASHED:
+            exam_state.crashed ++;
+            fprintf(stderr,
+                    "%s[CRASH] %s/%s (signal %d)%s\n",
+                    _exam_cli_color(EXAM_CLI_YELLOW),
+                    test->category,
+                    test->name,
+                    test->exit_signal,
+                    _exam_cli_color(EXAM_CLI_RESET));
+
+            if (test->output_size > 0) {
+                fprintf(stderr,
+                        "%s%s%s",
+                        _exam_cli_color(EXAM_CLI_YELLOW),
+                        test->output,
+                        _exam_cli_color(EXAM_CLI_RESET));
+                if (test->output[test->output_size - 1] != '\n')
+                    fputc('\n', stderr);
+            }
+
+            break;
+        default:
+            fprintf(stderr,
+                    "%s unexpected state (%d)\n",
+                    test->name,
+                    test->state);
+            break;
+    }
+
 }
 
 static const char *_exam_cli_color(const char *color)
