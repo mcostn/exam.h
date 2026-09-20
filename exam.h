@@ -737,6 +737,21 @@ static void _exam_finish_test(struct exam_test *test, int status, int out_fd)
     _exam_read_output(test, out_fd);
     close(out_fd);
 
+    switch (test->state) {
+        case EXAM_TEST_PASSED:
+            exam_state.passed++;
+            break;
+        case EXAM_TEST_FAILED:
+            exam_state.failed++;
+            break;
+        case EXAM_TEST_CRASHED:
+            exam_state.crashed++;
+            break;
+        default:
+            _exam_dief("test finished with unexpected state: %d",
+                       test->state);
+    }
+
     if (exam_state.on_test_finish)
         exam_state.on_test_finish(test);
 }
@@ -1086,7 +1101,6 @@ static void _exam_cli_on_test_finish(const struct exam_test *test)
 {
     switch(test->state) {
         case EXAM_TEST_PASSED:
-            exam_state.passed ++;
             fprintf(stdout,
                     "%s[PASS] %s/%s%s\n",
                     _exam_cli_color(EXAM_CLI_GREEN),
@@ -1095,7 +1109,6 @@ static void _exam_cli_on_test_finish(const struct exam_test *test)
                     _exam_cli_color(EXAM_CLI_RESET));
             break;
         case EXAM_TEST_FAILED:
-            exam_state.failed ++;
             fprintf(stderr,
                     "%s[FAIL] %s/%s%s\n",
                     _exam_cli_color(EXAM_CLI_RED),
@@ -1115,7 +1128,6 @@ static void _exam_cli_on_test_finish(const struct exam_test *test)
 
             break;
         case EXAM_TEST_CRASHED:
-            exam_state.crashed ++;
             fprintf(stderr,
                     "%s[CRASH] %s/%s (signal %d)%s\n",
                     _exam_cli_color(EXAM_CLI_YELLOW),
