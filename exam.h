@@ -927,6 +927,7 @@ static void _exam_cli_usage();
 static void _exam_cli_on_finish();
 static void _exam_cli_on_test_finish(const struct exam_test *test);
 
+static void _exam_cli_test_output(const struct exam_test *test);
 static const char *_exam_cli_color(const char *color);
 static bool _exam_cli_is_option(const char *str, const char *short_name, const char *long_name);
 static bool _exam_cli_is_color();
@@ -1115,17 +1116,7 @@ static void _exam_cli_on_test_finish(const struct exam_test *test)
                     test->category,
                     test->name,
                     _exam_cli_color(EXAM_CLI_RESET));
-
-            if (test->output_size > 0) {
-                fprintf(stderr,
-                        "%s%s%s",
-                        _exam_cli_color(EXAM_CLI_RED),
-                        test->output,
-                        _exam_cli_color(EXAM_CLI_RESET));
-                if (test->output[test->output_size - 1] != '\n')
-                    fputc('\n', stderr);
-            }
-
+            _exam_cli_test_output(test);
             break;
         case EXAM_TEST_CRASHED:
             fprintf(stderr,
@@ -1135,17 +1126,7 @@ static void _exam_cli_on_test_finish(const struct exam_test *test)
                     test->name,
                     test->exit_signal,
                     _exam_cli_color(EXAM_CLI_RESET));
-
-            if (test->output_size > 0) {
-                fprintf(stderr,
-                        "%s%s%s",
-                        _exam_cli_color(EXAM_CLI_YELLOW),
-                        test->output,
-                        _exam_cli_color(EXAM_CLI_RESET));
-                if (test->output[test->output_size - 1] != '\n')
-                    fputc('\n', stderr);
-            }
-
+            _exam_cli_test_output(test);
             break;
         default:
             fprintf(stderr,
@@ -1155,6 +1136,33 @@ static void _exam_cli_on_test_finish(const struct exam_test *test)
             break;
     }
 
+}
+
+static void _exam_cli_test_output(const struct exam_test *test)
+{
+    if (test->output_size <= 0)
+        return;
+
+    const char *color = EXAM_CLI_RED;
+    if (test->state == EXAM_TEST_CRASHED)
+        color = EXAM_CLI_YELLOW;
+
+    fputs(color, stderr);
+    fputc('\t', stderr);
+    for (size_t i = 0; i < test->output_size; i++) {
+        char ch = test->output[i];
+        fputc(ch, stderr);
+        if (ch == '\n' && i != test->output_size - 1)
+            fputc('\t', stderr);
+    }
+
+    if (test->output_truncated) {
+        if (test->output[test->output_size - 1] != '\n')
+            fputc('\n', stderr);
+        fputs("\t...\n", stderr);
+    }
+
+    fputs(EXAM_CLI_RESET, stderr);
 }
 
 static const char *_exam_cli_color(const char *color)
