@@ -542,6 +542,10 @@ static void _exam_read_output(struct exam_test *test, int out_fd);
 
 void exam_run_tests(struct exam_test_list *list, struct exam_filter filter, size_t jobs)
 {
+    exam_state.passed = 0;
+    exam_state.failed = 0;
+    exam_state.crashed = 0;
+
     if (list->count == 0)
         return;
 
