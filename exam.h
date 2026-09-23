@@ -195,6 +195,7 @@ extern int exam_cli_main(int argc, char **argv);
 #ifdef __linux__
 #include <unistd.h> /* isatty(), STDOUT_FILENO */
 #include <fcntl.h>
+#include <poll.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #else
@@ -537,7 +538,7 @@ struct exam_test_process
 };
 
 static struct exam_test_process _exam_start_test(struct exam_test *test, size_t idx);
-static void _exam_finish_test(struct exam_test *test, int status, int out_fd);
+static void _exam_finish_test(struct exam_test *test, int status);
 static void _exam_read_output(struct exam_test *test, int out_fd);
 
 void exam_run_tests(struct exam_test_list *list, struct exam_filter filter, size_t jobs)
@@ -566,6 +567,10 @@ void exam_run_tests(struct exam_test_list *list, struct exam_filter filter, size
     if (running == NULL)
         _exam_die_perror("calloc");
 
+    struct pollfd *fds = calloc(jobs, sizeof(*fds));
+    if (fds == NULL)
+        _exam_die_perror("calloc");
+
     size_t next_idx = 0;
     size_t running_count = 0;
     while (next_idx < list->count || running_count > 0) {
@@ -581,28 +586,52 @@ void exam_run_tests(struct exam_test_list *list, struct exam_filter filter, size
         if (running_count == 0)
             break;
 
-        int status;
-        pid_t pid = waitpid(-1, &status, 0);
-        if (pid == -1)
-            _exam_die_perror("wait");
-
-        bool found = false;
-        for (size_t i = 0; i < running_count; ++i) {
-            if (running[i].pid != pid)
-                continue;
-
-            struct exam_test *test = &list->data[running[i].test_index];
-            _exam_finish_test(test, status, running[i].out_fd);
-
-            running[i] = running[--running_count];
-            found = true;
-            break;
+        for (size_t i = 0; i < running_count; i++) {
+            fds[i].fd = running[i].out_fd;
+            fds[i].events = POLLIN;
         }
 
-        if (!found)
-            _exam_dief("wait returned unknown child pid: %ld", (long)pid);
+        int result = poll(fds, running_count, -1);
+        if (result == -1) {
+            if (errno == EINTR)
+                continue;
+
+            _exam_die_perror("poll");
+        }
+
+        for (size_t i = 0; i < running_count; ++i) {
+            if (fds[i].revents & (POLLIN | POLLHUP | POLLERR))
+                _exam_read_output(
+                        &list->data[running[i].test_index],
+                        running[i].out_fd);
+        }
+
+        for (size_t i = 0; i < running_count;) {
+            int status;
+            pid_t pid = waitpid(running[i].pid, &status, WNOHANG);
+
+            if (pid == -1) {
+                if (errno == EINTR)
+                    continue;
+
+                _exam_die_perror("waitpid");
+            }
+
+            if (pid == 0) {
+                i++;
+                continue;
+            }
+
+            struct exam_test *test = &list->data[running[i].test_index];
+            _exam_read_output(test, running[i].out_fd);
+            _exam_finish_test(test, status);
+            close(running[i].out_fd);
+
+            running[i] = running[--running_count];
+        }
     }
     free(running);
+    free(fds);
 
     if (exam_state.on_finish)
         exam_state.on_finish();
@@ -714,6 +743,13 @@ static struct exam_test_process _exam_start_test(struct exam_test *test, size_t 
             break;
         default:
             close(fildes[1]);
+
+            int flags = fcntl(fildes[0], F_GETFL);
+            if (flags == -1)
+                _exam_die_perror("fcntl");
+            if (fcntl(fildes[0], F_SETFL, flags | O_NONBLOCK) == -1)
+                _exam_die_perror("fcntl");
+
             process.pid = pid;
             process.out_fd = fildes[0];
             break;
@@ -722,7 +758,7 @@ static struct exam_test_process _exam_start_test(struct exam_test *test, size_t 
     return process;
 }
 
-static void _exam_finish_test(struct exam_test *test, int status, int out_fd)
+static void _exam_finish_test(struct exam_test *test, int status)
 {
     if (WIFEXITED(status)) {
         if (WEXITSTATUS(status) == EXIT_SUCCESS)
@@ -737,9 +773,6 @@ static void _exam_finish_test(struct exam_test *test, int status, int out_fd)
                    test->category,
                    test->name);
     }
-
-    _exam_read_output(test, out_fd);
-    close(out_fd);
 
     switch (test->state) {
         case EXAM_TEST_PASSED:
@@ -765,20 +798,12 @@ static void _exam_read_output(struct exam_test *test, int out_fd)
     char buf[256];
     for (;;) {
         ssize_t n = read(out_fd, buf, sizeof(buf));
-        if (n == -1) {
-            if (errno == EINTR)
-                continue;
-            if (errno == EAGAIN || errno == EWOULDBLOCK)
-                return;
-
-            _exam_die_perror("read");
-        }
-        if (n == 0)
-            return;
 
         if (n > 0) {
             size_t remaining = EXAM_TEST_OUTPUT_SIZE - test->output_size;
-            size_t copy = n < (ssize_t)remaining ? (size_t)n : remaining;
+            size_t copy = (size_t)n;
+            if (copy > remaining)
+                copy = remaining;
 
             if (copy > 0) {
                 memcpy(test->output + test->output_size, buf, copy);
@@ -788,7 +813,19 @@ static void _exam_read_output(struct exam_test *test, int out_fd)
 
             if ((size_t)n > copy)
                 test->output_truncated = true;
+
+            continue;
         }
+
+        if (n == 0)
+            return;
+
+        if (errno == EINTR)
+            continue;
+        if (errno == EAGAIN || errno == EWOULDBLOCK)
+            return;
+
+        _exam_die_perror("read");
     }
 }
 
