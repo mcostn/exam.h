@@ -1165,7 +1165,7 @@ cleanup:
 
 static int _exam_cli_run()
 {
-    _exam_run_tests(&exam_state.test_list, &exam_cli_state.filter, exam_cli_state.jobs);
+    exam_run(&exam_cli_state.filter, exam_cli_state.jobs);
     if (exam_state.failed > 0 || exam_state.crashed > 0)
         return EXIT_FAILURE;
     return EXIT_SUCCESS;
