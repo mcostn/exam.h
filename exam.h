@@ -1,3 +1,12 @@
+/*
+ * exam - A minimal, single-header unit testing library written in C99.
+ *
+ * Copyright (c) 2026 Matei-Stefan Costan
+ *
+ * Licensed under the MIT License.
+ * See LICENSE for details.
+ */
+
 #ifndef EXAM_H
 #define EXAM_H
 #include <stdbool.h>
