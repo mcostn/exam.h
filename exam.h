@@ -1188,7 +1188,7 @@ static void _exam_cli_test_output(const struct exam_test *test)
     if (test->state == EXAM_TEST_CRASHED)
         color = EXAM_CLI_YELLOW;
 
-    fputs(color, stderr);
+    fputs(_exam_cli_color(color), stderr);
     fputc('\t', stderr);
     for (size_t i = 0; i < test->output_size; i++) {
         char ch = test->output[i];
@@ -1203,7 +1203,7 @@ static void _exam_cli_test_output(const struct exam_test *test)
         fputs("\t...\n", stderr);
     }
 
-    fputs(EXAM_CLI_RESET, stderr);
+    fputs(_exam_cli_color(EXAM_CLI_RESET), stderr);
 }
 
 static const char *_exam_cli_color(const char *color)
