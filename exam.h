@@ -205,15 +205,15 @@ extern int exam_cli_main(int argc, char **argv);
 #endif
 
 #ifdef EXAM_SOURCE
-#include <stdio.h> /* printf(), fprintf(), vfprintf(), fputc(), perror(), stdout, stderr */
-#include <stdlib.h> /* malloc(), realloc(), free(), qsort(), exit(), strtoull(), EXIT_FAILURE */
-#include <string.h> /* strcmp(), memcmp(), strerror() */
-#include <stdarg.h> /* va_list, va_start(), va_end() */
-#include <errno.h> /* errno */
-#include <math.h> /*  isnan(), isinf(), isfinite() */
+#include <stdio.h> // printf(), fprintf(), vfprintf(), fputc(), perror(), stdout, stderr
+#include <stdlib.h> // malloc(), realloc(), free(), qsort(), exit(), strtoull(), EXIT_FAILURE
+#include <string.h> // strcmp(), memcmp(), strerror()
+#include <stdarg.h> // va_list, va_start(), va_end()
+#include <errno.h> // errno
+#include <math.h> //  isnan(), isinf(), isfinite()
 
 #ifdef __linux__
-#include <unistd.h> /* isatty(), STDOUT_FILENO */
+#include <unistd.h> // isatty(), STDOUT_FILENO
 #include <fcntl.h>
 #include <poll.h>
 #include <sys/types.h>
@@ -224,6 +224,29 @@ extern int exam_cli_main(int argc, char **argv);
 
 struct exam_state exam_state = {0};
 
+// Util
+static void _exam_dief(const char *fmt, ...);
+static void _exam_die_perror(const char *str);
+
+static void _exam_dief(const char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    vfprintf(stderr, fmt, args);
+    va_end(args);
+    fputc('\n', stderr);
+    exit(EXIT_FAILURE);
+}
+
+static void _exam_die_perror(const char *str)
+{
+    perror(str);
+    exit(EXIT_FAILURE);
+}
+
+// Asserts
+static void _exam_fail_test(const char *file, size_t line, const char *fmt, ...);
+
 static int _exam_test_cmp(const void *a, const void *b);
 static bool _exam_str_cmp(const char *a, const char *b);
 static bool _exam_float_cmp(float a, float b, float eps);
@@ -233,10 +256,6 @@ static bool _exam_float_in_range(float x, float min, float max, float eps);
 static bool _exam_double_in_range(double x, double min, double max, double eps);
 
 static const char *_exam_str_repr(const char *str);
-
-static void _exam_dief(const char *fmt, ...);
-static void _exam_die_perror(const char *str);
-static void _exam_fail_test(const char *file, size_t line, const char *fmt, ...);
 
 void exam_assert_true(bool res, const char *expression, const char *file, size_t line)
 {
@@ -413,7 +432,7 @@ void exam_assert_not_in_range_uint(uintmax_t x, uintmax_t min, uintmax_t max, co
         _exam_dief("invalid range [%ju, %ju]", min, max);
 
     if (x >= min && x <= max)
-        _exam_fail_test(file, line, 
+        _exam_fail_test(file, line,
                         "%ju is within the range [%ju, %ju]",
                         x, min, max);
 }
@@ -491,7 +510,7 @@ void exam_assert_in_arr_uint(uintmax_t x, const uintmax_t *arr, size_t count, co
             return;
     }
 
-    _exam_fail_test(file, line, 
+    _exam_fail_test(file, line,
                     "%ju not in %p (count=%zu)",
                     x, (void*)arr, count);
 }
@@ -550,6 +569,110 @@ void exam_assert_not_in_arr_double(double x, const double *arr, size_t count, do
     }
 }
 
+static void _exam_fail_test(const char *file, size_t line, const char *fmt, ...)
+{
+    fprintf(stderr, "[%s:%zu] ", file, line);
+
+    va_list args;
+    va_start(args, fmt);
+    vfprintf(stderr, fmt, args);
+    va_end(args);
+
+    fputc('\n', stderr);
+    exit(EXIT_FAILURE);
+}
+
+static int _exam_test_cmp(const void *a, const void *b)
+{
+    const struct exam_test *test_a = a;
+    const struct exam_test *test_b = b;
+    int result = strcmp(test_a->category, test_b->category);
+    if (result == 0)
+        result = strcmp(test_a->name, test_b->name);
+    return result;
+}
+
+static bool _exam_str_cmp(const char *a, const char *b)
+{
+    if (a == NULL || b == NULL)
+        return a == b;
+
+    return strcmp(a, b) == 0;
+}
+
+static bool _exam_float_cmp(float a, float b, float eps)
+{
+    if (!isfinite(eps) || eps < 0)
+        _exam_dief("invalid epsilon: %.9g", eps);
+
+    if (isnan(a) && isnan(b))
+        return true;
+    if (isinf(a) && isinf(b))
+        return ((a < 0) == (b < 0));
+
+    float diff = a - b;
+    diff = (diff > 0 ? diff : -diff);
+    if (isnan(diff) || isinf(diff))
+        return false;
+    if (diff <= eps)
+        return true;
+
+    float absA = (a > 0 ? a : -a);
+    float absB = (b > 0 ? b : -b);
+    float largest = (absA > absB ? absA : absB);
+    return diff <= eps * largest;
+}
+
+static bool _exam_double_cmp(double a, double b, double eps)
+{
+    if (!isfinite(eps) || eps < 0)
+        _exam_dief("invalid epsilon: %.17g", eps);
+
+    if (isnan(a) && isnan(b))
+        return true;
+    if (isinf(a) && isinf(b))
+        return ((a < 0) == (b < 0));
+
+    double diff = a - b;
+    diff = (diff > 0 ? diff : -diff);
+    if (isnan(diff) || isinf(diff))
+        return false;
+    if (diff <= eps)
+        return true;
+
+    double absA = (a > 0 ? a : -a);
+    double absB = (b > 0 ? b : -b);
+    double largest = (absA > absB ? absA : absB);
+    return diff <= eps * largest;
+}
+
+static bool _exam_float_in_range(float x, float min, float max, float eps)
+{
+    if (!isfinite(eps) || eps < 0)
+        _exam_dief("invalid epsilon: %.9g", eps);
+
+    return (_exam_float_cmp(x, min, eps) || x > min) &&
+           (_exam_float_cmp(x, max, eps) || x < max);
+}
+
+static bool _exam_double_in_range(double x, double min, double max, double eps)
+{
+    if (!isfinite(eps) || eps < 0)
+        _exam_dief("invalid epsilon: %.17g", eps);
+
+    return (_exam_double_cmp(x, min, eps) || x > min) &&
+           (_exam_double_cmp(x, max, eps) || x < max);
+}
+
+static const char *_exam_str_repr(const char *str)
+{
+    if (str == NULL)
+        return "NULL";
+
+    return str;
+}
+
+// Runner
 struct exam_test_process
 {
     pid_t pid;
@@ -744,6 +867,7 @@ static void _exam_run_tests(struct exam_test_list *list, const struct exam_filte
             running[i] = running[--running_count];
         }
     }
+
     free(running);
     free(fds);
 }
@@ -877,126 +1001,7 @@ static void _exam_read_output(struct exam_test *test, int out_fd)
     }
 }
 
-static void _exam_dief(const char *fmt, ...)
-{
-    va_list args;
-    va_start(args, fmt);
-    vfprintf(stderr, fmt, args);
-    va_end(args);
-    fputc('\n', stderr);
-    exit(EXIT_FAILURE);
-}
-
-static void _exam_die_perror(const char *str)
-{
-    perror(str);
-    exit(EXIT_FAILURE);
-}
-
-static void _exam_fail_test(const char *file, size_t line, const char *fmt, ...)
-{
-    fprintf(stderr, "[%s:%zu] ", file, line);
-
-    va_list args;
-    va_start(args, fmt);
-    vfprintf(stderr, fmt, args);
-    va_end(args);
-
-    fputc('\n', stderr);
-    exit(EXIT_FAILURE);
-}
-
-static int _exam_test_cmp(const void *a, const void *b)
-{
-    const struct exam_test *test_a = a;
-    const struct exam_test *test_b = b;
-    int result = strcmp(test_a->category, test_b->category);
-    if (result == 0)
-        result = strcmp(test_a->name, test_b->name);
-    return result;
-}
-
-static bool _exam_str_cmp(const char *a, const char *b)
-{
-    if (a == NULL || b == NULL)
-        return a == b;
-
-    return strcmp(a, b) == 0;
-}
-
-static bool _exam_float_cmp(float a, float b, float eps)
-{
-    if (!isfinite(eps) || eps < 0)
-        _exam_dief("invalid epsilon: %.9g", eps);
-
-    if (isnan(a) && isnan(b))
-        return true;
-    if (isinf(a) && isinf(b))
-        return ((a < 0) == (b < 0));
-
-    float diff = a - b;
-    diff = (diff > 0 ? diff : -diff);
-    if (isnan(diff) || isinf(diff))
-        return false;
-    if (diff <= eps)
-        return true;
-
-    float absA = (a > 0 ? a : -a);
-    float absB = (b > 0 ? b : -b);
-    float largest = (absA > absB ? absA : absB);
-    return diff <= eps * largest;
-}
-
-static bool _exam_float_in_range(float x, float min, float max, float eps)
-{
-    if (!isfinite(eps) || eps < 0)
-        _exam_dief("invalid epsilon: %.9g", eps);
-
-    return (_exam_float_cmp(x, min, eps) || x > min) &&
-           (_exam_float_cmp(x, max, eps) || x < max);
-}
-
-static bool _exam_double_cmp(double a, double b, double eps)
-{
-    if (!isfinite(eps) || eps < 0)
-        _exam_dief("invalid epsilon: %.17g", eps);
-
-    if (isnan(a) && isnan(b))
-        return true;
-    if (isinf(a) && isinf(b))
-        return ((a < 0) == (b < 0));
-
-    double diff = a - b;
-    diff = (diff > 0 ? diff : -diff);
-    if (isnan(diff) || isinf(diff))
-        return false;
-    if (diff <= eps)
-        return true;
-
-    double absA = (a > 0 ? a : -a);
-    double absB = (b > 0 ? b : -b);
-    double largest = (absA > absB ? absA : absB);
-    return diff <= eps * largest;
-}
-
-static bool _exam_double_in_range(double x, double min, double max, double eps)
-{
-    if (!isfinite(eps) || eps < 0)
-        _exam_dief("invalid epsilon: %.17g", eps);
-
-    return (_exam_double_cmp(x, min, eps) || x > min) &&
-           (_exam_double_cmp(x, max, eps) || x < max);
-}
-
-static const char *_exam_str_repr(const char *str)
-{
-    if (str == NULL)
-        return "NULL";
-
-    return str;
-}
-
-/* Cli */
+// Cli
 #ifndef EXAM_CLI_NAME
 #define EXAM_CLI_NAME "exam"
 #endif
@@ -1283,7 +1288,7 @@ static bool _exam_cli_is_color()
 
     return isatty(STDOUT_FILENO) || isatty(STDERR_FILENO);
 }
-#endif /* EXAM_SOURCE */
+#endif // EXAM_SOURCE
 
 #ifdef EXAM_SHORT_NAMES
 #define ASSERT_TRUE EXAM_ASSERT_TRUE
@@ -1323,5 +1328,5 @@ static bool _exam_cli_is_color()
 
 #define DEFINE_TEST EXAM_DEFINE_TEST
 #define REGISTER_TEST EXAM_REGISTER_TEST
-#endif /* EXAM_SHORT_NAMES */
-#endif /* EXAM_H */
+#endif // EXAM_SHORT_NAMES
+#endif // EXAM_H
