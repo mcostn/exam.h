@@ -557,13 +557,13 @@ struct exam_test_process
     int out_fd;
 };
 
-static bool _exam_check_filter(const struct exam_test *test, struct exam_filter filter);
+static bool _exam_check_filter(const struct exam_test *test, const struct exam_filter *filter);
 
 static void _exam_list_append(struct exam_test_list *list, const struct exam_test *test);
 static void _exam_list_destroy(struct exam_test_list *list);
 static void _exam_list_sort(struct exam_test_list *list);
 
-static void _exam_run_tests(struct exam_test_list *list, struct exam_filter filter, size_t jobs);
+static void _exam_run_tests(struct exam_test_list *list, const struct exam_filter *filter, size_t jobs);
 static struct exam_test_process _exam_start_test(struct exam_test *test, size_t idx);
 static void _exam_finish_test(struct exam_test *test, int status);
 static void _exam_read_output(struct exam_test *test, int out_fd);
@@ -579,7 +579,7 @@ int exam_run(const struct exam_filter *filter, size_t jobs)
         exam_state.on_start();
 
     struct exam_test_list *list = &exam_state.test_list;
-    _exam_run_tests(list, *filter, jobs);
+    _exam_run_tests(list, filter, jobs);
 
     if (exam_state.on_finish)
         exam_state.on_finish();
@@ -594,16 +594,19 @@ void exam_register(struct exam_test *test)
     _exam_list_append(&exam_state.test_list, test);
 }
 
-static bool _exam_check_filter(const struct exam_test *test, struct exam_filter filter)
+static bool _exam_check_filter(const struct exam_test *test, const struct exam_filter *filter)
 {
+    if (filter == NULL)
+        return true;
+
     bool out = true;
 
-    const char *category_name = filter.category_name;
+    const char *category_name = filter->category_name;
     if (category_name != NULL)
         out = out && (test->category != NULL &&
                       strcmp(test->category, category_name) == 0);
 
-    const char *test_name = filter.test_name;
+    const char *test_name = filter->test_name;
     if (test_name != NULL)
         out = out && (test->name != NULL &&
                      strcmp(test->name, test_name) == 0);
@@ -659,7 +662,7 @@ static void _exam_list_sort(struct exam_test_list *list)
     qsort(list->data, list->count, sizeof(*list->data), _exam_test_cmp);
 }
 
-static void _exam_run_tests(struct exam_test_list *list, struct exam_filter filter, size_t jobs)
+static void _exam_run_tests(struct exam_test_list *list, const struct exam_filter *filter, size_t jobs)
 {
     if (list->count == 0)
         return;
@@ -1134,7 +1137,7 @@ cleanup:
 
 static int _exam_cli_run()
 {
-    _exam_run_tests(&exam_state.test_list, exam_cli_state.filter, exam_cli_state.jobs);
+    _exam_run_tests(&exam_state.test_list, &exam_cli_state.filter, exam_cli_state.jobs);
     if (exam_state.failed > 0 || exam_state.crashed > 0)
         return EXIT_FAILURE;
     return EXIT_SUCCESS;
@@ -1145,7 +1148,7 @@ static int _exam_cli_list()
     size_t found = 0;
     for (size_t i = 0; i < exam_state.test_list.count; ++i) {
         const struct exam_test *test = &exam_state.test_list.data[i];
-        if (!_exam_check_filter(test, exam_cli_state.filter))
+        if (!_exam_check_filter(test, &exam_cli_state.filter))
             continue;
 
         printf("%s%s%s/%s\n",
