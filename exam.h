@@ -4,40 +4,40 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define EXAM_ASSERT_TRUE(cond) _exam_assert_true((cond), #cond, __FILE__, __LINE__)
-#define EXAM_ASSERT_FALSE(cond) _exam_assert_false((cond), #cond, __FILE__, __LINE__)
-#define EXAM_ASSERT_EQ_PTR(a, b) _exam_assert_eq_ptr((a), (b), __FILE__, __LINE__)
-#define EXAM_ASSERT_NEQ_PTR(a, b) _exam_assert_neq_ptr((a), (b), __FILE__, __LINE__)
-#define EXAM_ASSERT_NULL(ptr) _exam_assert_eq_ptr((ptr), NULL, __FILE__, __LINE__)
-#define EXAM_ASSERT_NON_NULL(ptr) _exam_assert_neq_ptr((ptr), NULL, __FILE__, __LINE__)
-#define EXAM_ASSERT_EQ_INT(a, b) _exam_assert_eq_int((a), (b), __FILE__, __LINE__)
-#define EXAM_ASSERT_NEQ_INT(a, b) _exam_assert_neq_int((a), (b), __FILE__, __LINE__)
-#define EXAM_ASSERT_EQ_UINT(a, b) _exam_assert_eq_uint((a), (b), __FILE__, __LINE__)
-#define EXAM_ASSERT_NEQ_UINT(a, b) _exam_assert_neq_uint((a), (b), __FILE__, __LINE__)
-#define EXAM_ASSERT_EQ_FLOAT(a, b, eps) _exam_assert_eq_float((a), (b), (eps), __FILE__, __LINE__)
-#define EXAM_ASSERT_NEQ_FLOAT(a, b, eps) _exam_assert_neq_float((a), (b), (eps), __FILE__, __LINE__)
-#define EXAM_ASSERT_EQ_DOUBLE(a, b, eps) _exam_assert_eq_double((a), (b), (eps), __FILE__, __LINE__)
-#define EXAM_ASSERT_NEQ_DOUBLE(a, b, eps) _exam_assert_neq_double((a), (b),(eps), __FILE__, __LINE__)
-#define EXAM_ASSERT_EQ_STR(a, b) _exam_assert_eq_str((a), (b), __FILE__, __LINE__)
-#define EXAM_ASSERT_NEQ_STR(a, b) _exam_assert_neq_str((a), (b), __FILE__, __LINE__)
-#define EXAM_ASSERT_EQ_MEM(a, b, size) _exam_assert_eq_mem((a), (b), (size), __FILE__, __LINE__)
-#define EXAM_ASSERT_NEQ_MEM(a, b, size) _exam_assert_neq_mem((a), (b), (size), __FILE__, __LINE__)
-#define EXAM_ASSERT_IN_RANGE_INT(x, min, max) _exam_assert_in_range_int((x), (min), (max), __FILE__, __LINE__)
-#define EXAM_ASSERT_NOT_IN_RANGE_INT(x, min, max) _exam_assert_not_in_range_int((x), (min), (max), __FILE__, __LINE__)
-#define EXAM_ASSERT_IN_RANGE_UINT(x, min, max) _exam_assert_in_range_uint((x), (min), (max), __FILE__, __LINE__)
-#define EXAM_ASSERT_NOT_IN_RANGE_UINT(x, min, max) _exam_assert_not_in_range_uint((x), (min), (max), __FILE__, __LINE__)
-#define EXAM_ASSERT_IN_RANGE_FLOAT(x, min, max, eps) _exam_assert_in_range_float((x), (min), (max), (eps), __FILE__, __LINE__)
-#define EXAM_ASSERT_NOT_IN_RANGE_FLOAT(x, min, max, eps) _exam_assert_not_in_range_float((x), (min), (max), (eps), __FILE__, __LINE__)
-#define EXAM_ASSERT_IN_RANGE_DOUBLE(x, min, max, eps) _exam_assert_in_range_double((x), (min), (max), (eps), __FILE__, __LINE__)
-#define EXAM_ASSERT_NOT_IN_RANGE_DOUBLE(x, min, max, eps) _exam_assert_not_in_range_double((x), (min), (max), (eps), __FILE__, __LINE__)
-#define EXAM_ASSERT_IN_ARR_INT(x, arr, count) _exam_assert_in_arr_int((x), (arr), (count), __FILE__, __LINE__)
-#define EXAM_ASSERT_NOT_IN_ARR_INT(x, arr, count) _exam_assert_not_in_arr_int((x), (arr), (count), __FILE__, __LINE__)
-#define EXAM_ASSERT_IN_ARR_UINT(x, arr, count) _exam_assert_in_arr_uint((x), (arr), (count), __FILE__, __LINE__)
-#define EXAM_ASSERT_NOT_IN_ARR_UINT(x, arr, count) _exam_assert_not_in_arr_uint((x), (arr), (count), __FILE__, __LINE__)
-#define EXAM_ASSERT_IN_ARR_FLOAT(x, arr, count, eps) _exam_assert_in_arr_float((x), (arr), (count), (eps), __FILE__, __LINE__)
-#define EXAM_ASSERT_NOT_IN_ARR_FLOAT(x, arr, count, eps) _exam_assert_not_in_arr_float((x), (arr), (count), (eps), __FILE__, __LINE__)
-#define EXAM_ASSERT_IN_ARR_DOUBLE(x, arr, count, eps) _exam_assert_in_arr_double((x), (arr), (count), (eps), __FILE__, __LINE__)
-#define EXAM_ASSERT_NOT_IN_ARR_DOUBLE(x, arr, count, eps) _exam_assert_not_in_arr_double((x), (arr), (count), (eps), __FILE__, __LINE__)
+#define EXAM_ASSERT_TRUE(cond) exam_assert_true((cond), #cond, __FILE__, __LINE__)
+#define EXAM_ASSERT_FALSE(cond) exam_assert_false((cond), #cond, __FILE__, __LINE__)
+#define EXAM_ASSERT_EQ_PTR(a, b) exam_assert_eq_ptr((a), (b), __FILE__, __LINE__)
+#define EXAM_ASSERT_NEQ_PTR(a, b) exam_assert_neq_ptr((a), (b), __FILE__, __LINE__)
+#define EXAM_ASSERT_NULL(ptr) exam_assert_eq_ptr((ptr), NULL, __FILE__, __LINE__)
+#define EXAM_ASSERT_NON_NULL(ptr) exam_assert_neq_ptr((ptr), NULL, __FILE__, __LINE__)
+#define EXAM_ASSERT_EQ_INT(a, b) exam_assert_eq_int((a), (b), __FILE__, __LINE__)
+#define EXAM_ASSERT_NEQ_INT(a, b) exam_assert_neq_int((a), (b), __FILE__, __LINE__)
+#define EXAM_ASSERT_EQ_UINT(a, b) exam_assert_eq_uint((a), (b), __FILE__, __LINE__)
+#define EXAM_ASSERT_NEQ_UINT(a, b) exam_assert_neq_uint((a), (b), __FILE__, __LINE__)
+#define EXAM_ASSERT_EQ_FLOAT(a, b, eps) exam_assert_eq_float((a), (b), (eps), __FILE__, __LINE__)
+#define EXAM_ASSERT_NEQ_FLOAT(a, b, eps) exam_assert_neq_float((a), (b), (eps), __FILE__, __LINE__)
+#define EXAM_ASSERT_EQ_DOUBLE(a, b, eps) exam_assert_eq_double((a), (b), (eps), __FILE__, __LINE__)
+#define EXAM_ASSERT_NEQ_DOUBLE(a, b, eps) exam_assert_neq_double((a), (b),(eps), __FILE__, __LINE__)
+#define EXAM_ASSERT_EQ_STR(a, b) exam_assert_eq_str((a), (b), __FILE__, __LINE__)
+#define EXAM_ASSERT_NEQ_STR(a, b) exam_assert_neq_str((a), (b), __FILE__, __LINE__)
+#define EXAM_ASSERT_EQ_MEM(a, b, size) exam_assert_eq_mem((a), (b), (size), __FILE__, __LINE__)
+#define EXAM_ASSERT_NEQ_MEM(a, b, size) exam_assert_neq_mem((a), (b), (size), __FILE__, __LINE__)
+#define EXAM_ASSERT_IN_RANGE_INT(x, min, max) exam_assert_in_range_int((x), (min), (max), __FILE__, __LINE__)
+#define EXAM_ASSERT_NOT_IN_RANGE_INT(x, min, max) exam_assert_not_in_range_int((x), (min), (max), __FILE__, __LINE__)
+#define EXAM_ASSERT_IN_RANGE_UINT(x, min, max) exam_assert_in_range_uint((x), (min), (max), __FILE__, __LINE__)
+#define EXAM_ASSERT_NOT_IN_RANGE_UINT(x, min, max) exam_assert_not_in_range_uint((x), (min), (max), __FILE__, __LINE__)
+#define EXAM_ASSERT_IN_RANGE_FLOAT(x, min, max, eps) exam_assert_in_range_float((x), (min), (max), (eps), __FILE__, __LINE__)
+#define EXAM_ASSERT_NOT_IN_RANGE_FLOAT(x, min, max, eps) exam_assert_not_in_range_float((x), (min), (max), (eps), __FILE__, __LINE__)
+#define EXAM_ASSERT_IN_RANGE_DOUBLE(x, min, max, eps) exam_assert_in_range_double((x), (min), (max), (eps), __FILE__, __LINE__)
+#define EXAM_ASSERT_NOT_IN_RANGE_DOUBLE(x, min, max, eps) exam_assert_not_in_range_double((x), (min), (max), (eps), __FILE__, __LINE__)
+#define EXAM_ASSERT_IN_ARR_INT(x, arr, count) exam_assert_in_arr_int((x), (arr), (count), __FILE__, __LINE__)
+#define EXAM_ASSERT_NOT_IN_ARR_INT(x, arr, count) exam_assert_not_in_arr_int((x), (arr), (count), __FILE__, __LINE__)
+#define EXAM_ASSERT_IN_ARR_UINT(x, arr, count) exam_assert_in_arr_uint((x), (arr), (count), __FILE__, __LINE__)
+#define EXAM_ASSERT_NOT_IN_ARR_UINT(x, arr, count) exam_assert_not_in_arr_uint((x), (arr), (count), __FILE__, __LINE__)
+#define EXAM_ASSERT_IN_ARR_FLOAT(x, arr, count, eps) exam_assert_in_arr_float((x), (arr), (count), (eps), __FILE__, __LINE__)
+#define EXAM_ASSERT_NOT_IN_ARR_FLOAT(x, arr, count, eps) exam_assert_not_in_arr_float((x), (arr), (count), (eps), __FILE__, __LINE__)
+#define EXAM_ASSERT_IN_ARR_DOUBLE(x, arr, count, eps) exam_assert_in_arr_double((x), (arr), (count), (eps), __FILE__, __LINE__)
+#define EXAM_ASSERT_NOT_IN_ARR_DOUBLE(x, arr, count, eps) exam_assert_not_in_arr_double((x), (arr), (count), (eps), __FILE__, __LINE__)
 
 #define _EXAM_DEF_NAME(category_name, test_name) \
     exam_def_##category_name##_##test_name
@@ -56,7 +56,7 @@
             .name = #test_name, \
             .func = _EXAM_DEF_NAME(category_name, test_name), \
         }; \
-        exam_list_append(&exam_state.test_list, &test); \
+        exam_register(&test); \
     } \
     static void _EXAM_DEF_NAME(category_name, test_name)(void)
 
@@ -75,7 +75,7 @@
     static void _EXAM_DEF_NAME(category_name, test_name)(void)
 
 #define EXAM_REGISTER_TEST(category_name, test_name) \
-    exam_list_append(&exam_state.test_list, &_EXAM_STRUCT_NAME(category_name, test_name))
+    exam_register(&_EXAM_STRUCT_NAME(category_name, test_name))
 #endif // EXAM_NO_AUTO_REGISTRATION
 
 enum exam_test_state
@@ -161,45 +161,42 @@ struct exam_cli_state
 #ifdef __cplusplus
 extern "C" {
 #endif
-extern void _exam_assert_true(bool result, const char *expression, const char *file, size_t line);
-extern void _exam_assert_false(bool result, const char *expression, const char *file, size_t line);
-extern void _exam_assert_eq_ptr(const void *a, const void *b, const char *file, size_t line);
-extern void _exam_assert_neq_ptr(const void *a, const void *b, const char *file, size_t line);
-extern void _exam_assert_eq_int(intmax_t a, intmax_t b, const char *file, size_t line);
-extern void _exam_assert_neq_int(intmax_t a, intmax_t b, const char *file, size_t line);
-extern void _exam_assert_eq_uint(uintmax_t a, uintmax_t b, const char *file, size_t line);
-extern void _exam_assert_neq_uint(uintmax_t a, uintmax_t b, const char *file, size_t line);
-extern void _exam_assert_eq_float(float a, float b, float eps, const char *file, size_t line);
-extern void _exam_assert_neq_float(float a, float b, float eps, const char *file, size_t line);
-extern void _exam_assert_eq_double(double a, double b, double eps, const char *file, size_t line);
-extern void _exam_assert_neq_double(double a, double b, double eps, const char *file, size_t line);
-extern void _exam_assert_eq_str(const char *a, const char *b, const char *file, size_t line);
-extern void _exam_assert_neq_str(const char *a, const char *b, const char *file, size_t line);
-extern void _exam_assert_neq_mem(const void *a, const void *b, size_t size, const char *file, size_t line);
-extern void _exam_assert_eq_mem(const void *a, const void *b, size_t size, const char *file, size_t line);
-extern void _exam_assert_in_range_int(intmax_t x, intmax_t min, intmax_t max, const char *file, size_t line);
-extern void _exam_assert_not_in_range_int(intmax_t x, intmax_t min, intmax_t max, const char *file, size_t line);
-extern void _exam_assert_in_range_uint(uintmax_t x, uintmax_t min, uintmax_t max, const char *file, size_t line);
-extern void _exam_assert_not_in_range_uint(uintmax_t x, uintmax_t min, uintmax_t max, const char *file, size_t line);
-extern void _exam_assert_in_range_float(float x, float min, float max, float eps, const char *file, size_t line);
-extern void _exam_assert_not_in_range_float(float x, float min, float max, float eps, const char *file, size_t line);
-extern void _exam_assert_in_range_double(double x, double min, double max, double eps, const char *file, size_t line);
-extern void _exam_assert_not_in_range_double(double x, double min, double max, double eps, const char *file, size_t line);
-extern void _exam_assert_in_arr_int(intmax_t x, const intmax_t *arr, size_t count, const char *file, size_t line);
-extern void _exam_assert_not_in_arr_int(intmax_t x, const intmax_t *arr, size_t count, const char *file, size_t line);
-extern void _exam_assert_in_arr_uint(uintmax_t x, const uintmax_t *arr, size_t count, const char *file, size_t line);
-extern void _exam_assert_not_in_arr_uint(uintmax_t x, const uintmax_t *arr, size_t count, const char *file, size_t line);
-extern void _exam_assert_in_arr_float(float x, const float *arr, size_t count, float eps, const char *file, size_t line);
-extern void _exam_assert_not_in_arr_float(float x, const float *arr, size_t count, float eps, const char *file, size_t line);
-extern void _exam_assert_in_arr_double(double x, const double *arr, size_t count, double eps, const char *file, size_t line);
-extern void _exam_assert_not_in_arr_double(double x, const double *arr, size_t count, double eps, const char *file, size_t line);
+extern void exam_assert_true(bool result, const char *expression, const char *file, size_t line);
+extern void exam_assert_false(bool result, const char *expression, const char *file, size_t line);
+extern void exam_assert_eq_ptr(const void *a, const void *b, const char *file, size_t line);
+extern void exam_assert_neq_ptr(const void *a, const void *b, const char *file, size_t line);
+extern void exam_assert_eq_int(intmax_t a, intmax_t b, const char *file, size_t line);
+extern void exam_assert_neq_int(intmax_t a, intmax_t b, const char *file, size_t line);
+extern void exam_assert_eq_uint(uintmax_t a, uintmax_t b, const char *file, size_t line);
+extern void exam_assert_neq_uint(uintmax_t a, uintmax_t b, const char *file, size_t line);
+extern void exam_assert_eq_float(float a, float b, float eps, const char *file, size_t line);
+extern void exam_assert_neq_float(float a, float b, float eps, const char *file, size_t line);
+extern void exam_assert_eq_double(double a, double b, double eps, const char *file, size_t line);
+extern void exam_assert_neq_double(double a, double b, double eps, const char *file, size_t line);
+extern void exam_assert_eq_str(const char *a, const char *b, const char *file, size_t line);
+extern void exam_assert_neq_str(const char *a, const char *b, const char *file, size_t line);
+extern void exam_assert_neq_mem(const void *a, const void *b, size_t size, const char *file, size_t line);
+extern void exam_assert_eq_mem(const void *a, const void *b, size_t size, const char *file, size_t line);
+extern void exam_assert_in_range_int(intmax_t x, intmax_t min, intmax_t max, const char *file, size_t line);
+extern void exam_assert_not_in_range_int(intmax_t x, intmax_t min, intmax_t max, const char *file, size_t line);
+extern void exam_assert_in_range_uint(uintmax_t x, uintmax_t min, uintmax_t max, const char *file, size_t line);
+extern void exam_assert_not_in_range_uint(uintmax_t x, uintmax_t min, uintmax_t max, const char *file, size_t line);
+extern void exam_assert_in_range_float(float x, float min, float max, float eps, const char *file, size_t line);
+extern void exam_assert_not_in_range_float(float x, float min, float max, float eps, const char *file, size_t line);
+extern void exam_assert_in_range_double(double x, double min, double max, double eps, const char *file, size_t line);
+extern void exam_assert_not_in_range_double(double x, double min, double max, double eps, const char *file, size_t line);
+extern void exam_assert_in_arr_int(intmax_t x, const intmax_t *arr, size_t count, const char *file, size_t line);
+extern void exam_assert_not_in_arr_int(intmax_t x, const intmax_t *arr, size_t count, const char *file, size_t line);
+extern void exam_assert_in_arr_uint(uintmax_t x, const uintmax_t *arr, size_t count, const char *file, size_t line);
+extern void exam_assert_not_in_arr_uint(uintmax_t x, const uintmax_t *arr, size_t count, const char *file, size_t line);
+extern void exam_assert_in_arr_float(float x, const float *arr, size_t count, float eps, const char *file, size_t line);
+extern void exam_assert_not_in_arr_float(float x, const float *arr, size_t count, float eps, const char *file, size_t line);
+extern void exam_assert_in_arr_double(double x, const double *arr, size_t count, double eps, const char *file, size_t line);
+extern void exam_assert_not_in_arr_double(double x, const double *arr, size_t count, double eps, const char *file, size_t line);
 
 extern struct exam_state exam_state;
-extern bool exam_test_passes_filter(const struct exam_test *test, struct exam_filter filter);
-extern void exam_run_tests(struct exam_test_list *list, struct exam_filter filter, size_t jobs);
-extern void exam_list_append(struct exam_test_list *list, const struct exam_test *test);
-extern void exam_list_destroy(struct exam_test_list *list);
-extern void exam_list_sort(struct exam_test_list *list);
+extern int exam_run(const struct exam_filter *filter, size_t jobs);
+extern void exam_register(struct exam_test *test);
 
 extern struct exam_cli_state exam_cli_state;
 extern int exam_cli_main(int argc, char **argv);
@@ -241,7 +238,7 @@ static void _exam_dief(const char *fmt, ...);
 static void _exam_die_perror(const char *str);
 static void _exam_fail_test(const char *file, size_t line, const char *fmt, ...);
 
-void _exam_assert_true(bool res, const char *expression, const char *file, size_t line)
+void exam_assert_true(bool res, const char *expression, const char *file, size_t line)
 {
     if (!res)
         _exam_fail_test(file, line,
@@ -249,7 +246,7 @@ void _exam_assert_true(bool res, const char *expression, const char *file, size_
                         expression);
 }
 
-void _exam_assert_false(bool res, const char *expression, const char *file, size_t line)
+void exam_assert_false(bool res, const char *expression, const char *file, size_t line)
 {
     if (res)
         _exam_fail_test(file, line,
@@ -257,7 +254,7 @@ void _exam_assert_false(bool res, const char *expression, const char *file, size
                         expression);
 }
 
-void _exam_assert_eq_ptr(const void *a, const void *b, const char *file, size_t line)
+void exam_assert_eq_ptr(const void *a, const void *b, const char *file, size_t line)
 {
     if (a != b)
         _exam_fail_test(file, line,
@@ -265,7 +262,7 @@ void _exam_assert_eq_ptr(const void *a, const void *b, const char *file, size_t 
                         a, b);
 }
 
-void _exam_assert_neq_ptr(const void *a, const void *b, const char *file, size_t line)
+void exam_assert_neq_ptr(const void *a, const void *b, const char *file, size_t line)
 {
     if (a == b)
         _exam_fail_test(file, line,
@@ -273,7 +270,7 @@ void _exam_assert_neq_ptr(const void *a, const void *b, const char *file, size_t
                         a, b);
 }
 
-void _exam_assert_eq_int(intmax_t a, intmax_t b, const char *file, size_t line)
+void exam_assert_eq_int(intmax_t a, intmax_t b, const char *file, size_t line)
 {
     if (a != b)
         _exam_fail_test(file, line,
@@ -281,7 +278,7 @@ void _exam_assert_eq_int(intmax_t a, intmax_t b, const char *file, size_t line)
                         a, b);
 }
 
-void _exam_assert_neq_int(intmax_t a, intmax_t b, const char *file, size_t line)
+void exam_assert_neq_int(intmax_t a, intmax_t b, const char *file, size_t line)
 {
     if (a == b)
         _exam_fail_test(file, line,
@@ -289,7 +286,7 @@ void _exam_assert_neq_int(intmax_t a, intmax_t b, const char *file, size_t line)
                         a, b);
 }
 
-void _exam_assert_eq_uint(uintmax_t a, uintmax_t b, const char *file, size_t line)
+void exam_assert_eq_uint(uintmax_t a, uintmax_t b, const char *file, size_t line)
 {
     if (a != b)
         _exam_fail_test(file, line,
@@ -297,7 +294,7 @@ void _exam_assert_eq_uint(uintmax_t a, uintmax_t b, const char *file, size_t lin
                         a, b);
 }
 
-void _exam_assert_neq_uint(uintmax_t a, uintmax_t b, const char *file, size_t line)
+void exam_assert_neq_uint(uintmax_t a, uintmax_t b, const char *file, size_t line)
 {
     if (a == b)
         _exam_fail_test(file, line,
@@ -305,7 +302,7 @@ void _exam_assert_neq_uint(uintmax_t a, uintmax_t b, const char *file, size_t li
                         a, b);
 }
 
-void _exam_assert_eq_float(float a, float b, float eps, const char *file, size_t line)
+void exam_assert_eq_float(float a, float b, float eps, const char *file, size_t line)
 {
     if (!_exam_float_cmp(a, b, eps))
         _exam_fail_test(file, line,
@@ -313,7 +310,7 @@ void _exam_assert_eq_float(float a, float b, float eps, const char *file, size_t
                          a, b);
 }
 
-void _exam_assert_neq_float(float a, float b, float eps, const char *file, size_t line)
+void exam_assert_neq_float(float a, float b, float eps, const char *file, size_t line)
 {
     if (_exam_float_cmp(a, b, eps))
         _exam_fail_test(file, line,
@@ -321,7 +318,7 @@ void _exam_assert_neq_float(float a, float b, float eps, const char *file, size_
                         a, b);
 }
 
-void _exam_assert_eq_double(double a, double b, double eps, const char *file, size_t line)
+void exam_assert_eq_double(double a, double b, double eps, const char *file, size_t line)
 {
     if (!_exam_double_cmp(a, b, eps))
         _exam_fail_test(file, line,
@@ -329,7 +326,7 @@ void _exam_assert_eq_double(double a, double b, double eps, const char *file, si
                         a, b);
 }
 
-void _exam_assert_neq_double(double a, double b, double eps, const char *file, size_t line)
+void exam_assert_neq_double(double a, double b, double eps, const char *file, size_t line)
 {
     if (_exam_double_cmp(a, b, eps))
         _exam_fail_test(file, line,
@@ -337,7 +334,7 @@ void _exam_assert_neq_double(double a, double b, double eps, const char *file, s
                         a, b);
 }
 
-void _exam_assert_eq_str(const char *a, const char *b, const char *file, size_t line)
+void exam_assert_eq_str(const char *a, const char *b, const char *file, size_t line)
 {
     if (!_exam_str_cmp(a, b))
         _exam_fail_test(file, line,
@@ -345,7 +342,7 @@ void _exam_assert_eq_str(const char *a, const char *b, const char *file, size_t 
                         _exam_str_repr(a), _exam_str_repr(b));
 }
 
-void _exam_assert_neq_str(const char *a, const char *b, const char *file, size_t line)
+void exam_assert_neq_str(const char *a, const char *b, const char *file, size_t line)
 {
     if (_exam_str_cmp(a, b))
         _exam_fail_test(file, line,
@@ -353,7 +350,7 @@ void _exam_assert_neq_str(const char *a, const char *b, const char *file, size_t
                          _exam_str_repr(a), _exam_str_repr(b));
 }
 
-void _exam_assert_eq_mem(const void *a, const void *b, size_t size, const char *file, size_t line)
+void exam_assert_eq_mem(const void *a, const void *b, size_t size, const char *file, size_t line)
 {
     const unsigned char *expected = a;
     const unsigned char *actual = b;
@@ -366,7 +363,7 @@ void _exam_assert_eq_mem(const void *a, const void *b, size_t size, const char *
     }
 }
 
-void _exam_assert_neq_mem(const void *a, const void *b, size_t size, const char *file, size_t line)
+void exam_assert_neq_mem(const void *a, const void *b, size_t size, const char *file, size_t line)
 {
     if (size == 0)
         return;
@@ -377,7 +374,7 @@ void _exam_assert_neq_mem(const void *a, const void *b, size_t size, const char 
                         size);
 }
 
-void _exam_assert_in_range_int(intmax_t x, intmax_t min, intmax_t max, const char *file, size_t line)
+void exam_assert_in_range_int(intmax_t x, intmax_t min, intmax_t max, const char *file, size_t line)
 {
     if (min > max)
         _exam_dief("invalid range [%jd, %jd]", min, max);
@@ -388,7 +385,7 @@ void _exam_assert_in_range_int(intmax_t x, intmax_t min, intmax_t max, const cha
                         x, min, max);
 }
 
-void _exam_assert_not_in_range_int(intmax_t x, intmax_t min, intmax_t max, const char *file, size_t line)
+void exam_assert_not_in_range_int(intmax_t x, intmax_t min, intmax_t max, const char *file, size_t line)
 {
     if (min > max)
         _exam_dief("invalid range [%jd, %jd]", min, max);
@@ -399,7 +396,7 @@ void _exam_assert_not_in_range_int(intmax_t x, intmax_t min, intmax_t max, const
                         x, min, max);
 }
 
-void _exam_assert_in_range_uint(uintmax_t x, uintmax_t min, uintmax_t max, const char *file, size_t line)
+void exam_assert_in_range_uint(uintmax_t x, uintmax_t min, uintmax_t max, const char *file, size_t line)
 {
     if (min > max)
         _exam_dief("invalid range [%ju, %ju]", min, max);
@@ -410,7 +407,7 @@ void _exam_assert_in_range_uint(uintmax_t x, uintmax_t min, uintmax_t max, const
                         x, min, max);
 }
 
-void _exam_assert_not_in_range_uint(uintmax_t x, uintmax_t min, uintmax_t max, const char *file, size_t line)
+void exam_assert_not_in_range_uint(uintmax_t x, uintmax_t min, uintmax_t max, const char *file, size_t line)
 {
     if (min > max)
         _exam_dief("invalid range [%ju, %ju]", min, max);
@@ -421,7 +418,7 @@ void _exam_assert_not_in_range_uint(uintmax_t x, uintmax_t min, uintmax_t max, c
                         x, min, max);
 }
 
-void _exam_assert_in_range_float(float x, float min, float max, float eps, const char *file, size_t line)
+void exam_assert_in_range_float(float x, float min, float max, float eps, const char *file, size_t line)
 {
     if (min > max)
         _exam_dief("invalid range [%.9g, %.9g]", min, max);
@@ -432,7 +429,7 @@ void _exam_assert_in_range_float(float x, float min, float max, float eps, const
                         x, min, max);
 }
 
-void _exam_assert_not_in_range_float(float x, float min, float max, float eps, const char *file, size_t line)
+void exam_assert_not_in_range_float(float x, float min, float max, float eps, const char *file, size_t line)
 {
     if (min > max)
         _exam_dief("invalid range [%.9g, %.9g]", min, max);
@@ -443,7 +440,7 @@ void _exam_assert_not_in_range_float(float x, float min, float max, float eps, c
                         x, min, max);
 }
 
-void _exam_assert_in_range_double(double x, double min, double max, double eps, const char *file, size_t line)
+void exam_assert_in_range_double(double x, double min, double max, double eps, const char *file, size_t line)
 {
     if (min > max)
         _exam_dief("invalid range [%.17g, %.17g]", min, max);
@@ -454,7 +451,7 @@ void _exam_assert_in_range_double(double x, double min, double max, double eps, 
                         x, min, max);
 }
 
-void _exam_assert_not_in_range_double(double x, double min, double max, double eps, const char *file, size_t line)
+void exam_assert_not_in_range_double(double x, double min, double max, double eps, const char *file, size_t line)
 {
     if (min > max)
         _exam_dief("invalid range [%.17g, %.17g]", min, max);
@@ -465,7 +462,7 @@ void _exam_assert_not_in_range_double(double x, double min, double max, double e
                         x, min, max);
 }
 
-void _exam_assert_in_arr_int(intmax_t x, const intmax_t *arr, size_t count, const char *file, size_t line)
+void exam_assert_in_arr_int(intmax_t x, const intmax_t *arr, size_t count, const char *file, size_t line)
 {
     for (size_t i = 0; i < count; i ++) {
         if (arr[i] == x)
@@ -477,7 +474,7 @@ void _exam_assert_in_arr_int(intmax_t x, const intmax_t *arr, size_t count, cons
                     x, (void*)arr, count);
 }
 
-void _exam_assert_not_in_arr_int(intmax_t x, const intmax_t *arr, size_t count, const char *file, size_t line)
+void exam_assert_not_in_arr_int(intmax_t x, const intmax_t *arr, size_t count, const char *file, size_t line)
 {
     for (size_t i = 0; i < count; i ++) {
         if (arr[i] == x)
@@ -487,7 +484,7 @@ void _exam_assert_not_in_arr_int(intmax_t x, const intmax_t *arr, size_t count, 
     }
 }
 
-void _exam_assert_in_arr_uint(uintmax_t x, const uintmax_t *arr, size_t count, const char *file, size_t line)
+void exam_assert_in_arr_uint(uintmax_t x, const uintmax_t *arr, size_t count, const char *file, size_t line)
 {
     for (size_t i = 0; i < count; i ++) {
         if (arr[i] == x)
@@ -499,7 +496,7 @@ void _exam_assert_in_arr_uint(uintmax_t x, const uintmax_t *arr, size_t count, c
                     x, (void*)arr, count);
 }
 
-void _exam_assert_not_in_arr_uint(uintmax_t x, const uintmax_t *arr, size_t count, const char *file, size_t line)
+void exam_assert_not_in_arr_uint(uintmax_t x, const uintmax_t *arr, size_t count, const char *file, size_t line)
 {
     for (size_t i = 0; i < count; i ++) {
         if (arr[i] == x)
@@ -509,7 +506,7 @@ void _exam_assert_not_in_arr_uint(uintmax_t x, const uintmax_t *arr, size_t coun
     }
 }
 
-void _exam_assert_in_arr_float(float x, const float *arr, size_t count, float eps, const char *file, size_t line)
+void exam_assert_in_arr_float(float x, const float *arr, size_t count, float eps, const char *file, size_t line)
 {
     for (size_t i = 0; i < count; i ++) {
         if (_exam_float_cmp(x, arr[i], eps))
@@ -521,7 +518,7 @@ void _exam_assert_in_arr_float(float x, const float *arr, size_t count, float ep
                     x, (void*)arr, count);
 }
 
-void _exam_assert_not_in_arr_float(float x, const float *arr, size_t count, float eps, const char *file, size_t line)
+void exam_assert_not_in_arr_float(float x, const float *arr, size_t count, float eps, const char *file, size_t line)
 {
     for (size_t i = 0; i < count; i ++) {
         if (_exam_float_cmp(x, arr[i], eps))
@@ -531,7 +528,7 @@ void _exam_assert_not_in_arr_float(float x, const float *arr, size_t count, floa
     }
 }
 
-void _exam_assert_in_arr_double(double x, const double *arr, size_t count, double eps, const char *file, size_t line)
+void exam_assert_in_arr_double(double x, const double *arr, size_t count, double eps, const char *file, size_t line)
 {
     for (size_t i = 0; i < count; i ++) {
         if (_exam_double_cmp(x, arr[i], eps))
@@ -543,7 +540,7 @@ void _exam_assert_in_arr_double(double x, const double *arr, size_t count, doubl
                     x, (void*)arr, count);
 }
 
-void _exam_assert_not_in_arr_double(double x, const double *arr, size_t count, double eps, const char *file, size_t line)
+void exam_assert_not_in_arr_double(double x, const double *arr, size_t count, double eps, const char *file, size_t line)
 {
     for (size_t i = 0; i < count; i ++) {
         if (_exam_double_cmp(x, arr[i], eps))
@@ -560,12 +557,20 @@ struct exam_test_process
     int out_fd;
 };
 
+static bool _exam_check_filter(const struct exam_test *test, struct exam_filter filter);
+
+static void _exam_list_append(struct exam_test_list *list, const struct exam_test *test);
+static void _exam_list_destroy(struct exam_test_list *list);
+static void _exam_list_sort(struct exam_test_list *list);
+
+static void _exam_run_tests(struct exam_test_list *list, struct exam_filter filter, size_t jobs);
 static struct exam_test_process _exam_start_test(struct exam_test *test, size_t idx);
 static void _exam_finish_test(struct exam_test *test, int status);
 static void _exam_read_output(struct exam_test *test, int out_fd);
 
-void exam_run_tests(struct exam_test_list *list, struct exam_filter filter, size_t jobs)
+int exam_run(const struct exam_filter *filter, size_t jobs)
 {
+    _exam_list_sort(&exam_state.test_list);
     exam_state.passed = 0;
     exam_state.failed = 0;
     exam_state.crashed = 0;
@@ -573,6 +578,89 @@ void exam_run_tests(struct exam_test_list *list, struct exam_filter filter, size
     if (exam_state.on_start)
         exam_state.on_start();
 
+    struct exam_test_list *list = &exam_state.test_list;
+    _exam_run_tests(list, *filter, jobs);
+
+    if (exam_state.on_finish)
+        exam_state.on_finish();
+
+    if (exam_state.failed > 0 || exam_state.crashed > 0)
+        return EXIT_FAILURE;
+    return EXIT_SUCCESS;
+}
+
+void exam_register(struct exam_test *test)
+{
+    _exam_list_append(&exam_state.test_list, test);
+}
+
+static bool _exam_check_filter(const struct exam_test *test, struct exam_filter filter)
+{
+    bool out = true;
+
+    const char *category_name = filter.category_name;
+    if (category_name != NULL)
+        out = out && (test->category != NULL &&
+                      strcmp(test->category, category_name) == 0);
+
+    const char *test_name = filter.test_name;
+    if (test_name != NULL)
+        out = out && (test->name != NULL &&
+                     strcmp(test->name, test_name) == 0);
+
+    return out;
+}
+
+static void _exam_list_append(struct exam_test_list *list, const struct exam_test *test)
+{
+    if (list->count == SIZE_MAX)
+        _exam_dief("test list too large");
+
+    size_t new_count = list->count + 1;
+    if (list->data == NULL || new_count > list->capacity) {
+        size_t new_cap = list->capacity;
+        if (new_cap < 4) {
+            new_cap = 4;
+        } else {
+            if (new_cap > SIZE_MAX / 2)
+                _exam_dief("test list too large");
+
+            new_cap *= 2;
+        }
+        if (new_cap < new_count)
+            new_cap = new_count;
+        if (new_cap > SIZE_MAX / sizeof(*list->data))
+            _exam_dief("test list too large");
+
+        struct exam_test *data = realloc(list->data, sizeof(*list->data) * new_cap);
+        if (data == NULL)
+            _exam_die_perror("realloc");
+
+        list->data = data;
+        list->capacity = new_cap;
+    }
+
+    list->data[list->count++] = *test;
+}
+
+static void _exam_list_destroy(struct exam_test_list *list)
+{
+    if (list->data == NULL)
+        return;
+
+    free(list->data);
+    list->data = NULL;
+    list->count = 0;
+    list->capacity = 0;
+}
+
+static void _exam_list_sort(struct exam_test_list *list)
+{
+    qsort(list->data, list->count, sizeof(*list->data), _exam_test_cmp);
+}
+
+static void _exam_run_tests(struct exam_test_list *list, struct exam_filter filter, size_t jobs)
+{
     if (list->count == 0)
         return;
 
@@ -600,7 +688,7 @@ void exam_run_tests(struct exam_test_list *list, struct exam_filter filter, size
         while (running_count < jobs && next_idx < list->count) {
             size_t idx = next_idx++;
             struct exam_test *test = &list->data[idx];
-            if (!exam_test_passes_filter(test, filter))
+            if (!_exam_check_filter(test, filter))
                 continue;
 
             running[running_count++] = _exam_start_test(test, idx);
@@ -655,74 +743,6 @@ void exam_run_tests(struct exam_test_list *list, struct exam_filter filter, size
     }
     free(running);
     free(fds);
-
-    if (exam_state.on_finish)
-        exam_state.on_finish();
-}
-
-bool exam_test_passes_filter(const struct exam_test *test, struct exam_filter filter)
-{
-    bool out = true;
-
-    const char *category_name = filter.category_name;
-    if (category_name != NULL)
-        out = out && (test->category != NULL &&
-                      strcmp(test->category, category_name) == 0);
-
-    const char *test_name = filter.test_name;
-    if (test_name != NULL)
-        out = out && (test->name != NULL &&
-                     strcmp(test->name, test_name) == 0);
-
-    return out;
-}
-
-void exam_list_append(struct exam_test_list *list, const struct exam_test *test)
-{
-    if (list->count == SIZE_MAX)
-        _exam_dief("test list too large");
-
-    size_t new_count = list->count + 1;
-    if (list->data == NULL || new_count > list->capacity) {
-        size_t new_cap = list->capacity;
-        if (new_cap < 4) {
-            new_cap = 4;
-        } else {
-            if (new_cap > SIZE_MAX / 2)
-                _exam_dief("test list too large");
-
-            new_cap *= 2;
-        }
-        if (new_cap < new_count)
-            new_cap = new_count;
-        if (new_cap > SIZE_MAX / sizeof(*list->data))
-            _exam_dief("test list too large");
-
-        struct exam_test *data = realloc(list->data, sizeof(*list->data) * new_cap);
-        if (data == NULL)
-            _exam_die_perror("realloc");
-
-        list->data = data;
-        list->capacity = new_cap;
-    }
-
-    list->data[list->count++] = *test;
-}
-
-void exam_list_destroy(struct exam_test_list *list)
-{
-    if (list->data == NULL)
-        return;
-
-    free(list->data);
-    list->data = NULL;
-    list->count = 0;
-    list->capacity = 0;
-}
-
-void exam_list_sort(struct exam_test_list *list)
-{
-    qsort(list->data, list->count, sizeof(*list->data), _exam_test_cmp);
 }
 
 static struct exam_test_process _exam_start_test(struct exam_test *test, size_t idx)
@@ -1000,7 +1020,6 @@ static bool _exam_cli_is_color();
 
 int exam_cli_main(int argc, char **argv)
 {
-    exam_list_sort(&exam_state.test_list);
     exam_state.on_finish = _exam_cli_on_finish;
     exam_state.on_test_finish = _exam_cli_on_test_finish;
 
@@ -1109,13 +1128,13 @@ int exam_cli_main(int argc, char **argv)
     }
 
 cleanup:
-    exam_list_destroy(&exam_state.test_list);
+    _exam_list_destroy(&exam_state.test_list);
     return rc;
 }
 
 static int _exam_cli_run()
 {
-    exam_run_tests(&exam_state.test_list, exam_cli_state.filter, exam_cli_state.jobs);
+    _exam_run_tests(&exam_state.test_list, exam_cli_state.filter, exam_cli_state.jobs);
     if (exam_state.failed > 0 || exam_state.crashed > 0)
         return EXIT_FAILURE;
     return EXIT_SUCCESS;
@@ -1126,7 +1145,7 @@ static int _exam_cli_list()
     size_t found = 0;
     for (size_t i = 0; i < exam_state.test_list.count; ++i) {
         const struct exam_test *test = &exam_state.test_list.data[i];
-        if (!exam_test_passes_filter(test, exam_cli_state.filter))
+        if (!_exam_check_filter(test, exam_cli_state.filter))
             continue;
 
         printf("%s%s%s/%s\n",
