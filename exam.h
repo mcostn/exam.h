@@ -4,6 +4,39 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#if defined(__linux__)
+#define EXAM_LINUX
+#else
+#error "Your platform is currently not supported"
+#endif
+
+#if defined(__clang__)
+#define EXAM_CLANG
+#elif defined(__TINYC__)
+#define EXAM_TCC
+#elif defined(__GNUC__)
+#define EXAM_GCC
+#elif defined(_MSC_VER)
+#define EXAM_MSVC
+#else
+#define EXAM_UNKNOWN_COMPILER
+#endif
+
+#if !defined(EXAM_NO_AUTO_REGISTRATION) && (defined(EXAM_MSVC) || defined(EXAM_UNKNOWN_COMPILER))
+#error "Automatic registration not supported for your compiler"
+#endif
+
+#ifndef EXAM_TEST_OUTPUT_SIZE
+#define EXAM_TEST_OUTPUT_SIZE 1024
+#endif
+#if EXAM_TEST_OUTPUT_SIZE < 1
+#error "EXAM_TEST_OUTPUT_SIZE must be greater than zero"
+#endif
+
+#ifndef EXAM_CLI_NAME
+#define EXAM_CLI_NAME "exam"
+#endif
+
 #define EXAM_ASSERT_TRUE(cond) exam_assert_true((cond), #cond, __FILE__, __LINE__)
 #define EXAM_ASSERT_FALSE(cond) exam_assert_false((cond), #cond, __FILE__, __LINE__)
 #define EXAM_ASSERT_EQ_PTR(a, b) exam_assert_eq_ptr((a), (b), __FILE__, __LINE__)
@@ -87,13 +120,6 @@ enum exam_test_state
     EXAM_TEST_CRASHED,
 };
 
-#ifndef EXAM_TEST_OUTPUT_SIZE
-#define EXAM_TEST_OUTPUT_SIZE 1024
-#endif
-
-#if EXAM_TEST_OUTPUT_SIZE < 1
-#error "EXAM_TEST_OUTPUT_SIZE must be greater than zero"
-#endif
 
 struct exam_test
 {
@@ -1002,10 +1028,6 @@ static void _exam_read_output(struct exam_test *test, int out_fd)
 }
 
 // Cli
-#ifndef EXAM_CLI_NAME
-#define EXAM_CLI_NAME "exam"
-#endif
-
 #define EXAM_CLI_RESET  "\033[0m"
 #define EXAM_CLI_RED    "\033[31m"
 #define EXAM_CLI_GREEN  "\033[32m"
