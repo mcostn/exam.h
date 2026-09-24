@@ -1322,7 +1322,7 @@ static bool _exam_cli_is_color()
 }
 #endif // EXAM_SOURCE
 
-#ifdef EXAM_SHORT_NAMES
+#ifndef EXAM_NO_SHORT_NAMES
 #define ASSERT_TRUE EXAM_ASSERT_TRUE
 #define ASSERT_FALSE EXAM_ASSERT_FALSE
 #define ASSERT_EQ_PTR EXAM_ASSERT_EQ_PTR
@@ -1360,5 +1360,5 @@ static bool _exam_cli_is_color()
 
 #define DEFINE_TEST EXAM_DEFINE_TEST
 #define REGISTER_TEST EXAM_REGISTER_TEST
-#endif // EXAM_SHORT_NAMES
+#endif // EXAM_NO_SHORT_NAMES
 #endif // EXAM_H

@@ -1,4 +1,3 @@
-#define EXAM_SHORT_NAMES
 #define EXAM_SOURCE
 #include "exam.h"
 
