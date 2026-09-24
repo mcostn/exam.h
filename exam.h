@@ -120,7 +120,6 @@ enum exam_test_state
     EXAM_TEST_CRASHED,
 };
 
-
 struct exam_test
 {
     const char *category;
@@ -160,28 +159,6 @@ struct exam_state
     size_t passed;
     size_t failed;
     size_t crashed;
-};
-
-enum exam_color
-{
-    EXAM_COLOR_AUTO = 0,
-    EXAM_COLOR_ALWAYS,
-    EXAM_COLOR_NEVER,
-};
-
-enum exam_cli_action
-{
-    EXAM_ACTION_RUN = 0,
-    EXAM_ACTION_LIST,
-    EXAM_ACTION_HELP,
-};
-
-struct exam_cli_state
-{
-    size_t jobs;
-    enum exam_cli_action action;
-    enum exam_color color;
-    struct exam_filter filter;
 };
 
 #ifdef __cplusplus
@@ -224,7 +201,6 @@ extern struct exam_state exam_state;
 extern int exam_run(const struct exam_filter *filter, size_t jobs);
 extern void exam_register(struct exam_test *test);
 
-extern struct exam_cli_state exam_cli_state;
 extern int exam_cli_main(int argc, char **argv);
 #ifdef __cplusplus
 }
@@ -1034,7 +1010,26 @@ static void _exam_read_output(struct exam_test *test, int out_fd)
 #define EXAM_CLI_YELLOW "\033[33m"
 #define EXAM_CLI_CYAN   "\033[36m"
 
-struct exam_cli_state exam_cli_state = {0};
+enum exam_cli_color
+{
+    EXAM_COLOR_AUTO = 0,
+    EXAM_COLOR_ALWAYS,
+    EXAM_COLOR_NEVER,
+};
+
+enum exam_cli_action
+{
+    EXAM_ACTION_RUN = 0,
+    EXAM_ACTION_LIST,
+    EXAM_ACTION_HELP,
+};
+
+static struct {
+    size_t jobs;
+    enum exam_cli_action action;
+    enum exam_cli_color color;
+    struct exam_filter filter;
+} exam_cli_state = {0};
 
 static int _exam_cli_run();
 static int _exam_cli_list();
@@ -1050,11 +1045,17 @@ static bool _exam_cli_is_color();
 
 int exam_cli_main(int argc, char **argv)
 {
+    // Init
+    exam_cli_state.jobs = 1;
+    exam_cli_state.action = EXAM_ACTION_RUN;
+    exam_cli_state.color = EXAM_COLOR_AUTO;
+    exam_cli_state.filter.category_name = NULL;
+    exam_cli_state.filter.test_name = NULL;
+
     exam_state.on_finish = _exam_cli_on_finish;
     exam_state.on_test_finish = _exam_cli_on_test_finish;
 
-    exam_cli_state = (struct exam_cli_state){0};
-
+    // Options
     int rc = EXIT_SUCCESS;
     for (int i = 1; i < argc; ++i) {
         if (_exam_cli_is_option(argv[i], "-j", "--jobs")) {
