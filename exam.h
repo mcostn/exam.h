@@ -551,11 +551,11 @@ void exam_run_tests(struct exam_test_list *list, struct exam_filter filter, size
     exam_state.failed = 0;
     exam_state.crashed = 0;
 
-    if (list->count == 0)
-        return;
-
     if (exam_state.on_start)
         exam_state.on_start();
+
+    if (list->count == 0)
+        return;
 
     if (jobs == 0) {
         long cpu_count = sysconf(_SC_NPROCESSORS_ONLN);
