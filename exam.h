@@ -39,11 +39,12 @@
 #define EXAM_ASSERT_IN_ARR_DOUBLE(x, arr, count, eps) _exam_assert_in_arr_double((x), (arr), (count), (eps), __FILE__, __LINE__)
 #define EXAM_ASSERT_NOT_IN_ARR_DOUBLE(x, arr, count, eps) _exam_assert_not_in_arr_double((x), (arr), (count), (eps), __FILE__, __LINE__)
 
-#define _EXAM_REG_NAME(category_name, test_name) \
-    exam_reg_##category_name##_##test_name
-
 #define _EXAM_DEF_NAME(category_name, test_name) \
     exam_def_##category_name##_##test_name
+
+#ifndef EXAM_NO_AUTO_REGISTRATION
+#define _EXAM_REG_NAME(category_name, test_name) \
+    exam_reg_##category_name##_##test_name
 
 #define EXAM_DEFINE_TEST(category_name, test_name) \
     static void _EXAM_DEF_NAME(category_name, test_name)(void); \
@@ -58,6 +59,24 @@
         exam_list_append(&exam_state.test_list, &test); \
     } \
     static void _EXAM_DEF_NAME(category_name, test_name)(void)
+
+#else
+
+#define _EXAM_STRUCT_NAME(category_name, test_name) \
+    exam_test_obj_##category_name##_##test_name
+
+#define EXAM_DEFINE_TEST(category_name, test_name) \
+    static void _EXAM_DEF_NAME(category_name, test_name)(void); \
+    static struct exam_test _EXAM_STRUCT_NAME(category_name, test_name) = { \
+        .category = #category_name, \
+        .name = #test_name, \
+        .func = _EXAM_DEF_NAME(category_name, test_name), \
+    }; \
+    static void _EXAM_DEF_NAME(category_name, test_name)(void)
+
+#define EXAM_REGISTER_TEST(category_name, test_name) \
+    exam_list_append(&exam_state.test_list, &_EXAM_STRUCT_NAME(category_name, test_name))
+#endif // EXAM_NO_AUTO_REGISTRATION
 
 enum exam_test_state
 {
@@ -1281,5 +1300,6 @@ static bool _exam_cli_is_color()
 #define ASSERT_NOT_IN_ARR_DOUBLE EXAM_ASSERT_NOT_IN_ARR_DOUBLE
 
 #define DEFINE_TEST EXAM_DEFINE_TEST
+#define REGISTER_TEST EXAM_REGISTER_TEST
 #endif /* EXAM_SHORT_NAMES */
 #endif /* EXAM_H */
