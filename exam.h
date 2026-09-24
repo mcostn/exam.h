@@ -72,6 +72,10 @@ enum exam_test_state
 #define EXAM_TEST_OUTPUT_SIZE 1024
 #endif
 
+#if EXAM_TEST_OUTPUT_SIZE < 1
+#error "EXAM_TEST_OUTPUT_SIZE must be greater than zero"
+#endif
+
 struct exam_test
 {
     const char *category;
@@ -708,9 +712,6 @@ static struct exam_test_process _exam_start_test(struct exam_test *test, size_t 
         _exam_dief("tried to run test with an unexpected state: %d",
                    test->state);
 
-    if (exam_state.on_test_start)
-        exam_state.on_test_start(test);
-
     int fildes[2];
     if (pipe(fildes) == -1)
         _exam_die_perror("pipe");
@@ -720,9 +721,14 @@ static struct exam_test_process _exam_start_test(struct exam_test *test, size_t 
     test->output_size = 0;
     test->output_truncated = false;
 
+    if (exam_state.on_test_start)
+        exam_state.on_test_start(test);
+
     struct exam_test_process process = {0};
     process.test_index = idx;
 
+    fflush(stdout);
+    fflush(stderr);
     pid_t pid = fork();
     switch (pid) {
         case -1:
