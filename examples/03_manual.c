@@ -1,4 +1,4 @@
-#define EXAM_SOURCE
+#define EXAM_IMPLEMENTATION
 #define EXAM_NO_AUTO_REGISTRATION
 #include "../exam.h"
 

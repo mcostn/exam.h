@@ -5,7 +5,7 @@
     in C (also works for C++).
 
     To use this library, do this in *one* C or C++ file:
-        #define EXAM_SOURCE
+        #define EXAM_IMPLEMENTATION
         #include "exam.h"
 
 LICENSE
@@ -408,7 +408,7 @@ extern int exam_cli_main(int argc, char **argv);
 }
 #endif
 
-#ifdef EXAM_SOURCE
+#ifdef EXAM_IMPLEMENTATION
 #include <stdio.h> // printf(), fprintf(), vfprintf(), fputc(), perror(), stdout, stderr
 #include <string.h> // strcmp(), memcmp(), strerror()
 #include <stdarg.h> // va_list, va_start(), va_end()
@@ -1512,7 +1512,7 @@ static bool _exam_cli_is_color()
 
     return isatty(STDOUT_FILENO) || isatty(STDERR_FILENO);
 }
-#endif // EXAM_SOURCE
+#endif // EXAM_IMPLEMENTATION
 
 #ifndef EXAM_NO_SHORT_NAMES
 #define ASSERT_TRUE EXAM_ASSERT_TRUE

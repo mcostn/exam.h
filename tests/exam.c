@@ -1,4 +1,4 @@
-#define EXAM_SOURCE
+#define EXAM_IMPLEMENTATION
 #include "exam.h"
 
 #include "asserts.h"

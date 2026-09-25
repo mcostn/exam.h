@@ -1,5 +1,5 @@
 #define EXAM_NO_SHORT_NAMES
-#define EXAM_SOURCE
+#define EXAM_IMPLEMENTATION
 #include "exam.h"
 
 EXAM_DEFINE_TEST(math, addition)
