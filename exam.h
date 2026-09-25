@@ -22,6 +22,14 @@ COMPILE_TIME OPTIONS
         that those collide with other symbols, you can use this flag
         to add the "EXAM_" prefix.
 
+    #define EXAM_CALLOC(n, size) better_calloc
+    #define EXAM_REALLOC(p, size) better_realloc
+    #define EXAM_FREE(ptr) better_free
+
+        Override the memory allocation functions used internally by exam.
+        By default, these are malloc(), calloc(), realloc(), and free().
+        You must either define all three or none.
+
     #define EXAM_NO_AUTO_REGISTRATION
 
         This library automatically registers the tests when you define
@@ -185,6 +193,7 @@ DOCUMENTATION
 
 #ifndef EXAM_H
 #define EXAM_H
+#include <stdlib.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -205,6 +214,14 @@ DOCUMENTATION
 #define EXAM_MSVC
 #else
 #define EXAM_UNKNOWN_COMPILER
+#endif
+
+#if !defined(EXAM_CALLOC) && !defined(EXAM_REALLOC) && !defined(EXAM_FREE)
+#define EXAM_CALLOC(n, size) calloc(n, size)
+#define EXAM_REALLOC(p, size) realloc(p, size)
+#define EXAM_FREE(p) free(p)
+#elif !defined(EXAM_CALLOC) || !defined(EXAM_REALLOC) || !defined(EXAM_FREE)
+#error "EXAM_CALLOC, EXAM_REALLOC and EXAM_FREE must be defined together."
 #endif
 
 #if !defined(EXAM_NO_AUTO_REGISTRATION) && (defined(EXAM_MSVC) || defined(EXAM_UNKNOWN_COMPILER))
@@ -393,7 +410,6 @@ extern int exam_cli_main(int argc, char **argv);
 
 #ifdef EXAM_SOURCE
 #include <stdio.h> // printf(), fprintf(), vfprintf(), fputc(), perror(), stdout, stderr
-#include <stdlib.h> // malloc(), realloc(), free(), qsort(), exit(), strtoull(), EXIT_FAILURE
 #include <string.h> // strcmp(), memcmp(), strerror()
 #include <stdarg.h> // va_list, va_start(), va_end()
 #include <errno.h> // errno
@@ -945,9 +961,9 @@ static void _exam_list_append(struct exam_test_list *list, const struct exam_tes
         if (new_cap > SIZE_MAX / sizeof(*list->data))
             _exam_dief("test list too large");
 
-        struct exam_test *data = realloc(list->data, sizeof(*list->data) * new_cap);
+        struct exam_test *data = EXAM_REALLOC(list->data, sizeof(*list->data) * new_cap);
         if (data == NULL)
-            _exam_die_perror("realloc");
+            _exam_die_perror("EXAM_REALLOC");
 
         list->data = data;
         list->capacity = new_cap;
@@ -961,7 +977,7 @@ static void _exam_list_destroy(struct exam_test_list *list)
     if (list->data == NULL)
         return;
 
-    free(list->data);
+    EXAM_FREE(list->data);
     list->data = NULL;
     list->count = 0;
     list->capacity = 0;
@@ -987,11 +1003,11 @@ static void _exam_run_tests(struct exam_test_list *list, const struct exam_filte
     if (jobs > list->count)
         jobs = list->count;
 
-    struct exam_test_process *running = calloc(jobs, sizeof(*running));
+    struct exam_test_process *running = EXAM_CALLOC(jobs, sizeof(*running));
     if (running == NULL)
         _exam_die_perror("calloc");
 
-    struct pollfd *fds = calloc(jobs, sizeof(*fds));
+    struct pollfd *fds = EXAM_CALLOC(jobs, sizeof(*fds));
     if (fds == NULL)
         _exam_die_perror("calloc");
 
@@ -1055,8 +1071,8 @@ static void _exam_run_tests(struct exam_test_list *list, const struct exam_filte
         }
     }
 
-    free(running);
-    free(fds);
+    EXAM_FREE(running);
+    EXAM_FREE(fds);
 }
 
 static struct exam_test_process _exam_start_test(struct exam_test *test, size_t idx)

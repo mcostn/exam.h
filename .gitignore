@@ -2,7 +2,10 @@
 *.o
 
 # Executables
-/examples/assert
-/examples/test
-/examples/cli
-/tests/exam
+examples/*
+!examples/*.c
+!examples/*.h
+
+tests/*
+!tests/*.c
+!tests/*.h
