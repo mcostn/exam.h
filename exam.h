@@ -1,10 +1,186 @@
-/*
- * exam - A minimal, single-header unit testing library written in C99.
- *
- * Copyright (c) 2026 Matei-Stefan Costan
- *
- * Licensed under the MIT License.
- * See LICENSE for details.
+/*  exam - v0.1 - unit testing library
+
+    This is a single-header library that provides a portable
+    and easy-to-use library for writing and running unit-tests
+    in C (also works for C++).
+
+    To use this library, do this in *one* C or C++ file:
+        #define EXAM_SOURCE
+        #include "exam.h"
+
+LICENSE
+    Copyright (c) 2026 Matei-Stefan Costan
+
+    Licensed under the MIT License.
+    See LICENSE for details.
+
+COMPILE_TIME OPTIONS
+
+    #define EXAM_NO_SHORT_NAMES
+
+        By default, exam exposes shorter function names. In the case
+        that those collide with other symbols, you can use this flag
+        to add the "EXAM_" prefix.
+
+    #define EXAM_NO_AUTO_REGISTRATION
+
+        This library automatically registers the tests when you define
+        them (using compiler extensions like constructors for GCC and Clang).
+        If your compiler does not support such features, you can use this
+        flag tu turn it off and manually register your tests.
+
+    #define EXAM_TEST_OUTPUT_SIZE size
+
+        The max size of the buffer that holds a test's output
+        (stdout and stderr). By default this is set to 1024, but you
+        can increase it or decrease it as long as it's bigger than 1.
+
+    #define EXAM_CLI_NAME "name"
+
+        The name showed in the CLI's help. By default it's set to "exam",
+        but you can change this to the name of your executable or whatever
+        you desire.
+
+DOCUMENTATION
+
+    Managing Tests
+
+        DEFINE_TEST(category_name, test_name):
+            Defines the test and automatically registers it if possible.
+            This defines a function's signature and its body should
+            follow right after. Note that category_name and test_name
+            should *not* be strings, just symbols.
+
+        REGISTER_TEST(category_name, test_name):
+            If EXAM_NO_AUTO_REGISTRATION is defined, you can manually
+            register them using this macro in main. As the previous one,
+            category_name and test_name should *not* be strings, just symbols.
+
+        int exam_run(const struct exam_filter *filter, size_t jobs):
+            This runs all the registered tests and returns EXIT_FAILURE if at
+            least one doesn't pass or crashes, or EXIT_SUCCESS otherwise.
+            filter is used to filter out tests (NULL = no filter, every test
+            satisfies it). Jobs is the number of processes to start (0 = cpu
+            count).
+
+    Cli
+
+        int exam_cli_main(int argc, char **argv):
+            Runs the test suite using the command-line interface.
+
+    Asserts
+
+        ASSERT_TRUE(cond):
+            Checks if the condition is true.
+
+        ASSERT_FALSE(cond):
+            Checks if the condition is false.
+
+        ASSERT_EQ_PTR(a, b):
+            Checks if the pointers a and b are equal.
+
+        ASSERT_NEQ_PTR(a, b):
+            Checks if the pointers a and b are not equal.
+
+        ASSERT_NULL(ptr):
+            Checks if ptr is NULL.
+
+        ASSERT_NON_NULL(ptr):
+            Checks if ptr is not NULL.
+
+        ASSERT_EQ_INT(a, b):
+            Checks if the signed integer values a and b are equal.
+
+        ASSERT_NEQ_INT(a, b):
+            Checks if the signed integer values a and b are not equal.
+
+        ASSERT_EQ_UINT(a, b):
+            Checks if the unsigned integer values a and b are equal.
+
+        ASSERT_NEQ_UINT(a, b):
+            Checks if the unsigned integer values a and b are not equal.
+
+        ASSERT_EQ_FLOAT(a, b, eps):
+            Checks if the floating-point values a and b are equal within the given epsilon.
+
+        ASSERT_NEQ_FLOAT(a, b, eps):
+            Checks if the floating-point values a and b are not equal within the given epsilon.
+
+        ASSERT_EQ_DOUBLE(a, b, eps):
+            Checks if the double-precision floating-point values a and b are equal within the given epsilon.
+
+        ASSERT_NEQ_DOUBLE(a, b, eps):
+            Checks if the double-precision floating-point values a and b are not equal within the given epsilon.
+
+        ASSERT_EQ_STR(a, b):
+            Checks if the null-terminated strings a and b are equal.
+
+        ASSERT_NEQ_STR(a, b):
+            Checks if the null-terminated strings a and b are not equal.
+
+        ASSERT_EQ_MEM(a, b, size):
+            Checks if the first size bytes of memory at a and b are equal.
+
+        ASSERT_NEQ_MEM(a, b, size):
+            Checks if the first size bytes of memory at a and b are not equal.
+
+        ASSERT_IN_RANGE_INT(x, min, max):
+            Checks if the signed integer x is within the inclusive range [min, max].
+
+        ASSERT_NOT_IN_RANGE_INT(x, min, max):
+            Checks if the signed integer x is outside the inclusive range [min, max].
+
+        ASSERT_IN_RANGE_UINT(x, min, max):
+            Checks if the unsigned integer x is within the inclusive range [min, max].
+
+        ASSERT_NOT_IN_RANGE_UINT(x, min, max):
+            Checks if the unsigned integer x is outside the inclusive range [min, max].
+
+        ASSERT_IN_RANGE_FLOAT(x, min, max, eps):
+            Checks if the floating-point value x is within the inclusive range [min, max],
+            using eps for floating-point comparisons.
+
+        ASSERT_NOT_IN_RANGE_FLOAT(x, min, max, eps):
+            Checks if the floating-point value x is outside the inclusive range [min, max],
+            using eps for floating-point comparisons.
+
+        ASSERT_IN_RANGE_DOUBLE(x, min, max, eps):
+            Checks if the double-precision floating-point value x is within the inclusive range [min, max],
+            using eps for floating-point comparisons.
+
+        ASSERT_NOT_IN_RANGE_DOUBLE(x, min, max, eps):
+            Checks if the double-precision floating-point value x is outside the inclusive range [min, max],
+            using eps for floating-point comparisons.
+
+        ASSERT_IN_ARR_INT(x, arr, count):
+            Checks if the signed integer x is contained in the first count elements of the integer array arr.
+
+        ASSERT_NOT_IN_ARR_INT(x, arr, count):
+            Checks if the signed integer x is not contained in the first count elements of the integer array arr.
+
+        ASSERT_IN_ARR_UINT(x, arr, count):
+            Checks if the unsigned integer x is contained in the first count elements of the
+            unsigned integer array arr.
+
+        ASSERT_NOT_IN_ARR_UINT(x, arr, count):
+            Checks if the unsigned integer x is not contained in the first count elements of the
+            unsigned integer array arr.
+
+        ASSERT_IN_ARR_FLOAT(x, arr, count, eps):
+            Checks if the floating-point value x is contained in the first count elements of the array arr,
+            using eps for comparisons.
+
+        ASSERT_NOT_IN_ARR_FLOAT(x, arr, count, eps):
+            Checks if the floating-point value x is not contained in the first count elements of the array arr,
+            using eps for comparisons.
+
+        ASSERT_IN_ARR_DOUBLE(x, arr, count, eps):
+            Checks if the double-precision floating-point value x is contained in the first count elements
+            of the array arr, using eps for comparisons.
+
+        ASSERT_NOT_IN_ARR_DOUBLE(x, arr, count, eps):
+            Checks if the double-precision floating-point value x is not contained in the first count
+            elements of the array arr, using eps for comparisons.
  */
 
 #ifndef EXAM_H
