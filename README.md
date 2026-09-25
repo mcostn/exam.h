@@ -6,8 +6,7 @@ A minimal, single-header unit testing library written in C99.
 ## Example
 
 ```c
-#define EXAM_SHORT_NAMES
-#define EXAM_SOURCE
+#define EXAM_IMPLEMENTATION
 #include "exam.h"
 
 DEFINE_TEST(math, addition)
@@ -38,7 +37,7 @@ cc -std=c99 -o test test.c
 Put `exam.h` somewhere in your project and define `EXAM_IMPLEMENTATION` in **one** source file before including it:
 
 ```c
-#define EXAM_SOURCE
+#define EXAM_IMPLEMENTATION
 #include "exam.h"
 ```
 
