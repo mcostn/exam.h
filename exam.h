@@ -1,8 +1,8 @@
 /*  exam - v0.1 - unit testing library
 
     This is a single-header library that provides a portable
-    and easy-to-use library for writing and running unit-tests
-    in C (also works for C++).
+    and easy-to-use way for writing and running unit-tests
+    in C and C++.
 
     To use this library, do this in *one* C or C++ file:
         #define EXAM_IMPLEMENTATION
