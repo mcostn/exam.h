@@ -365,7 +365,7 @@ struct exam_state
 
 #ifdef __cplusplus
 extern "C" {
-#endif
+#endif // __cplusplus
 extern void exam_assert_true(bool result, const char *expression, const char *file, size_t line);
 extern void exam_assert_false(bool result, const char *expression, const char *file, size_t line);
 extern void exam_assert_eq_ptr(const void *a, const void *b, const char *file, size_t line);
@@ -404,9 +404,6 @@ extern int exam_run(const struct exam_filter *filter, size_t jobs);
 extern void exam_register(struct exam_test *test);
 
 extern int exam_cli_main(int argc, char **argv);
-#ifdef __cplusplus
-}
-#endif
 
 #ifdef EXAM_IMPLEMENTATION
 #include <stdio.h> // printf(), fprintf(), vfprintf(), fputc(), perror(), stdout, stderr
@@ -574,8 +571,8 @@ void exam_assert_neq_str(const char *a, const char *b, const char *file, size_t 
 
 void exam_assert_eq_mem(const void *a, const void *b, size_t size, const char *file, size_t line)
 {
-    const unsigned char *expected = a;
-    const unsigned char *actual = b;
+    const unsigned char *expected = (const unsigned char *)a;
+    const unsigned char *actual = (const unsigned char *)b;
 
     for (size_t i = 0; i < size; i ++) {
         if (expected[i] != actual[i])
@@ -787,8 +784,8 @@ static void _exam_fail_test(const char *file, size_t line, const char *fmt, ...)
 
 static int _exam_test_cmp(const void *a, const void *b)
 {
-    const struct exam_test *test_a = a;
-    const struct exam_test *test_b = b;
+    const struct exam_test *test_a = (const struct exam_test *)a;
+    const struct exam_test *test_b = (const struct exam_test *)b;
     int result = strcmp(test_a->category, test_b->category);
     if (result == 0)
         result = strcmp(test_a->name, test_b->name);
@@ -961,7 +958,7 @@ static void _exam_list_append(struct exam_test_list *list, const struct exam_tes
         if (new_cap > SIZE_MAX / sizeof(*list->data))
             _exam_dief("test list too large");
 
-        struct exam_test *data = EXAM_REALLOC(list->data, sizeof(*list->data) * new_cap);
+        struct exam_test *data = (struct exam_test *)EXAM_REALLOC(list->data, sizeof(*list->data) * new_cap);
         if (data == NULL)
             _exam_die_perror("EXAM_REALLOC");
 
@@ -1003,11 +1000,11 @@ static void _exam_run_tests(struct exam_test_list *list, const struct exam_filte
     if (jobs > list->count)
         jobs = list->count;
 
-    struct exam_test_process *running = EXAM_CALLOC(jobs, sizeof(*running));
+    struct exam_test_process *running = (struct exam_test_process *)EXAM_CALLOC(jobs, sizeof(*running));
     if (running == NULL)
         _exam_die_perror("calloc");
 
-    struct pollfd *fds = EXAM_CALLOC(jobs, sizeof(*fds));
+    struct pollfd *fds = (struct pollfd *)EXAM_CALLOC(jobs, sizeof(*fds));
     if (fds == NULL)
         _exam_die_perror("calloc");
 
@@ -1395,7 +1392,7 @@ static int _exam_cli_list()
 
 static void _exam_cli_usage()
 {
-    printf("usage: "EXAM_CLI_NAME" [options] [filter...]\n"
+    printf("usage: " EXAM_CLI_NAME " [options] [filter...]\n"
            "options:\n"
            "    -j, --jobs N        run up to N jobs at once\n"
            "    -l, --list          list available tests\n"
@@ -1513,6 +1510,9 @@ static bool _exam_cli_is_color()
     return isatty(STDOUT_FILENO) || isatty(STDERR_FILENO);
 }
 #endif // EXAM_IMPLEMENTATION
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #ifndef EXAM_NO_SHORT_NAMES
 #define ASSERT_TRUE EXAM_ASSERT_TRUE
