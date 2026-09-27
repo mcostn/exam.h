@@ -4,7 +4,9 @@
 # Executables
 examples/*
 !examples/*.c
+!examples/*.cpp
 !examples/*.h
+!examples/*.hpp
 
 tests/*
 !tests/*.c
