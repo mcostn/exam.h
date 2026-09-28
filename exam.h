@@ -49,6 +49,11 @@ COMPILE_TIME OPTIONS
         but you can change this to the name of your executable or whatever
         you desire.
 
+    #define EXAM_NO_STL
+
+        In case you are using C++, exam offers more functionality intended
+        to use with the STL. To desable it, you can define this macro.
+
 DOCUMENTATION
 
     Managing Tests
@@ -189,6 +194,32 @@ DOCUMENTATION
         ASSERT_NOT_IN_ARR_DOUBLE(x, arr, count, eps):
             Checks if the double-precision floating-point value x is not contained in the first count
             elements of the array arr, using eps for comparisons.
+
+        C++ Asserts
+
+            ASSERT_IN_VEC(x, vec):
+                Checks if x is contained in the std::vector vec
+
+            ASSERT_NOT_IN_VEC(x, vec):
+                Checks if x is not contained in the std::vector vec
+
+            ASSERT_KEY_IN_MAP(k, hm):
+                Checks if k is not a key in the std::unordered_map hm
+
+            ASSERT_KEY_NOT_IN_MAP(k, hm):
+                Checks if k is a key in the std::unordered_map hm
+
+            ASSERT_VAL_IN_MAP(v, hm):
+                Checks if v is a value in the std::unordered_map hm
+
+            ASSERT_VAL_NOT_IN_MAP(v, hm):
+                Checks if v is not a value in the std::unordered_map hm
+
+            ASSERT_KEY_VAL_IN_MAP(k, v, hm):
+                Checks if the key-value pair (k, v) exists in the std::unordered_map hm
+
+            ASSERT_KEY_VAL_NOT_IN_MAP(k, v, hm):
+                Checks if the key-value pair (k, v) does not exists in the std::unordered_map hm
  */
 
 #ifndef EXAM_H
@@ -273,6 +304,17 @@ DOCUMENTATION
 #define EXAM_ASSERT_NOT_IN_ARR_FLOAT(x, arr, count, eps) exam_assert_not_in_arr_float((x), (arr), (count), (eps), __FILE__, __LINE__)
 #define EXAM_ASSERT_IN_ARR_DOUBLE(x, arr, count, eps) exam_assert_in_arr_double((x), (arr), (count), (eps), __FILE__, __LINE__)
 #define EXAM_ASSERT_NOT_IN_ARR_DOUBLE(x, arr, count, eps) exam_assert_not_in_arr_double((x), (arr), (count), (eps), __FILE__, __LINE__)
+
+#if defined(__cplusplus) && !defined(EXAM_NO_STL)
+#define EXAM_ASSERT_IN_CONTAINER(x, container) exam_assert_in_container((x), (container), __FILE__, __LINE__)
+#define EXAM_ASSERT_NOT_IN_CONTAINER(x, container) exam_assert_not_in_container((x), (container), __FILE__, __LINE__)
+#define EXAM_ASSERT_KEY_IN_MAP(k, hm) exam_assert_key_in_map((k), (hm), __FILE__, __LINE__)
+#define EXAM_ASSERT_KEY_NOT_IN_MAP(k, hm) exam_assert_key_not_in_map((k), (hm), __FILE__, __LINE__)
+#define EXAM_ASSERT_VAL_IN_MAP(v, hm) exam_assert_val_in_map((v), (hm), __FILE__, __LINE__)
+#define EXAM_ASSERT_VAL_NOT_IN_MAP(v, hm) exam_assert_val_not_in_map((v), (hm), __FILE__, __LINE__)
+#define EXAM_ASSERT_KEY_VAL_IN_MAP(k, v, hm) exam_assert_key_val_in_map((k), (v), (hm), __FILE__, __LINE__)
+#define EXAM_ASSERT_KEY_VAL_NOT_IN_MAP(k, v, hm) exam_assert_key_val_not_in_map((k), (v), (hm), __FILE__, __LINE__)
+#endif // defined(__cplusplus) && !defined(EXAM_NO_STL)
 
 #define _EXAM_DEF_NAME(category_name, test_name) \
     exam_def_##category_name##_##test_name
@@ -1514,6 +1556,111 @@ static bool _exam_cli_is_color()
 }
 #endif // __cplusplus
 
+#if defined(__cplusplus) && !defined(EXAM_NO_STL)
+#include <algorithm>
+#include <unordered_map>
+#include <sstream>
+#include <string>
+
+template <typename T>
+std::string _exam_to_string(const T &value)
+{
+    std::ostringstream stream;
+    stream << value;
+    return stream.str();
+}
+
+template <typename Container, typename Value>
+void exam_assert_in_container(const Value &x, const Container &container, const char *file, size_t line)
+{
+    if (std::find(container.begin(), container.end(), x) == container.end())
+        _exam_fail_test(file, line,
+                        "\"%s\" not in container",
+                        _exam_to_string(x).c_str(),
+                        container.size());
+}
+
+template <typename Container, typename Value>
+void exam_assert_not_in_container(const Value &x, const Container &container, const char *file, size_t line)
+{
+    if (std::find(container.begin(), container.end(), x) != container.end())
+        _exam_fail_test(file, line,
+                        "\"%s\" in container",
+                        _exam_to_string(x).c_str(),
+                        container.size());
+}
+
+template <typename K, typename V>
+void exam_assert_key_in_map(const K &key, const std::unordered_map<K, V> &hm, const char *file, size_t line)
+{
+    auto it = hm.find(key);
+    if (it == hm.end())
+        _exam_fail_test(file, line,
+                        "key \"%s\" not in unordered_map",
+                        _exam_to_string(key).c_str());
+}
+
+template <typename K, typename V>
+void exam_assert_key_not_in_map(const K &key, const std::unordered_map<K, V> &hm, const char *file, size_t line)
+{
+    auto it = hm.find(key);
+    if (it != hm.end())
+        _exam_fail_test(file, line,
+                        "key \"%s\" in unordered_map",
+                        _exam_to_string(key).c_str());
+}
+
+template <typename K, typename V>
+void exam_assert_val_in_map(const V &val, const std::unordered_map<K, V> &hm, const char *file, size_t line)
+{
+    for (const auto &entry : hm)
+        if (entry.second == val)
+            return;
+
+    _exam_fail_test(file, line,
+                    "value \"%s\" not in unordered_map",
+                    _exam_to_string(val).c_str());
+}
+
+template <typename K, typename V>
+void exam_assert_val_not_in_map(const V &val, const std::unordered_map<K, V> &hm, const char *file, size_t line)
+{
+    for (const auto &entry : hm)
+        if (entry.second == val)
+            _exam_fail_test(file, line,
+                            "value \"%s\" in unordered_map",
+                            _exam_to_string(val).c_str());
+}
+
+template <typename K, typename V>
+void exam_assert_key_val_in_map(const K &key, const V &val, const std::unordered_map<K, V> &hm, const char *file, size_t line)
+{
+    auto it = hm.find(key);
+    if (it == hm.end())
+        _exam_fail_test(file, line,
+                        "key \"%s\" not in unordered_map",
+                        _exam_to_string(key).c_str());
+
+    if (it->second != val)
+        _exam_fail_test(file, line,
+                        "value at key \"%s\" is not \"%s\"",
+                        _exam_to_string(key).c_str(), _exam_to_string(val).c_str());
+}
+
+template <typename K, typename V>
+void exam_assert_key_val_not_in_map(const K &key, const V &val, const std::unordered_map<K, V> &hm, const char *file, size_t line)
+{
+    auto it = hm.find(key);
+    if (it == hm.end())
+        return;
+
+    if (it->second == val)
+        _exam_fail_test(file, line,
+                        "value at key \"%s\" is \"%s\"",
+                        _exam_to_string(key).c_str(), _exam_to_string(val).c_str());
+}
+#endif // defined(__cplusplus) && !defined(EXAM_NO_STL)
+
 #ifndef EXAM_NO_SHORT_NAMES
 #define ASSERT_TRUE EXAM_ASSERT_TRUE
 #define ASSERT_FALSE EXAM_ASSERT_FALSE
@@ -1549,6 +1696,17 @@ static bool _exam_cli_is_color()
 #define ASSERT_NOT_IN_ARR_FLOAT EXAM_ASSERT_NOT_IN_ARR_FLOAT
 #define ASSERT_IN_ARR_DOUBLE EXAM_ASSERT_IN_ARR_DOUBLE
 #define ASSERT_NOT_IN_ARR_DOUBLE EXAM_ASSERT_NOT_IN_ARR_DOUBLE
+
+#if defined(__cplusplus) && !defined(EXAM_NO_STL)
+#define ASSERT_IN_CONTAINER EXAM_ASSERT_IN_CONTAINER
+#define ASSERT_NOT_IN_CONTAINER EXAM_ASSERT_NOT_IN_CONTAINER
+#define ASSERT_KEY_IN_MAP EXAM_ASSERT_KEY_IN_MAP
+#define ASSERT_KEY_NOT_IN_MAP EXAM_ASSERT_KEY_NOT_IN_MAP
+#define ASSERT_VAL_IN_MAP EXAM_ASSERT_VAL_IN_MAP
+#define ASSERT_VAL_NOT_IN_MAP EXAM_ASSERT_VAL_NOT_IN_MAP
+#define ASSERT_KEY_VAL_IN_MAP EXAM_ASSERT_KEY_VAL_IN_MAP
+#define ASSERT_KEY_VAL_NOT_IN_MAP EXAM_ASSERT_KEY_VAL_NOT_IN_MAP
+#endif // defined(__cplusplus) && !defined(EXAM_NO_STL)
 
 #define DEFINE_TEST EXAM_DEFINE_TEST
 #define REGISTER_TEST EXAM_REGISTER_TEST

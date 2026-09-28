@@ -1,5 +1,6 @@
 CC     ?= gcc
 CFLAGS ?= -I. -std=c99 -Wall -Wextra -Wpedantic
+CPPFLAGS ?= -I. -std=c++11 -lstdc++
 
 EXAMPLES := \
 	examples/01_basic \
@@ -16,6 +17,7 @@ TESTS := \
 all: examples tests
 
 examples: $(EXAMPLES)
+	$(CC) $(CPPFLAGS) -o examples/06_C++ examples/06_C++.cpp
 
 tests: $(TESTS)
 
