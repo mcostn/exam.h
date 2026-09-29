@@ -1576,8 +1576,7 @@ void exam_assert_in_container(const Value &x, const Container &container, const 
     if (std::find(container.begin(), container.end(), x) == container.end())
         _exam_fail_test(file, line,
                         "\"%s\" not in container",
-                        _exam_to_string(x).c_str(),
-                        container.size());
+                        _exam_to_string(x).c_str());
 }
 
 template <typename Container, typename Value>
@@ -1586,8 +1585,7 @@ void exam_assert_not_in_container(const Value &x, const Container &container, co
     if (std::find(container.begin(), container.end(), x) != container.end())
         _exam_fail_test(file, line,
                         "\"%s\" in container",
-                        _exam_to_string(x).c_str(),
-                        container.size());
+                        _exam_to_string(x).c_str());
 }
 
 template <typename K, typename V>
