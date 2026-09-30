@@ -26,20 +26,20 @@ DEFINE_TEST(stl, unordered_map)
         {"third", 3}
     };
 
-    ASSERT_KEY_IN_MAP(std::string("first"), nums);
-    ASSERT_KEY_IN_MAP(std::string("third"), nums);
-    ASSERT_KEY_NOT_IN_MAP(std::string("fourth"), nums);
+    ASSERT_KEY_IN_MAP("first", nums);
+    ASSERT_KEY_IN_MAP("third", nums);
+    ASSERT_KEY_NOT_IN_MAP("fourth", nums);
 
     ASSERT_VAL_IN_MAP(1, nums);
     ASSERT_VAL_IN_MAP(3, nums);
     ASSERT_VAL_NOT_IN_MAP(0, nums);
     ASSERT_VAL_NOT_IN_MAP(4, nums);
 
-    ASSERT_KEY_VAL_IN_MAP(std::string("first"), 1, nums);
-    ASSERT_KEY_VAL_IN_MAP(std::string("second"), 2, nums);
+    ASSERT_KEY_VAL_IN_MAP("first", 1, nums);
+    ASSERT_KEY_VAL_IN_MAP("second", 2, nums);
 
-    ASSERT_KEY_VAL_NOT_IN_MAP(std::string("first"), 2, nums);
-    ASSERT_KEY_VAL_NOT_IN_MAP(std::string("fourth"), 4, nums);
+    ASSERT_KEY_VAL_NOT_IN_MAP("first", 2, nums);
+    ASSERT_KEY_VAL_NOT_IN_MAP("fourth", 4, nums);
 }
 
 int main(int argc, char **argv)

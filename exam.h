@@ -1558,7 +1558,6 @@ static bool _exam_cli_is_color()
 
 #if defined(__cplusplus) && !defined(EXAM_NO_STL)
 #include <algorithm>
-#include <unordered_map>
 #include <sstream>
 #include <string>
 
@@ -1588,73 +1587,71 @@ void exam_assert_not_in_container(const Value &x, const Container &container, co
                         _exam_to_string(x).c_str());
 }
 
-template <typename K, typename V>
-void exam_assert_key_in_map(const K &key, const std::unordered_map<K, V> &hm, const char *file, size_t line)
+template <typename K, typename Map>
+void exam_assert_key_in_map(const K &key, const Map &map, const char *file, size_t line)
 {
-    auto it = hm.find(key);
-    if (it == hm.end())
+    if (map.find(key) == map.end())
         _exam_fail_test(file, line,
-                        "key \"%s\" not in unordered_map",
+                        "key \"%s\" not in map",
                         _exam_to_string(key).c_str());
 }
 
-template <typename K, typename V>
-void exam_assert_key_not_in_map(const K &key, const std::unordered_map<K, V> &hm, const char *file, size_t line)
+template <typename K, typename Map>
+void exam_assert_key_not_in_map(const K &key, const Map &map, const char *file, size_t line)
 {
-    auto it = hm.find(key);
-    if (it != hm.end())
+    if (map.find(key) != map.end())
         _exam_fail_test(file, line,
-                        "key \"%s\" in unordered_map",
+                        "key \"%s\" in map",
                         _exam_to_string(key).c_str());
 }
 
-template <typename K, typename V>
-void exam_assert_val_in_map(const V &val, const std::unordered_map<K, V> &hm, const char *file, size_t line)
+template <typename V, typename Map>
+void exam_assert_val_in_map(const V &val, const Map &map, const char *file, size_t line)
 {
-    for (const auto &entry : hm)
+    for (const auto &entry : map)
         if (entry.second == val)
             return;
 
     _exam_fail_test(file, line,
-                    "value \"%s\" not in unordered_map",
+                    "value \"%s\" not in map",
                     _exam_to_string(val).c_str());
 }
 
-template <typename K, typename V>
-void exam_assert_val_not_in_map(const V &val, const std::unordered_map<K, V> &hm, const char *file, size_t line)
+template <typename V, typename Map>
+void exam_assert_val_not_in_map(const V &val, const Map &map, const char *file, size_t line)
 {
-    for (const auto &entry : hm)
+    for (const auto &entry : map)
         if (entry.second == val)
             _exam_fail_test(file, line,
-                            "value \"%s\" in unordered_map",
+                            "value \"%s\" in map",
                             _exam_to_string(val).c_str());
 }
 
-template <typename K, typename V>
-void exam_assert_key_val_in_map(const K &key, const V &val, const std::unordered_map<K, V> &hm, const char *file, size_t line)
+template <typename K, typename V, typename Map>
+void exam_assert_key_val_in_map(const K &key, const V &val, const Map &map, const char *file, size_t line)
 {
-    auto it = hm.find(key);
-    if (it == hm.end())
+    auto it = map.find(key);
+    if (it == map.end())
         _exam_fail_test(file, line,
-                        "key \"%s\" not in unordered_map",
+                        "key \"%s\" not in map",
                         _exam_to_string(key).c_str());
 
     if (it->second != val)
         _exam_fail_test(file, line,
-                        "value at key \"%s\" is not \"%s\"",
+                        "value at key \"%s\" is not \"%s\" in map",
                         _exam_to_string(key).c_str(), _exam_to_string(val).c_str());
 }
 
-template <typename K, typename V>
-void exam_assert_key_val_not_in_map(const K &key, const V &val, const std::unordered_map<K, V> &hm, const char *file, size_t line)
+template <typename K, typename V, typename Map>
+void exam_assert_key_val_not_in_map(const K &key, const V &val, const Map &map, const char *file, size_t line)
 {
-    auto it = hm.find(key);
-    if (it == hm.end())
+    auto it = map.find(key);
+    if (it == map.end())
         return;
 
     if (it->second == val)
         _exam_fail_test(file, line,
-                        "value at key \"%s\" is \"%s\"",
+                        "value at key \"%s\" is \"%s\" in map",
                         _exam_to_string(key).c_str(), _exam_to_string(val).c_str());
 }
 #endif // defined(__cplusplus) && !defined(EXAM_NO_STL)
