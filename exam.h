@@ -408,6 +408,7 @@ struct exam_state
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
+extern void exam_fail_test(const char *file, size_t line, const char *fmt, ...);
 extern void exam_assert_true(bool result, const char *expression, const char *file, size_t line);
 extern void exam_assert_false(bool result, const char *expression, const char *file, size_t line);
 extern void exam_assert_eq_ptr(const void *a, const void *b, const char *file, size_t line);
@@ -487,8 +488,6 @@ static void _exam_die_perror(const char *str)
 }
 
 // Asserts
-static void _exam_fail_test(const char *file, size_t line, const char *fmt, ...);
-
 static int _exam_test_cmp(const void *a, const void *b);
 static bool _exam_str_cmp(const char *a, const char *b);
 static bool _exam_float_cmp(float a, float b, float eps);
@@ -499,319 +498,7 @@ static bool _exam_double_in_range(double x, double min, double max, double eps);
 
 static const char *_exam_str_repr(const char *str);
 
-void exam_assert_true(bool res, const char *expression, const char *file, size_t line)
-{
-    if (!res)
-        _exam_fail_test(file, line,
-                        "%s is not true",
-                        expression);
-}
-
-void exam_assert_false(bool res, const char *expression, const char *file, size_t line)
-{
-    if (res)
-        _exam_fail_test(file, line,
-                        "%s is not false",
-                        expression);
-}
-
-void exam_assert_eq_ptr(const void *a, const void *b, const char *file, size_t line)
-{
-    if (a != b)
-        _exam_fail_test(file, line,
-                        "%p != %p",
-                        a, b);
-}
-
-void exam_assert_neq_ptr(const void *a, const void *b, const char *file, size_t line)
-{
-    if (a == b)
-        _exam_fail_test(file, line,
-                        "%p == %p",
-                        a, b);
-}
-
-void exam_assert_eq_int(intmax_t a, intmax_t b, const char *file, size_t line)
-{
-    if (a != b)
-        _exam_fail_test(file, line,
-                        "%jd != %jd",
-                        a, b);
-}
-
-void exam_assert_neq_int(intmax_t a, intmax_t b, const char *file, size_t line)
-{
-    if (a == b)
-        _exam_fail_test(file, line,
-                        "%jd == %jd",
-                        a, b);
-}
-
-void exam_assert_eq_uint(uintmax_t a, uintmax_t b, const char *file, size_t line)
-{
-    if (a != b)
-        _exam_fail_test(file, line,
-                        "%ju != %ju",
-                        a, b);
-}
-
-void exam_assert_neq_uint(uintmax_t a, uintmax_t b, const char *file, size_t line)
-{
-    if (a == b)
-        _exam_fail_test(file, line,
-                        "%ju == %ju",
-                        a, b);
-}
-
-void exam_assert_eq_float(float a, float b, float eps, const char *file, size_t line)
-{
-    if (!_exam_float_cmp(a, b, eps))
-        _exam_fail_test(file, line,
-                        "%.9g != %.9g",
-                         a, b);
-}
-
-void exam_assert_neq_float(float a, float b, float eps, const char *file, size_t line)
-{
-    if (_exam_float_cmp(a, b, eps))
-        _exam_fail_test(file, line,
-                        "%.9g == %.9g",
-                        a, b);
-}
-
-void exam_assert_eq_double(double a, double b, double eps, const char *file, size_t line)
-{
-    if (!_exam_double_cmp(a, b, eps))
-        _exam_fail_test(file, line,
-                        "%.17g != %.17g",
-                        a, b);
-}
-
-void exam_assert_neq_double(double a, double b, double eps, const char *file, size_t line)
-{
-    if (_exam_double_cmp(a, b, eps))
-        _exam_fail_test(file, line,
-                        "%.17g == %.17g",
-                        a, b);
-}
-
-void exam_assert_eq_str(const char *a, const char *b, const char *file, size_t line)
-{
-    if (!_exam_str_cmp(a, b))
-        _exam_fail_test(file, line,
-                        "\"%s\" != \"%s\"",
-                        _exam_str_repr(a), _exam_str_repr(b));
-}
-
-void exam_assert_neq_str(const char *a, const char *b, const char *file, size_t line)
-{
-    if (_exam_str_cmp(a, b))
-        _exam_fail_test(file, line,
-                        "%s == %s",
-                         _exam_str_repr(a), _exam_str_repr(b));
-}
-
-void exam_assert_eq_mem(const void *a, const void *b, size_t size, const char *file, size_t line)
-{
-    const unsigned char *expected = (const unsigned char *)a;
-    const unsigned char *actual = (const unsigned char *)b;
-
-    for (size_t i = 0; i < size; i ++) {
-        if (expected[i] != actual[i])
-            _exam_fail_test(file, line,
-                            "memory differs at offset %zu: expected=0x%02x actual=0x%02x",
-                            i, expected[i], actual[i]);
-    }
-}
-
-void exam_assert_neq_mem(const void *a, const void *b, size_t size, const char *file, size_t line)
-{
-    if (size == 0)
-        return;
-
-    if (memcmp(a, b, size) == 0)
-        _exam_fail_test(file, line,
-                        "memory regions are equal (%zu bytes)",
-                        size);
-}
-
-void exam_assert_in_range_int(intmax_t x, intmax_t min, intmax_t max, const char *file, size_t line)
-{
-    if (min > max)
-        _exam_dief("invalid range [%jd, %jd]", min, max);
-
-    if (x < min || x > max)
-        _exam_fail_test(file, line,
-                        "%jd is not within the range [%jd, %jd]",
-                        x, min, max);
-}
-
-void exam_assert_not_in_range_int(intmax_t x, intmax_t min, intmax_t max, const char *file, size_t line)
-{
-    if (min > max)
-        _exam_dief("invalid range [%jd, %jd]", min, max);
-
-    if (x >= min && x <= max)
-        _exam_fail_test(file, line,
-                        "%jd is within the range [%jd, %jd]",
-                        x, min, max);
-}
-
-void exam_assert_in_range_uint(uintmax_t x, uintmax_t min, uintmax_t max, const char *file, size_t line)
-{
-    if (min > max)
-        _exam_dief("invalid range [%ju, %ju]", min, max);
-
-    if (x < min || x > max)
-        _exam_fail_test(file, line,
-                        "%ju is not within the range [%ju, %ju]",
-                        x, min, max);
-}
-
-void exam_assert_not_in_range_uint(uintmax_t x, uintmax_t min, uintmax_t max, const char *file, size_t line)
-{
-    if (min > max)
-        _exam_dief("invalid range [%ju, %ju]", min, max);
-
-    if (x >= min && x <= max)
-        _exam_fail_test(file, line,
-                        "%ju is within the range [%ju, %ju]",
-                        x, min, max);
-}
-
-void exam_assert_in_range_float(float x, float min, float max, float eps, const char *file, size_t line)
-{
-    if (min > max)
-        _exam_dief("invalid range [%.9g, %.9g]", min, max);
-
-    if (!_exam_float_in_range(x, min, max, eps))
-        _exam_fail_test(file, line,
-                        "%.9g is not within the range [%.9g, %.9g]",
-                        x, min, max);
-}
-
-void exam_assert_not_in_range_float(float x, float min, float max, float eps, const char *file, size_t line)
-{
-    if (min > max)
-        _exam_dief("invalid range [%.9g, %.9g]", min, max);
-
-    if (_exam_float_in_range(x, min, max, eps))
-        _exam_fail_test(file, line,
-                        "%.9g is within the range [%.9g, %.9g]",
-                        x, min, max);
-}
-
-void exam_assert_in_range_double(double x, double min, double max, double eps, const char *file, size_t line)
-{
-    if (min > max)
-        _exam_dief("invalid range [%.17g, %.17g]", min, max);
-
-    if (!_exam_double_in_range(x, min, max, eps))
-        _exam_fail_test(file, line,
-                        "%.17g is not within the range [%.17g, %.17g]",
-                        x, min, max);
-}
-
-void exam_assert_not_in_range_double(double x, double min, double max, double eps, const char *file, size_t line)
-{
-    if (min > max)
-        _exam_dief("invalid range [%.17g, %.17g]", min, max);
-
-    if (_exam_double_in_range(x, min, max, eps))
-        _exam_fail_test(file, line,
-                        "%.17g is within the range [%.17g, %.17g]",
-                        x, min, max);
-}
-
-void exam_assert_in_arr_int(intmax_t x, const intmax_t *arr, size_t count, const char *file, size_t line)
-{
-    for (size_t i = 0; i < count; i ++) {
-        if (arr[i] == x)
-            return;
-    }
-
-    _exam_fail_test(file, line,
-                    "%jd not in %p (count=%zu)",
-                    x, (void*)arr, count);
-}
-
-void exam_assert_not_in_arr_int(intmax_t x, const intmax_t *arr, size_t count, const char *file, size_t line)
-{
-    for (size_t i = 0; i < count; i ++) {
-        if (arr[i] == x)
-            _exam_fail_test(file, line,
-                            "%jd in %p (count=%zu)",
-                            x, (void*)arr, count);
-    }
-}
-
-void exam_assert_in_arr_uint(uintmax_t x, const uintmax_t *arr, size_t count, const char *file, size_t line)
-{
-    for (size_t i = 0; i < count; i ++) {
-        if (arr[i] == x)
-            return;
-    }
-
-    _exam_fail_test(file, line,
-                    "%ju not in %p (count=%zu)",
-                    x, (void*)arr, count);
-}
-
-void exam_assert_not_in_arr_uint(uintmax_t x, const uintmax_t *arr, size_t count, const char *file, size_t line)
-{
-    for (size_t i = 0; i < count; i ++) {
-        if (arr[i] == x)
-            _exam_fail_test(file, line,
-                            "%ju in %p (count=%zu)",
-                            x, (void*)arr, count);
-    }
-}
-
-void exam_assert_in_arr_float(float x, const float *arr, size_t count, float eps, const char *file, size_t line)
-{
-    for (size_t i = 0; i < count; i ++) {
-        if (_exam_float_cmp(x, arr[i], eps))
-            return;
-    }
-
-    _exam_fail_test(file, line,
-                    "%.9g not in %p (count=%zu)",
-                    x, (void*)arr, count);
-}
-
-void exam_assert_not_in_arr_float(float x, const float *arr, size_t count, float eps, const char *file, size_t line)
-{
-    for (size_t i = 0; i < count; i ++) {
-        if (_exam_float_cmp(x, arr[i], eps))
-            _exam_fail_test(file, line,
-                            "%.9g in %p (count=%zu)",
-                            x, (void*)arr, count);
-    }
-}
-
-void exam_assert_in_arr_double(double x, const double *arr, size_t count, double eps, const char *file, size_t line)
-{
-    for (size_t i = 0; i < count; i ++) {
-        if (_exam_double_cmp(x, arr[i], eps))
-            return;
-    }
-
-    _exam_fail_test(file, line,
-                    "%.17g not in %p (count=%zu)",
-                    x, (void*)arr, count);
-}
-
-void exam_assert_not_in_arr_double(double x, const double *arr, size_t count, double eps, const char *file, size_t line)
-{
-    for (size_t i = 0; i < count; i ++) {
-        if (_exam_double_cmp(x, arr[i], eps))
-            _exam_fail_test(file, line,
-                            "%.17g in %p (count=%zu)",
-                            x, (void*)arr, count);
-    }
-}
-
-static void _exam_fail_test(const char *file, size_t line, const char *fmt, ...)
+void exam_fail_test(const char *file, size_t line, const char *fmt, ...)
 {
     fprintf(stderr, "[%s:%zu] ", file, line);
 
@@ -822,6 +509,318 @@ static void _exam_fail_test(const char *file, size_t line, const char *fmt, ...)
 
     fputc('\n', stderr);
     exit(EXIT_FAILURE);
+}
+
+void exam_assert_true(bool res, const char *expression, const char *file, size_t line)
+{
+    if (!res)
+        exam_fail_test(file, line,
+                       "%s is not true",
+                       expression);
+}
+
+void exam_assert_false(bool res, const char *expression, const char *file, size_t line)
+{
+    if (res)
+        exam_fail_test(file, line,
+                       "%s is not false",
+                       expression);
+}
+
+void exam_assert_eq_ptr(const void *a, const void *b, const char *file, size_t line)
+{
+    if (a != b)
+        exam_fail_test(file, line,
+                       "%p != %p",
+                       a, b);
+}
+
+void exam_assert_neq_ptr(const void *a, const void *b, const char *file, size_t line)
+{
+    if (a == b)
+        exam_fail_test(file, line,
+                       "%p == %p",
+                       a, b);
+}
+
+void exam_assert_eq_int(intmax_t a, intmax_t b, const char *file, size_t line)
+{
+    if (a != b)
+        exam_fail_test(file, line,
+                       "%jd != %jd",
+                       a, b);
+}
+
+void exam_assert_neq_int(intmax_t a, intmax_t b, const char *file, size_t line)
+{
+    if (a == b)
+        exam_fail_test(file, line,
+                       "%jd == %jd",
+                       a, b);
+}
+
+void exam_assert_eq_uint(uintmax_t a, uintmax_t b, const char *file, size_t line)
+{
+    if (a != b)
+        exam_fail_test(file, line,
+                       "%ju != %ju",
+                       a, b);
+}
+
+void exam_assert_neq_uint(uintmax_t a, uintmax_t b, const char *file, size_t line)
+{
+    if (a == b)
+        exam_fail_test(file, line,
+                       "%ju == %ju",
+                       a, b);
+}
+
+void exam_assert_eq_float(float a, float b, float eps, const char *file, size_t line)
+{
+    if (!_exam_float_cmp(a, b, eps))
+        exam_fail_test(file, line,
+                       "%.9g != %.9g",
+                       a, b);
+}
+
+void exam_assert_neq_float(float a, float b, float eps, const char *file, size_t line)
+{
+    if (_exam_float_cmp(a, b, eps))
+        exam_fail_test(file, line,
+                       "%.9g == %.9g",
+                       a, b);
+}
+
+void exam_assert_eq_double(double a, double b, double eps, const char *file, size_t line)
+{
+    if (!_exam_double_cmp(a, b, eps))
+        exam_fail_test(file, line,
+                       "%.17g != %.17g",
+                       a, b);
+}
+
+void exam_assert_neq_double(double a, double b, double eps, const char *file, size_t line)
+{
+    if (_exam_double_cmp(a, b, eps))
+        exam_fail_test(file, line,
+                       "%.17g == %.17g",
+                       a, b);
+}
+
+void exam_assert_eq_str(const char *a, const char *b, const char *file, size_t line)
+{
+    if (!_exam_str_cmp(a, b))
+        exam_fail_test(file, line,
+                       "\"%s\" != \"%s\"",
+                       _exam_str_repr(a), _exam_str_repr(b));
+}
+
+void exam_assert_neq_str(const char *a, const char *b, const char *file, size_t line)
+{
+    if (_exam_str_cmp(a, b))
+        exam_fail_test(file, line,
+                       "%s == %s",
+                       _exam_str_repr(a), _exam_str_repr(b));
+}
+
+void exam_assert_eq_mem(const void *a, const void *b, size_t size, const char *file, size_t line)
+{
+    const unsigned char *expected = (const unsigned char *)a;
+    const unsigned char *actual = (const unsigned char *)b;
+
+    for (size_t i = 0; i < size; i ++) {
+        if (expected[i] != actual[i])
+            exam_fail_test(file, line,
+                           "memory differs at offset %zu: expected=0x%02x actual=0x%02x",
+                           i, expected[i], actual[i]);
+    }
+}
+
+void exam_assert_neq_mem(const void *a, const void *b, size_t size, const char *file, size_t line)
+{
+    if (size == 0)
+        return;
+
+    if (memcmp(a, b, size) == 0)
+        exam_fail_test(file, line,
+                       "memory regions are equal (%zu bytes)",
+                       size);
+}
+
+void exam_assert_in_range_int(intmax_t x, intmax_t min, intmax_t max, const char *file, size_t line)
+{
+    if (min > max)
+        _exam_dief("invalid range [%jd, %jd]", min, max);
+
+    if (x < min || x > max)
+        exam_fail_test(file, line,
+                       "%jd is not within the range [%jd, %jd]",
+                       x, min, max);
+}
+
+void exam_assert_not_in_range_int(intmax_t x, intmax_t min, intmax_t max, const char *file, size_t line)
+{
+    if (min > max)
+        _exam_dief("invalid range [%jd, %jd]", min, max);
+
+    if (x >= min && x <= max)
+        exam_fail_test(file, line,
+                       "%jd is within the range [%jd, %jd]",
+                       x, min, max);
+}
+
+void exam_assert_in_range_uint(uintmax_t x, uintmax_t min, uintmax_t max, const char *file, size_t line)
+{
+    if (min > max)
+        _exam_dief("invalid range [%ju, %ju]", min, max);
+
+    if (x < min || x > max)
+        exam_fail_test(file, line,
+                       "%ju is not within the range [%ju, %ju]",
+                       x, min, max);
+}
+
+void exam_assert_not_in_range_uint(uintmax_t x, uintmax_t min, uintmax_t max, const char *file, size_t line)
+{
+    if (min > max)
+        _exam_dief("invalid range [%ju, %ju]", min, max);
+
+    if (x >= min && x <= max)
+        exam_fail_test(file, line,
+                       "%ju is within the range [%ju, %ju]",
+                       x, min, max);
+}
+
+void exam_assert_in_range_float(float x, float min, float max, float eps, const char *file, size_t line)
+{
+    if (min > max)
+        _exam_dief("invalid range [%.9g, %.9g]", min, max);
+
+    if (!_exam_float_in_range(x, min, max, eps))
+        exam_fail_test(file, line,
+                       "%.9g is not within the range [%.9g, %.9g]",
+                       x, min, max);
+}
+
+void exam_assert_not_in_range_float(float x, float min, float max, float eps, const char *file, size_t line)
+{
+    if (min > max)
+        _exam_dief("invalid range [%.9g, %.9g]", min, max);
+
+    if (_exam_float_in_range(x, min, max, eps))
+        exam_fail_test(file, line,
+                       "%.9g is within the range [%.9g, %.9g]",
+                       x, min, max);
+}
+
+void exam_assert_in_range_double(double x, double min, double max, double eps, const char *file, size_t line)
+{
+    if (min > max)
+        _exam_dief("invalid range [%.17g, %.17g]", min, max);
+
+    if (!_exam_double_in_range(x, min, max, eps))
+        exam_fail_test(file, line,
+                       "%.17g is not within the range [%.17g, %.17g]",
+                       x, min, max);
+}
+
+void exam_assert_not_in_range_double(double x, double min, double max, double eps, const char *file, size_t line)
+{
+    if (min > max)
+        _exam_dief("invalid range [%.17g, %.17g]", min, max);
+
+    if (_exam_double_in_range(x, min, max, eps))
+        exam_fail_test(file, line,
+                       "%.17g is within the range [%.17g, %.17g]",
+                       x, min, max);
+}
+
+void exam_assert_in_arr_int(intmax_t x, const intmax_t *arr, size_t count, const char *file, size_t line)
+{
+    for (size_t i = 0; i < count; i ++) {
+        if (arr[i] == x)
+            return;
+    }
+
+    exam_fail_test(file, line,
+                   "%jd not in %p (count=%zu)",
+                   x, (void*)arr, count);
+}
+
+void exam_assert_not_in_arr_int(intmax_t x, const intmax_t *arr, size_t count, const char *file, size_t line)
+{
+    for (size_t i = 0; i < count; i ++) {
+        if (arr[i] == x)
+            exam_fail_test(file, line,
+                           "%jd in %p (count=%zu)",
+                           x, (void*)arr, count);
+    }
+}
+
+void exam_assert_in_arr_uint(uintmax_t x, const uintmax_t *arr, size_t count, const char *file, size_t line)
+{
+    for (size_t i = 0; i < count; i ++) {
+        if (arr[i] == x)
+            return;
+    }
+
+    exam_fail_test(file, line,
+                   "%ju not in %p (count=%zu)",
+                   x, (void*)arr, count);
+}
+
+void exam_assert_not_in_arr_uint(uintmax_t x, const uintmax_t *arr, size_t count, const char *file, size_t line)
+{
+    for (size_t i = 0; i < count; i ++) {
+        if (arr[i] == x)
+            exam_fail_test(file, line,
+                           "%ju in %p (count=%zu)",
+                           x, (void*)arr, count);
+    }
+}
+
+void exam_assert_in_arr_float(float x, const float *arr, size_t count, float eps, const char *file, size_t line)
+{
+    for (size_t i = 0; i < count; i ++) {
+        if (_exam_float_cmp(x, arr[i], eps))
+            return;
+    }
+
+    exam_fail_test(file, line,
+                   "%.9g not in %p (count=%zu)",
+                   x, (void*)arr, count);
+}
+
+void exam_assert_not_in_arr_float(float x, const float *arr, size_t count, float eps, const char *file, size_t line)
+{
+    for (size_t i = 0; i < count; i ++) {
+        if (_exam_float_cmp(x, arr[i], eps))
+            exam_fail_test(file, line,
+                           "%.9g in %p (count=%zu)",
+                           x, (void*)arr, count);
+    }
+}
+
+void exam_assert_in_arr_double(double x, const double *arr, size_t count, double eps, const char *file, size_t line)
+{
+    for (size_t i = 0; i < count; i ++) {
+        if (_exam_double_cmp(x, arr[i], eps))
+            return;
+    }
+
+    exam_fail_test(file, line,
+                   "%.17g not in %p (count=%zu)",
+                   x, (void*)arr, count);
+}
+
+void exam_assert_not_in_arr_double(double x, const double *arr, size_t count, double eps, const char *file, size_t line)
+{
+    for (size_t i = 0; i < count; i ++) {
+        if (_exam_double_cmp(x, arr[i], eps))
+            exam_fail_test(file, line,
+                           "%.17g in %p (count=%zu)",
+                           x, (void*)arr, count);
+    }
 }
 
 static int _exam_test_cmp(const void *a, const void *b)
@@ -1573,36 +1572,36 @@ template <typename Container, typename Value>
 void exam_assert_in_container(const Value &x, const Container &container, const char *file, size_t line)
 {
     if (std::find(container.begin(), container.end(), x) == container.end())
-        _exam_fail_test(file, line,
-                        "\"%s\" not in container",
-                        _exam_to_string(x).c_str());
+        exam_fail_test(file, line,
+                       "\"%s\" not in container",
+                       _exam_to_string(x).c_str());
 }
 
 template <typename Container, typename Value>
 void exam_assert_not_in_container(const Value &x, const Container &container, const char *file, size_t line)
 {
     if (std::find(container.begin(), container.end(), x) != container.end())
-        _exam_fail_test(file, line,
-                        "\"%s\" in container",
-                        _exam_to_string(x).c_str());
+        exam_fail_test(file, line,
+                       "\"%s\" in container",
+                       _exam_to_string(x).c_str());
 }
 
 template <typename K, typename Map>
 void exam_assert_key_in_map(const K &key, const Map &map, const char *file, size_t line)
 {
     if (map.find(key) == map.end())
-        _exam_fail_test(file, line,
-                        "key \"%s\" not in map",
-                        _exam_to_string(key).c_str());
+        exam_fail_test(file, line,
+                       "key \"%s\" not in map",
+                       _exam_to_string(key).c_str());
 }
 
 template <typename K, typename Map>
 void exam_assert_key_not_in_map(const K &key, const Map &map, const char *file, size_t line)
 {
     if (map.find(key) != map.end())
-        _exam_fail_test(file, line,
-                        "key \"%s\" in map",
-                        _exam_to_string(key).c_str());
+        exam_fail_test(file, line,
+                       "key \"%s\" in map",
+                       _exam_to_string(key).c_str());
 }
 
 template <typename V, typename Map>
@@ -1612,9 +1611,9 @@ void exam_assert_val_in_map(const V &val, const Map &map, const char *file, size
         if (entry.second == val)
             return;
 
-    _exam_fail_test(file, line,
-                    "value \"%s\" not in map",
-                    _exam_to_string(val).c_str());
+    exam_fail_test(file, line,
+                   "value \"%s\" not in map",
+                   _exam_to_string(val).c_str());
 }
 
 template <typename V, typename Map>
@@ -1622,9 +1621,9 @@ void exam_assert_val_not_in_map(const V &val, const Map &map, const char *file, 
 {
     for (const auto &entry : map)
         if (entry.second == val)
-            _exam_fail_test(file, line,
-                            "value \"%s\" in map",
-                            _exam_to_string(val).c_str());
+            exam_fail_test(file, line,
+                           "value \"%s\" in map",
+                           _exam_to_string(val).c_str());
 }
 
 template <typename K, typename V, typename Map>
@@ -1632,14 +1631,14 @@ void exam_assert_key_val_in_map(const K &key, const V &val, const Map &map, cons
 {
     auto it = map.find(key);
     if (it == map.end())
-        _exam_fail_test(file, line,
-                        "key \"%s\" not in map",
-                        _exam_to_string(key).c_str());
+        exam_fail_test(file, line,
+                       "key \"%s\" not in map",
+                       _exam_to_string(key).c_str());
 
     if (it->second != val)
-        _exam_fail_test(file, line,
-                        "value at key \"%s\" is not \"%s\" in map",
-                        _exam_to_string(key).c_str(), _exam_to_string(val).c_str());
+        exam_fail_test(file, line,
+                       "value at key \"%s\" is not \"%s\" in map",
+                       _exam_to_string(key).c_str(), _exam_to_string(val).c_str());
 }
 
 template <typename K, typename V, typename Map>
@@ -1650,9 +1649,9 @@ void exam_assert_key_val_not_in_map(const K &key, const V &val, const Map &map, 
         return;
 
     if (it->second == val)
-        _exam_fail_test(file, line,
-                        "value at key \"%s\" is \"%s\" in map",
-                        _exam_to_string(key).c_str(), _exam_to_string(val).c_str());
+        exam_fail_test(file, line,
+                       "value at key \"%s\" is \"%s\" in map",
+                       _exam_to_string(key).c_str(), _exam_to_string(val).c_str());
 }
 #endif // defined(__cplusplus) && !defined(EXAM_NO_STL)
 
