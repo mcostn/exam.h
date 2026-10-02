@@ -197,29 +197,31 @@ DOCUMENTATION
 
         C++ Asserts
 
-            ASSERT_IN_VEC(x, vec):
-                Checks if x is contained in the std::vector vec
+            ASSERT_IN_CONTAINER(x, container):
+                Checks whether container contains an element equal to x.
 
-            ASSERT_NOT_IN_VEC(x, vec):
-                Checks if x is not contained in the std::vector vec
+            ASSERT_NOT_IN_CONTAINER(x, container):
+                Checks whether container does not contain an element equal to x.
 
             ASSERT_KEY_IN_MAP(k, hm):
-                Checks if k is not a key in the std::unordered_map hm
+                Checks whether map contains the key k.
 
             ASSERT_KEY_NOT_IN_MAP(k, hm):
-                Checks if k is a key in the std::unordered_map hm
+                Checks whether map does not contain the key k.
 
             ASSERT_VAL_IN_MAP(v, hm):
-                Checks if v is a value in the std::unordered_map hm
+                Checks whether map contains a value equal to v.
 
             ASSERT_VAL_NOT_IN_MAP(v, hm):
-                Checks if v is not a value in the std::unordered_map hm
+                Checks whether map does not contain a value equal to v.
 
             ASSERT_KEY_VAL_IN_MAP(k, v, hm):
-                Checks if the key-value pair (k, v) exists in the std::unordered_map hm
+                Checks whether map contains the key k associated with a value equal to v.
+                Fails if the key is absent or its associated value differs from v.
 
             ASSERT_KEY_VAL_NOT_IN_MAP(k, v, hm):
-                Checks if the key-value pair (k, v) does not exists in the std::unordered_map hm
+                Checks whether map does not contain the key k associated with a value equal to v.
+                Passes if the key is absent or its associated value differs from v.
  */
 
 #ifndef EXAM_H
