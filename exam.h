@@ -231,10 +231,12 @@ DOCUMENTATION
 #include <stddef.h>
 #include <stdint.h>
 
-#if defined(__linux__)
-#define EXAM_LINUX
+#if defined(__linux__) || defined(__APPLE__) || defined(__unix__)
+#define EXAM_POSIX
+#elif defined(_WIN32)
+#define EXAM_WINDOWS
 #else
-#error "Your platform is currently not supported"
+#define EXAM_UNKNOWN_PLATFORM
 #endif
 
 #if defined(__clang__)
@@ -457,15 +459,35 @@ extern int exam_cli_main(int argc, char **argv);
 #include <errno.h> // errno
 #include <math.h> //  isnan(), isinf(), isfinite()
 
-#ifdef __linux__
-#include <unistd.h> // isatty(), STDOUT_FILENO
+#if defined(EXAM_POSIX)
+#include <unistd.h>
 #include <fcntl.h>
 #include <poll.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#else
-#error "Your platform is currently not supported"
-#endif
+
+static size_t _exam_platform_cpu_count()
+{
+    long cpu_count = sysconf(_SC_NPROCESSORS_ONLN);
+    if (cpu_count <= 0)
+        return 1;
+
+    return cpu_count;
+}
+
+#elif defined(EXAM_WINDOWS)
+#include <windows.h>
+
+static size_t _exam_platform_cpu_count()
+{
+    SYSTEM_INFO si;
+    GetSystemInfo(&si);
+    if (si.dwNumberOfProcessors <= 0)
+        return 1;
+
+    return (size_t)si.dwNumberOfProcessors;
+}
+#endif // EXAM_WINDOWS
 
 struct exam_state exam_state = {0};
 
@@ -1033,13 +1055,8 @@ static void _exam_run_tests(struct exam_test_list *list, const struct exam_filte
     if (list->count == 0)
         return;
 
-    if (jobs == 0) {
-        long cpu_count = sysconf(_SC_NPROCESSORS_ONLN);
-        if (cpu_count <= 0)
-            jobs = 1;
-        else
-            jobs = cpu_count;
-    }
+    if (jobs == 0)
+        jobs = _exam_platform_cpu_count();
     if (jobs > list->count)
         jobs = list->count;
 
