@@ -475,6 +475,10 @@ static size_t _exam_platform_cpu_count()
     return cpu_count;
 }
 
+static bool _exam_platform_is_tty()
+{
+    return isatty(STDOUT_FILENO) || isatty(STDERR_FILENO);
+}
 #elif defined(EXAM_WINDOWS)
 #include <windows.h>
 
@@ -486,6 +490,28 @@ static size_t _exam_platform_cpu_count()
         return 1;
 
     return (size_t)si.dwNumberOfProcessors;
+}
+
+static bool _exam_platform_is_tty()
+{
+    static int cached = -1; // negative used for not set
+
+    if (cached < 0) {
+        cached = 0;
+        HANDLE handles[2] = {
+            GetStdHandle(STD_OUTPUT_HANDLE),
+            GetStdHandle(STD_ERROR_HANDLE)
+        };
+
+        for (int i = 0; i < 2; i++) {
+            DWORD mode;
+            if (GetConsoleMode(handles[i], &mode) &&
+                SetConsoleMode(handles[i], mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING))
+                cached = 1;
+        }
+    }
+
+    return cached == 1;
 }
 #endif // EXAM_WINDOWS
 
@@ -1567,7 +1593,7 @@ static bool _exam_cli_is_color()
     if (exam_cli_state.color == EXAM_COLOR_ALWAYS)
         return true;
 
-    return isatty(STDOUT_FILENO) || isatty(STDERR_FILENO);
+    return _exam_platform_is_tty();
 }
 #endif // EXAM_IMPLEMENTATION
 #ifdef __cplusplus
