@@ -459,12 +459,27 @@ extern int exam_cli_main(int argc, char **argv);
 #include <errno.h> // errno
 #include <math.h> //  isnan(), isinf(), isfinite()
 
+// Platform
+struct exam_process;
+
+static size_t _exam_platform_cpu_count();
+static bool _exam_platform_is_tty();
+static bool _exam_platform_process_start(struct exam_process *proc, struct exam_test *test);
+static bool _exam_platform_process_close(struct exam_process *proc);
+
 #if defined(EXAM_POSIX)
 #include <unistd.h>
 #include <fcntl.h>
 #include <poll.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+
+struct exam_process
+{
+    size_t test_index;
+    pid_t pid;
+    int out_fd;
+};
 
 static size_t _exam_platform_cpu_count()
 {
@@ -479,8 +494,68 @@ static bool _exam_platform_is_tty()
 {
     return isatty(STDOUT_FILENO) || isatty(STDERR_FILENO);
 }
+
+static bool _exam_platform_process_start(struct exam_process *proc, struct exam_test *test)
+{
+    int fildes[2];
+    if (pipe(fildes) == -1)
+        return false;
+
+    fflush(stdout);
+    fflush(stderr);
+    pid_t pid = fork();
+    if (pid == -1) {
+        int saved = errno;
+        close(fildes[0]);
+        close(fildes[1]);
+        errno = saved;
+        return false;
+    }
+
+    if (pid == 0) {
+        close(fildes[0]);
+        if (dup2(fildes[1], STDOUT_FILENO) == -1 ||
+            dup2(fildes[1], STDERR_FILENO) == -1) {
+            perror("dup2");
+            _exit(EXIT_FAILURE);
+        }
+        close(fildes[1]);
+
+        test->func();
+        fflush(stdout);
+        fflush(stderr);
+        _exit(EXIT_SUCCESS);
+    }
+
+    close(fildes[1]);
+    int flags = fcntl(fildes[0], F_GETFL);
+    if (flags == -1 || fcntl(fildes[0], F_SETFL, flags | O_NONBLOCK) == -1) {
+        int saved = errno;
+        kill(pid, SIGKILL);
+        waitpid(pid, NULL, 0);
+        close(fildes[0]);
+        errno = saved;
+        return false;
+    }
+
+    proc->pid = pid;
+    proc->out_fd = fildes[0];
+    return true;
+}
+
+static bool _exam_platform_process_close(struct exam_process *proc)
+{
+    close(proc->out_fd);
+}
 #elif defined(EXAM_WINDOWS)
 #include <windows.h>
+
+struct exam_process
+{
+    size_t test_index;
+    HANDLE process;
+    HANDLE out_read;
+};
 
 static size_t _exam_platform_cpu_count()
 {
@@ -515,9 +590,9 @@ static bool _exam_platform_is_tty()
 }
 #endif // EXAM_WINDOWS
 
+// Util
 struct exam_state exam_state = {0};
 
-// Util
 static void _exam_dief(const char *fmt, ...);
 static void _exam_die_perror(const char *str);
 
@@ -964,13 +1039,6 @@ static const char *_exam_str_repr(const char *str)
 }
 
 // Runner
-struct exam_test_process
-{
-    pid_t pid;
-    size_t test_index;
-    int out_fd;
-};
-
 static bool _exam_check_filter(const struct exam_test *test, const struct exam_filter *filter);
 
 static void _exam_list_append(struct exam_test_list *list, const struct exam_test *test);
@@ -978,7 +1046,7 @@ static void _exam_list_destroy(struct exam_test_list *list);
 static void _exam_list_sort(struct exam_test_list *list);
 
 static void _exam_run_tests(struct exam_test_list *list, const struct exam_filter *filter, size_t jobs);
-static struct exam_test_process _exam_start_test(struct exam_test *test, size_t idx);
+static struct exam_process _exam_start_test(struct exam_test *test, size_t idx);
 static void _exam_finish_test(struct exam_test *test, int status);
 static void _exam_read_output(struct exam_test *test, int out_fd);
 
@@ -1086,7 +1154,7 @@ static void _exam_run_tests(struct exam_test_list *list, const struct exam_filte
     if (jobs > list->count)
         jobs = list->count;
 
-    struct exam_test_process *running = (struct exam_test_process *)EXAM_CALLOC(jobs, sizeof(*running));
+    struct exam_process *running = (struct exam_process *)EXAM_CALLOC(jobs, sizeof(*running));
     if (running == NULL)
         _exam_die_perror("calloc");
 
@@ -1158,7 +1226,7 @@ static void _exam_run_tests(struct exam_test_list *list, const struct exam_filte
     EXAM_FREE(fds);
 }
 
-static struct exam_test_process _exam_start_test(struct exam_test *test, size_t idx)
+static struct exam_process _exam_start_test(struct exam_test *test, size_t idx)
 {
     if (test->state != EXAM_TEST_NONE)
         _exam_dief("tried to run test with an unexpected state: %d",
@@ -1176,42 +1244,10 @@ static struct exam_test_process _exam_start_test(struct exam_test *test, size_t 
     if (exam_state.on_test_start)
         exam_state.on_test_start(test);
 
-    struct exam_test_process process = {0};
+    struct exam_process proc = {0};
     process.test_index = idx;
-
-    fflush(stdout);
-    fflush(stderr);
-    pid_t pid = fork();
-    switch (pid) {
-        case -1:
-            _exam_die_perror("fork");
-            break; // unreachable
-        case 0:
-            close(fildes[0]);
-            if (dup2(fildes[1], STDOUT_FILENO) == -1)
-                _exam_die_perror("dup2");
-            if (dup2(fildes[1], STDERR_FILENO) == -1)
-                _exam_die_perror("dup2");
-            close(fildes[1]);
-
-            test->func();
-            fflush(stdout);
-            fflush(stderr);
-            _exit(EXIT_SUCCESS);
-            break;
-        default:
-            close(fildes[1]);
-
-            int flags = fcntl(fildes[0], F_GETFL);
-            if (flags == -1)
-                _exam_die_perror("fcntl");
-            if (fcntl(fildes[0], F_SETFL, flags | O_NONBLOCK) == -1)
-                _exam_die_perror("fcntl");
-
-            process.pid = pid;
-            process.out_fd = fildes[0];
-            break;
-    }
+    if (!_exam_platform_start(&proc, test))
+        _exam_dief("failed to start test");
 
     return process;
 }
