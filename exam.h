@@ -460,12 +460,21 @@ extern int exam_cli_main(int argc, char **argv);
 #include <math.h> //  isnan(), isinf(), isfinite()
 
 // Platform
+enum exam_read_status
+{
+    EXAM_READ_DATA,
+    EXAM_READ_AGAIN,
+    EXAM_READ_EOF,
+    EXAM_READ_ERROR,
+};
+
 struct exam_process;
 
 static size_t _exam_platform_cpu_count();
 static bool _exam_platform_is_tty();
 static bool _exam_platform_process_start(struct exam_process *proc, struct exam_test *test);
-static bool _exam_platform_process_close(struct exam_process *proc);
+static void _exam_platform_process_close(struct exam_process *proc);
+static enum exam_read_status _exam_platform_process_read(struct exam_process *proc, char *buf, size_t cap, size_t *n);
 
 #if defined(EXAM_POSIX)
 #include <unistd.h>
@@ -543,9 +552,29 @@ static bool _exam_platform_process_start(struct exam_process *proc, struct exam_
     return true;
 }
 
-static bool _exam_platform_process_close(struct exam_process *proc)
+static void _exam_platform_process_close(struct exam_process *proc)
 {
     close(proc->out_fd);
+}
+
+static enum exam_read_status _exam_platform_process_read(struct exam_process *proc, char *buf, size_t cap, size_t *n)
+{
+    for (;;) {
+        ssize_t r = read(proc->out_fd, buf, cap);
+        if (r > 0) {
+            *n = (size_t)r;
+            return EXAM_READ_DATA;
+        }
+        if (r == 0)
+            return EXAM_READ_EOF;
+
+        if (errno = EINTR)
+            continue;
+        if (errno == EAGAIN || errno == EWOULDBLOCK)
+            return EXAM_READ_AGAIN;
+
+        return EXAM_READ_ERROR;
+    }
 }
 #elif defined(EXAM_WINDOWS)
 #include <windows.h>
@@ -1048,7 +1077,7 @@ static void _exam_list_sort(struct exam_test_list *list);
 static void _exam_run_tests(struct exam_test_list *list, const struct exam_filter *filter, size_t jobs);
 static struct exam_process _exam_start_test(struct exam_test *test, size_t idx);
 static void _exam_finish_test(struct exam_test *test, int status);
-static void _exam_read_output(struct exam_test *test, int out_fd);
+static void _exam_read_output(struct exam_test *test, struct exam_process *proc);
 
 int exam_run(const struct exam_filter *filter, size_t jobs)
 {
@@ -1245,11 +1274,11 @@ static struct exam_process _exam_start_test(struct exam_test *test, size_t idx)
         exam_state.on_test_start(test);
 
     struct exam_process proc = {0};
-    process.test_index = idx;
-    if (!_exam_platform_start(&proc, test))
+    proc.test_index = idx;
+    if (!_exam_platform_process_start(&proc, test))
         _exam_dief("failed to start test");
 
-    return process;
+    return proc;
 }
 
 static void _exam_finish_test(struct exam_test *test, int status)
@@ -1287,39 +1316,27 @@ static void _exam_finish_test(struct exam_test *test, int status)
         exam_state.on_test_finish(test);
 }
 
-static void _exam_read_output(struct exam_test *test, int out_fd)
+static void _exam_read_output(struct exam_test *test, struct exam_process *proc)
 {
     char buf[256];
     for (;;) {
-        ssize_t n = read(out_fd, buf, sizeof(buf));
+        size_t n = 0;
+        enum exam_read_status status = _exam_platform_process_read(proc, buf, sizeof(*buf), &n);
+        if (status == EXAM_READ_AGAIN || status == EXAM_READ_EOF)
+            return;
+        if (status == EXAM_READ_ERROR)
+            _exam_die_perror("read");
 
-        if (n > 0) {
-            size_t remaining = EXAM_TEST_OUTPUT_SIZE - test->output_size;
-            size_t copy = (size_t)n;
-            if (copy > remaining)
-                copy = remaining;
-
-            if (copy > 0) {
-                memcpy(test->output + test->output_size, buf, copy);
-                test->output_size += copy;
-                test->output[test->output_size] = '\0';
-            }
-
-            if ((size_t)n > copy)
-                test->output_truncated = true;
-
-            continue;
+        size_t remaining = EXAM_TEST_OUTPUT_SIZE - test->output_size;
+        size_t copy = n < remaining ? n : remaining;
+        if (copy > 0) {
+            memcpy(test->output + test->output_size, buf, copy);
+            test->output_size += copy;
+            test->output[test->output_size] = '\0';
         }
 
-        if (n == 0)
-            return;
-
-        if (errno == EINTR)
-            continue;
-        if (errno == EAGAIN || errno == EWOULDBLOCK)
-            return;
-
-        _exam_die_perror("read");
+        if (n > copy)
+            test->output_truncated = true;
     }
 }
 
