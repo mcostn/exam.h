@@ -475,6 +475,7 @@ static bool _exam_platform_is_tty();
 static bool _exam_platform_process_start(struct exam_process *proc, struct exam_test *test);
 static void _exam_platform_process_close(struct exam_process *proc);
 static enum exam_read_status _exam_platform_process_read(struct exam_process *proc, char *buf, size_t cap, size_t *n);
+static void _exam_platform_process_wait_io(struct exam_process *procs, size_t count);
 
 #if defined(EXAM_POSIX)
 #include <unistd.h>
@@ -575,6 +576,45 @@ static enum exam_read_status _exam_platform_process_read(struct exam_process *pr
 
         return EXAM_READ_ERROR;
     }
+}
+
+static void _exam_platform_process_wait_io(struct exam_process *procs, size_t count)
+{
+    struct pollfd *fds = (struct pollfd *)EXAM_CALLOC(count, sizeof(*fds));
+    if (fds == NULL) {
+        perror("calloc");
+        return;
+    }
+
+    size_t live = 0;
+    for (size_t i = 0; i < count; i++) {
+        if (procs[i].eof) {
+            fds[i].fd = -1;
+            fds[i].events = 0;
+        } else {
+            fds[i].fd = procs[i].out_fd;
+            fds[i].events = POLLIN;
+            live++;
+        }
+    }
+
+    if (live == 0) {
+        poll(NULL, 0, 1); // portable sleep for 1ms
+        EXAM_FREE(fds);
+        return;
+    }
+
+    int result;
+    do {
+        result = poll(fds, (nfds_t)count, -1);
+    } while (result == -1 && errno == EINTR);
+
+    if (result == -1) {
+        perror("poll");
+        return;
+    }
+
+    EXAM_FREE(fds);
 }
 #elif defined(EXAM_WINDOWS)
 #include <windows.h>
@@ -1187,10 +1227,6 @@ static void _exam_run_tests(struct exam_test_list *list, const struct exam_filte
     if (running == NULL)
         _exam_die_perror("calloc");
 
-    struct pollfd *fds = (struct pollfd *)EXAM_CALLOC(jobs, sizeof(*fds));
-    if (fds == NULL)
-        _exam_die_perror("calloc");
-
     size_t next_idx = 0;
     size_t running_count = 0;
     while (next_idx < list->count || running_count > 0) {
@@ -1206,53 +1242,23 @@ static void _exam_run_tests(struct exam_test_list *list, const struct exam_filte
         if (running_count == 0)
             break;
 
-        for (size_t i = 0; i < running_count; i++) {
-            fds[i].fd = running[i].out_fd;
-            fds[i].events = POLLIN;
-        }
+        _exam_platform_process_wait_io(running, running_count);
 
-        int result = poll(fds, running_count, -1);
-        if (result == -1) {
-            if (errno == EINTR)
-                continue;
-
-            _exam_die_perror("poll");
-        }
-
-        for (size_t i = 0; i < running_count; ++i) {
-            if (fds[i].revents & (POLLIN | POLLHUP | POLLERR))
-                _exam_read_output(
-                        &list->data[running[i].test_index],
-                        running[i].out_fd);
-        }
+        for (size_t i = 0; i < running_count; ++i)
+            _exam_read_output( &list->data[running[i].test_index], &running[i]);
 
         for (size_t i = 0; i < running_count;) {
-            int status;
-            pid_t pid = waitpid(running[i].pid, &status, WNOHANG);
-
-            if (pid == -1) {
-                if (errno == EINTR)
-                    continue;
-
-                _exam_die_perror("waitpid");
-            }
-
-            if (pid == 0) {
-                i++;
-                continue;
-            }
 
             struct exam_test *test = &list->data[running[i].test_index];
             _exam_read_output(test, running[i].out_fd);
             _exam_finish_test(test, status);
-            close(running[i].out_fd);
+            _exam_platform_process_close(&running[i]);
 
             running[i] = running[--running_count];
         }
     }
 
     EXAM_FREE(running);
-    EXAM_FREE(fds);
 }
 
 static struct exam_process _exam_start_test(struct exam_test *test, size_t idx)
