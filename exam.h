@@ -1250,7 +1250,7 @@ static void _exam_run_tests(struct exam_test_list *list, const struct exam_filte
         for (size_t i = 0; i < running_count;) {
 
             struct exam_test *test = &list->data[running[i].test_index];
-            _exam_read_output(test, running[i].out_fd);
+            _exam_read_output(test, &running[i]);
             _exam_finish_test(test, status);
             _exam_platform_process_close(&running[i]);
 
