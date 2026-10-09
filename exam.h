@@ -489,6 +489,7 @@ struct exam_process
     size_t test_index;
     pid_t pid;
     int out_fd;
+    bool eof;
 };
 
 static size_t _exam_platform_cpu_count()
