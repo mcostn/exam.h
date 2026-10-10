@@ -649,7 +649,7 @@ static bool _exam_platform_process_try_reap(struct exam_process *proc, struct ex
     if (WIFEXITED(status)) {
         out->kind = EXAM_EXIT_NORMAL;
         out->code = WEXITSTATUS(status);
-    } else {
+    } else if (WIFSIGNALED(status)) {
         out->kind = EXAM_EXIT_SIGNAL;
         out->code = WTERMSIG(status);
     } else {
@@ -1291,6 +1291,11 @@ static void _exam_run_tests(struct exam_test_list *list, const struct exam_filte
             _exam_read_output( &list->data[running[i].test_index], &running[i]);
 
         for (size_t i = 0; i < running_count;) {
+            struct exam_exit ex;
+            if (!_exam_platform_process_try_reap(&running[i], &ex)) {
+                i++;
+                continue;
+            }
 
             struct exam_test *test = &list->data[running[i].test_index];
             _exam_read_output(test, &running[i]);
