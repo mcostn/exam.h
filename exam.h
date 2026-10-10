@@ -460,6 +460,18 @@ extern int exam_cli_main(int argc, char **argv);
 #include <math.h> //  isnan(), isinf(), isfinite()
 
 // Platform
+enum exam_exit_kind
+{
+    EXAM_EXIT_NORMAL,
+    EXAM_EXIT_SIGNAL,
+};
+
+struct exam_exit
+{
+    enum exam_exit_kind kind;
+    int code;
+};
+
 enum exam_read_status
 {
     EXAM_READ_DATA,
@@ -476,6 +488,7 @@ static bool _exam_platform_process_start(struct exam_process *proc, struct exam_
 static void _exam_platform_process_close(struct exam_process *proc);
 static enum exam_read_status _exam_platform_process_read(struct exam_process *proc, char *buf, size_t cap, size_t *n);
 static void _exam_platform_process_wait_io(struct exam_process *procs, size_t count);
+static bool _exam_platform_process_try_reap(struct exam_process *proc, struct exam_exit *out);
 
 #if defined(EXAM_POSIX)
 #include <unistd.h>
@@ -616,6 +629,35 @@ static void _exam_platform_process_wait_io(struct exam_process *procs, size_t co
     }
 
     EXAM_FREE(fds);
+}
+
+static bool _exam_platform_process_try_reap(struct exam_process *proc, struct exam_exit *out)
+{
+    int status;
+    pid_t pid;
+    do {
+        pid = waitpid(proc->pid, &status, WNOHANG);
+    } while (pid == -1 && errno == EINTR);
+
+    if (pid == -1) {
+        perror("waitpid");
+        return false;
+    }
+    if (pid == 0)
+        return false;
+
+    if (WIFEXITED(status)) {
+        out->kind = EXAM_EXIT_NORMAL;
+        out->code = WEXITSTATUS(status);
+    } else {
+        out->kind = EXAM_EXIT_SIGNAL;
+        out->code = WTERMSIG(status);
+    } else {
+        fprintf(stderr, "unexpected wait status");
+        return false;
+    }
+
+    return true;
 }
 #elif defined(EXAM_WINDOWS)
 #include <windows.h>
