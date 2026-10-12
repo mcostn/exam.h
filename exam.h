@@ -1159,7 +1159,7 @@ static void _exam_list_sort(struct exam_test_list *list);
 
 static void _exam_run_tests(struct exam_test_list *list, const struct exam_filter *filter, size_t jobs);
 static struct exam_process _exam_start_test(struct exam_test *test, size_t idx);
-static void _exam_finish_test(struct exam_test *test, int status);
+static void _exam_finish_test(struct exam_test *test, const struct exam_exit *ex);
 static void _exam_read_output(struct exam_test *test, struct exam_process *proc);
 
 int exam_run(const struct exam_filter *filter, size_t jobs)
@@ -1299,7 +1299,7 @@ static void _exam_run_tests(struct exam_test_list *list, const struct exam_filte
 
             struct exam_test *test = &list->data[running[i].test_index];
             _exam_read_output(test, &running[i]);
-            _exam_finish_test(test, status);
+            _exam_finish_test(test, &ex);
             _exam_platform_process_close(&running[i]);
 
             running[i] = running[--running_count];
@@ -1335,20 +1335,14 @@ static struct exam_process _exam_start_test(struct exam_test *test, size_t idx)
     return proc;
 }
 
-static void _exam_finish_test(struct exam_test *test, int status)
+static void _exam_finish_test(struct exam_test *test, const struct exam_exit *ex)
 {
-    if (WIFEXITED(status)) {
-        if (WEXITSTATUS(status) == EXIT_SUCCESS)
-            test->state = EXAM_TEST_PASSED;
-        else
-            test->state = EXAM_TEST_FAILED;
-    } else if (WIFSIGNALED(status)) {
-        test->state = EXAM_TEST_CRASHED;
-        test->exit_signal = WTERMSIG(status);
+     if (ex->kind == EXAM_EXIT_NORMAL) {
+        test->state = (ex->code == EXIT_SUCCESS) ? EXAM_TEST_PASSED
+                                                 : EXAM_TEST_FAILED;
     } else {
-        _exam_dief("unexpected wait status for test %s/%s",
-                   test->category,
-                   test->name);
+        test->state = EXAM_TEST_CRASHED;
+        test->exit_signal = ex->code;
     }
 
     switch (test->state) {
