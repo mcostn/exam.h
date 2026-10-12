@@ -226,6 +226,11 @@ DOCUMENTATION
 
 #ifndef EXAM_H
 #define EXAM_H
+
+#if !defined(_WIN32) && !defined(_POSIX_C_SOURCE) && !defined(_GNU_SOURCE) && !defined(_DEFAULT_SOURCE)
+#define _POSIX_C_SOURCE 200809L
+#endif
+
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -494,6 +499,7 @@ static bool _exam_platform_process_try_reap(struct exam_process *proc, struct ex
 #include <unistd.h>
 #include <fcntl.h>
 #include <poll.h>
+#include <signal.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 
