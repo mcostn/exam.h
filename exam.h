@@ -589,7 +589,7 @@ static enum exam_read_status _exam_platform_process_read(struct exam_process *pr
         if (r == 0)
             return EXAM_READ_EOF;
 
-        if (errno = EINTR)
+        if (errno == EINTR)
             continue;
         if (errno == EAGAIN || errno == EWOULDBLOCK)
             return EXAM_READ_AGAIN;
