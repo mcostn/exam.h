@@ -631,6 +631,7 @@ static void _exam_platform_process_wait_io(struct exam_process *procs, size_t co
 
     if (result == -1) {
         perror("poll");
+        EXAM_FREE(fds);
         return;
     }
 
