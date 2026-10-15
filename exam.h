@@ -570,6 +570,7 @@ static bool _exam_platform_process_start(struct exam_process *proc, struct exam_
 
     proc->pid = pid;
     proc->out_fd = fildes[0];
+    proc->eof = false;
     return true;
 }
 
@@ -586,8 +587,10 @@ static enum exam_read_status _exam_platform_process_read(struct exam_process *pr
             *n = (size_t)r;
             return EXAM_READ_DATA;
         }
-        if (r == 0)
+        if (r == 0) {
+            proc->eof = true;
             return EXAM_READ_EOF;
+        }
 
         if (errno == EINTR)
             continue;
