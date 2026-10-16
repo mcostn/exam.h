@@ -1325,10 +1325,6 @@ static struct exam_process _exam_start_test(struct exam_test *test, size_t idx)
         _exam_dief("tried to run test with an unexpected state: %d",
                    test->state);
 
-    int fildes[2];
-    if (pipe(fildes) == -1)
-        _exam_die_perror("pipe");
-
     test->state = EXAM_TEST_RUNNING;
     test->output[0] = '\0';
     test->output_size = 0;
