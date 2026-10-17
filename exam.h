@@ -1375,7 +1375,7 @@ static void _exam_read_output(struct exam_test *test, struct exam_process *proc)
     char buf[256];
     for (;;) {
         size_t n = 0;
-        enum exam_read_status status = _exam_platform_process_read(proc, buf, sizeof(*buf), &n);
+        enum exam_read_status status = _exam_platform_process_read(proc, buf, sizeof(buf), &n);
         if (status == EXAM_READ_AGAIN || status == EXAM_READ_EOF)
             return;
         if (status == EXAM_READ_ERROR)
