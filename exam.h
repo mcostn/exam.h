@@ -464,6 +464,28 @@ extern int exam_cli_main(int argc, char **argv);
 #include <errno.h> // errno
 #include <math.h> //  isnan(), isinf(), isfinite()
 
+// Util
+struct exam_state exam_state = {0};
+
+static void _exam_dief(const char *fmt, ...);
+static void _exam_die_perror(const char *str);
+
+static void _exam_dief(const char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    vfprintf(stderr, fmt, args);
+    va_end(args);
+    fputc('\n', stderr);
+    exit(EXIT_FAILURE);
+}
+
+static void _exam_die_perror(const char *str)
+{
+    perror(str);
+    exit(EXIT_FAILURE);
+}
+
 // Platform
 enum exam_exit_kind
 {
@@ -604,10 +626,8 @@ static enum exam_read_status _exam_platform_process_read(struct exam_process *pr
 static void _exam_platform_process_wait_io(struct exam_process *procs, size_t count)
 {
     struct pollfd *fds = (struct pollfd *)EXAM_CALLOC(count, sizeof(*fds));
-    if (fds == NULL) {
-        perror("calloc");
-        return;
-    }
+    if (fds == NULL)
+        _exam_die_perror("calloc");
 
     size_t live = 0;
     for (size_t i = 0; i < count; i++) {
@@ -633,9 +653,10 @@ static void _exam_platform_process_wait_io(struct exam_process *procs, size_t co
     } while (result == -1 && errno == EINTR);
 
     if (result == -1) {
-        perror("poll");
+        int saved = errno;
         EXAM_FREE(fds);
-        return;
+        errno = saved;
+        _exam_die_perror("poll");
     }
 
     EXAM_FREE(fds);
@@ -649,10 +670,8 @@ static bool _exam_platform_process_try_reap(struct exam_process *proc, struct ex
         pid = waitpid(proc->pid, &status, WNOHANG);
     } while (pid == -1 && errno == EINTR);
 
-    if (pid == -1) {
-        perror("waitpid");
-        return false;
-    }
+    if (pid == -1)
+        _exam_die_perror("waitpid");
     if (pid == 0)
         return false;
 
@@ -663,8 +682,7 @@ static bool _exam_platform_process_try_reap(struct exam_process *proc, struct ex
         out->kind = EXAM_EXIT_SIGNAL;
         out->code = WTERMSIG(status);
     } else {
-        fprintf(stderr, "unexpected wait status");
-        return false;
+        _exam_dief("unexpected wait status");
     }
 
     return true;
@@ -711,28 +729,6 @@ static bool _exam_platform_is_tty()
     return cached == 1;
 }
 #endif // EXAM_WINDOWS
-
-// Util
-struct exam_state exam_state = {0};
-
-static void _exam_dief(const char *fmt, ...);
-static void _exam_die_perror(const char *str);
-
-static void _exam_dief(const char *fmt, ...)
-{
-    va_list args;
-    va_start(args, fmt);
-    vfprintf(stderr, fmt, args);
-    va_end(args);
-    fputc('\n', stderr);
-    exit(EXIT_FAILURE);
-}
-
-static void _exam_die_perror(const char *str)
-{
-    perror(str);
-    exit(EXIT_FAILURE);
-}
 
 // Asserts
 static int _exam_test_cmp(const void *a, const void *b);
