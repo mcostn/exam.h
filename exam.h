@@ -539,7 +539,7 @@ static size_t _exam_platform_cpu_count()
     if (cpu_count <= 0)
         return 1;
 
-    return cpu_count;
+    return (size_t)cpu_count;
 }
 
 static bool _exam_platform_is_tty()
@@ -688,11 +688,26 @@ static bool _exam_platform_process_try_reap(struct exam_process *proc, struct ex
     return true;
 }
 #elif defined(EXAM_WINDOWS)
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+
 #include <windows.h>
+#include <io.h>
+#include <fcntl.h>
+
+#ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
+#define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
+#endif
 
 struct exam_process
 {
     size_t test_index;
+    bool eof;
     HANDLE process;
     HANDLE out_read;
 };
@@ -728,6 +743,147 @@ static bool _exam_platform_is_tty()
 
     return cached == 1;
 }
+
+static bool _exam_platform_process_start(struct exam_process *proc, struct exam_test *test)
+{
+    char exe[MAX_PATH];
+    char cmd[MAX_PATH + 512];
+
+    DWORD len = GetModuleFileNameA(NULL, exe, MAX_PATH);
+    if (len == 0 || len >= MAX_PATH) {
+        SetLastError(ERROR_INSUFFICIENT_BUFFER);
+        return false;
+    }
+
+    int written = snprintf(cmd, sizeof(cmd), "\"%s\" --exam-child \"%s\" \"%s\"", exe, test->category, test->name);
+    if (written < 0 || (size_t)written >= sizeof(cmd)) {
+        SetLastError(ERROR_INSUFFICIENT_BUFFER);
+        return false;
+    }
+
+    SECURITY_ATTRIBUTES sa = { sizeof(sa), NULL, TRUE };
+    HANDLE out_r = NULL, out_w = NULL;
+
+    if (!CreatePipe(&out_r, &out_w, &sa, 0))
+        return false;
+    if (!SetHandleInformation(out_r, HANDLE_FLAG_INHERIT, 0))
+        goto fail;
+
+    HANDLE nul = INVALID_HANDLE_VALUE;
+    nul = CreateFileA("NUL", GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, &sa, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (nul == INVALID_HANDLE_VALUE)
+        goto fail;
+
+    STARTUPINFOA si;
+    PROCESS_INFORMATION pi;
+    memset(&si, 0, sizeof(si));
+    memset(&pi, 0, sizeof(pi));
+    si.cb = sizeof(si);
+    si.dwFlags = STARTF_USESTDHANDLES;
+    si.hStdInput = nul;
+    si.hStdOutput = out_w;
+    si.hStdError = out_w;
+
+    if (!CreateProcessA(NULL, cmd, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi))
+        goto fail;
+
+    CloseHandle(pi.hThread);
+    CloseHandle(out_w);
+    CloseHandle(nul);
+
+    proc->process = pi.hProcess;
+    proc->out_read = out_r;
+    proc->eof = false;
+    return true;
+
+fail: {
+          DWORD saved = GetLastError();
+          if (out_r) CloseHandle(out_r);
+          if (out_w) CloseHandle(out_w);
+          if (nul != INVALID_HANDLE_VALUE) CloseHandle(nul);
+          SetLastError(saved);
+          return false;
+      }
+}
+
+static void _exam_platform_process_close(struct exam_proc *proc)
+{
+    CloseHandle(proc->out_read);
+    CloseHandle(proc->process);
+}
+
+static enum exam_read_status _exam_platform_proc_read(struct exam_proc *proc, char *buf, size_t cap, size_t *n)
+{
+    DWORD avail = 0;
+    if (!PeekNamedPipe(proc->out_read, NULL, 0, NULL, &avail, NULL)) {
+        if (GetLastError() == ERROR_BROKEN_PIPE) {
+            proc->eof = true;
+            return EXAM_READ_EOF;
+        }
+
+        return EXAM_READ_ERROR;
+    }
+    if (avail == 0)
+        return EXAM_READ_AGAIN;
+
+    DWORD want = avail < cap ? avail : (DWORD)cap;
+    DWORD got = 0;
+    if (!ReadFile(proc->out_read, buf, want, &got, NULL)) {
+        if (GetLastError() == ERROR_BROKEN_PIPE) {
+            proc->eof = true;
+            return EXAM_READ_EOF;
+        }
+        return EXAM_READ_ERROR;
+    }
+    if (got == 0) {
+        proc->eof = true;
+        return EXAM_READ_EOF;
+    }
+
+    *n = (size_t)got;
+    return EXAM_READ_DATA;
+}
+
+static void _exam_platform_proc_wait_io(struct exam_proc *procs, size_t count)
+{
+    HANDLE handles[MAXIMUM_WAIT_OBJECTS];
+    DWORD n = 0;
+
+    for (size_t i = 0; i < count; i++) {
+        DWORD avail = 0;
+        if (!procs[i].eof &&
+            PeekNamedPipe(procs[i].out_read, NULL, 0, NULL, &avail, NULL) && avail > 0)
+            return;
+        if (n < MAXIMUM_WAIT_OBJECTS)
+            handles[n++] = procs[i].process;
+    }
+
+    if (WaitForMultipleObjects(n, handles, FALSE, 10) == WAIT_FAILED)
+        _exam_die_perror("WaitForMultipleObjects");
+}
+
+static bool _exam_platform_proc_try_reap(struct exam_proc *proc, struct exam_exit *out)
+{
+    DWORD r = WaitForSingleObject(proc->process, 0);
+    if (r == WAIT_TIMEOUT)
+        return false;
+    if (r != WAIT_OBJECT_0)
+        _exam_die_perror("WaitForSingleObject");
+
+    DWORD code;
+    if (!GetExitCodeProcess(proc->process, &code))
+        _exam_die_perror("GetExitCodeProcess");
+
+    if ((code & 0xF0000000u) == 0xC0000000u) {
+        out->kind = EXAM_EXIT_SIGNAL;
+        out->code = _exam_win_code_to_signal(code);
+    } else {
+        out->kind = EXAM_EXIT_NORMAL;
+        out->code = (int)code;
+    }
+    return true;
+}
+
 #endif // EXAM_WINDOWS
 
 // Asserts
