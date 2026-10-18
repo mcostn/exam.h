@@ -629,7 +629,7 @@ static void _exam_platform_process_wait_io(struct exam_process *procs, size_t co
 
     int result;
     do {
-        result = poll(fds, (nfds_t)count, -1);
+        result = poll(fds, (nfds_t)count, 50);
     } while (result == -1 && errno == EINTR);
 
     if (result == -1) {
