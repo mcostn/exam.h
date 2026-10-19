@@ -264,9 +264,28 @@ DOCUMENTATION
 #error "EXAM_CALLOC, EXAM_REALLOC and EXAM_FREE must be defined together."
 #endif
 
-#if !defined(EXAM_NO_AUTO_REGISTRATION) && (defined(EXAM_MSVC) || defined(EXAM_UNKNOWN_COMPILER))
+#ifndef EXAM_NO_AUTO_REGISTRATION
+#if defined(EXAM_GCC) || defined(EXAM_CLANG) || defined(EXAM_TCC)
+#define EXAM_CONSTRUCTOR(func_name) \ 
+    static void func_name(void) __attribute__((constructor)); \
+    static void func_name(void)
+#elif defined(EXAM_MSVC)
+#pragma section(".CRT$XCU", read)
+#define EXAM_CONSTRUCTOR_IMPL(func_name, prefix) \
+    static void func_name(void); \
+    __declspec(allocate(".CRT$XCU")) void (*func_name##_)(void) = func_name; \
+    __pragma(comment(linker, "/include:" prefix #func_name "_")) \
+    static void func_name(void)
+    
+#ifdef _WIN64
+    #define EXAM_CONSTRUCTOR(func_name) EXAM_CONSTRUCTOR_IMPL(func_name, "")
+#else
+    #define EXAM_CONSTRUCTOR(func_name) EXAM_CONSTRUCTOR_IMPL(func_name, "_")
+#endif
+#else
 #error "Automatic registration not supported for your compiler"
 #endif
+#endif // EXAM_NO_AUTO_REGISTRATION
 
 #ifndef EXAM_TEST_OUTPUT_SIZE
 #define EXAM_TEST_OUTPUT_SIZE 1024
@@ -334,8 +353,7 @@ DOCUMENTATION
 
 #define EXAM_DEFINE_TEST(category_name, test_name) \
     static void _EXAM_DEF_NAME(category_name, test_name)(void); \
-    static void _EXAM_REG_NAME(category_name, test_name)(void) __attribute__((constructor)); \
-    static void _EXAM_REG_NAME(category_name, test_name)(void) \
+    EXAM_CONSTRUCTOR(_EXAM_REG_NAME(category_name, test_name)) \
     { \
         struct exam_test test = { \
             .category = #category_name, \
@@ -763,13 +781,13 @@ static bool _exam_platform_process_start(struct exam_process *proc, struct exam_
 
     SECURITY_ATTRIBUTES sa = { sizeof(sa), NULL, TRUE };
     HANDLE out_r = NULL, out_w = NULL;
+    HANDLE nul = INVALID_HANDLE_VALUE;
 
     if (!CreatePipe(&out_r, &out_w, &sa, 0))
         return false;
     if (!SetHandleInformation(out_r, HANDLE_FLAG_INHERIT, 0))
         goto fail;
 
-    HANDLE nul = INVALID_HANDLE_VALUE;
     nul = CreateFileA("NUL", GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, &sa, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (nul == INVALID_HANDLE_VALUE)
         goto fail;
@@ -806,13 +824,13 @@ fail: {
       }
 }
 
-static void _exam_platform_process_close(struct exam_proc *proc)
+static void _exam_platform_process_close(struct exam_process *proc)
 {
     CloseHandle(proc->out_read);
     CloseHandle(proc->process);
 }
 
-static enum exam_read_status _exam_platform_proc_read(struct exam_proc *proc, char *buf, size_t cap, size_t *n)
+static enum exam_read_status _exam_platform_process_read(struct exam_process *proc, char *buf, size_t cap, size_t *n)
 {
     DWORD avail = 0;
     if (!PeekNamedPipe(proc->out_read, NULL, 0, NULL, &avail, NULL)) {
@@ -844,7 +862,7 @@ static enum exam_read_status _exam_platform_proc_read(struct exam_proc *proc, ch
     return EXAM_READ_DATA;
 }
 
-static void _exam_platform_proc_wait_io(struct exam_proc *procs, size_t count)
+static void _exam_platform_process_wait_io(struct exam_process *procs, size_t count)
 {
     HANDLE handles[MAXIMUM_WAIT_OBJECTS];
     DWORD n = 0;
@@ -862,7 +880,7 @@ static void _exam_platform_proc_wait_io(struct exam_proc *procs, size_t count)
         _exam_die_perror("WaitForMultipleObjects");
 }
 
-static bool _exam_platform_proc_try_reap(struct exam_proc *proc, struct exam_exit *out)
+static bool _exam_platform_process_try_reap(struct exam_process *proc, struct exam_exit *out)
 {
     DWORD r = WaitForSingleObject(proc->process, 0);
     if (r == WAIT_TIMEOUT)
@@ -876,14 +894,13 @@ static bool _exam_platform_proc_try_reap(struct exam_proc *proc, struct exam_exi
 
     if ((code & 0xF0000000u) == 0xC0000000u) {
         out->kind = EXAM_EXIT_SIGNAL;
-        out->code = _exam_win_code_to_signal(code);
+        // out->code = _exam_win_code_to_signal(code); // TOOD: Implement code_to_signal
     } else {
         out->kind = EXAM_EXIT_NORMAL;
         out->code = (int)code;
     }
     return true;
 }
-
 #endif // EXAM_WINDOWS
 
 // Asserts
