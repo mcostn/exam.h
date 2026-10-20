@@ -266,7 +266,7 @@ DOCUMENTATION
 
 #ifndef EXAM_NO_AUTO_REGISTRATION
 #if defined(EXAM_GCC) || defined(EXAM_CLANG) || defined(EXAM_TCC)
-#define EXAM_CONSTRUCTOR(func_name) \ 
+#define EXAM_CONSTRUCTOR(func_name) \
     static void func_name(void) __attribute__((constructor)); \
     static void func_name(void)
 #elif defined(EXAM_MSVC)
@@ -276,11 +276,11 @@ DOCUMENTATION
     __declspec(allocate(".CRT$XCU")) void (*func_name##_)(void) = func_name; \
     __pragma(comment(linker, "/include:" prefix #func_name "_")) \
     static void func_name(void)
-    
+
 #ifdef _WIN64
-    #define EXAM_CONSTRUCTOR(func_name) EXAM_CONSTRUCTOR_IMPL(func_name, "")
+#define EXAM_CONSTRUCTOR(func_name) EXAM_CONSTRUCTOR_IMPL(func_name, "")
 #else
-    #define EXAM_CONSTRUCTOR(func_name) EXAM_CONSTRUCTOR_IMPL(func_name, "_")
+#define EXAM_CONSTRUCTOR(func_name) EXAM_CONSTRUCTOR_IMPL(func_name, "_")
 #endif
 #else
 #error "Automatic registration not supported for your compiler"
@@ -399,6 +399,8 @@ struct exam_test
 
     enum exam_test_state state;
     int exit_signal;
+
+    size_t registration_index;
 
     char output[EXAM_TEST_OUTPUT_SIZE + 1];
     size_t output_size;
@@ -1416,7 +1418,9 @@ static void _exam_list_append(struct exam_test_list *list, const struct exam_tes
         list->capacity = new_cap;
     }
 
-    list->data[list->count++] = *test;
+    list->data[list->count] = *test;
+    list->data[list->count].registration_index = list->count;
+    list->count++;
 }
 
 static void _exam_list_destroy(struct exam_test_list *list)
