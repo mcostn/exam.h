@@ -533,6 +533,7 @@ static size_t _exam_platform_cpu_count();
 static bool _exam_platform_is_tty();
 static bool _exam_platform_process_start(struct exam_process *proc, struct exam_test *test);
 static void _exam_platform_process_close(struct exam_process *proc);
+static void _exam_platform_maybe_run_child();
 static enum exam_read_status _exam_platform_process_read(struct exam_process *proc, char *buf, size_t cap, size_t *n);
 static void _exam_platform_process_wait_io(struct exam_process *procs, size_t count);
 static bool _exam_platform_process_try_reap(struct exam_process *proc, struct exam_exit *out);
@@ -619,6 +620,11 @@ static bool _exam_platform_process_start(struct exam_process *proc, struct exam_
 static void _exam_platform_process_close(struct exam_process *proc)
 {
     close(proc->out_fd);
+}
+
+static void _exam_platform_maybe_run_child()
+{
+    // No need to implement this on Posix
 }
 
 static enum exam_read_status _exam_platform_process_read(struct exam_process *proc, char *buf, size_t cap, size_t *n)
@@ -717,12 +723,17 @@ static bool _exam_platform_process_try_reap(struct exam_process *proc, struct ex
 #endif
 
 #include <windows.h>
+#include <signal.h>
 #include <io.h>
 #include <fcntl.h>
 
 #ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
 #define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
 #endif
+
+#define EXAM_WIN_CHILD_ENV "EXAM_CHILD"
+#define EXAM_WIN_CHILD_ID_SIZE 32
+#define EXAM_WIN_ABORT_STATUS 0xC0000409u
 
 struct exam_process
 {
@@ -766,6 +777,8 @@ static bool _exam_platform_is_tty()
 
 static bool _exam_platform_process_start(struct exam_process *proc, struct exam_test *test)
 {
+    DWORD saved;
+
     char exe[MAX_PATH];
     char cmd[MAX_PATH + 512];
 
@@ -816,20 +829,56 @@ static bool _exam_platform_process_start(struct exam_process *proc, struct exam_
     proc->eof = false;
     return true;
 
-fail: {
-          DWORD saved = GetLastError();
-          if (out_r) CloseHandle(out_r);
-          if (out_w) CloseHandle(out_w);
-          if (nul != INVALID_HANDLE_VALUE) CloseHandle(nul);
-          SetLastError(saved);
-          return false;
-      }
+fail:
+    saved = GetLastError();
+    if (out_r) CloseHandle(out_r);
+    if (out_w) CloseHandle(out_w);
+    if (nul != INVALID_HANDLE_VALUE) CloseHandle(nul);
+    SetLastError(saved);
+    return false;
 }
 
 static void _exam_platform_process_close(struct exam_process *proc)
 {
     CloseHandle(proc->out_read);
     CloseHandle(proc->process);
+}
+
+static void _exam_win_abort_handler(int sig)
+{
+    (void)sig;
+    TerminateProcess(GetCurrentProcess(), EXAM_WIN_ABORT_STATUS);
+}
+
+static void _exam_platform_maybe_run_child()
+{
+    char id[EXAM_WIN_CHILD_ID_SIZE];
+    DWORD n = GetEnvironmentVariableA(EXAM_WIN_CHILD_ENV, id, sizeof(id));
+    if (n == 0 || n >= sizeof(id))
+        return;
+
+    SetEnvironmentVariableA(EXAM_WIN_CHILD_ENV, NULL);
+
+    struct exam_test_list *list = &exam_state.test_list;
+    char *end;
+    errno = 0;
+    unsigned long long idx = strtoull(id, &end, 10);
+    if (errno == ERANGE || end == id || *end != '\0' || idx >= list->count)
+        _exam_dief("invalid %s value '%s'", EXAM_WIN_CHILD_ENV, id);
+
+    SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX | SEM_NOOPENFILEERRORBOX);
+    signal(SIGABRT, _exam_win_abort_handler);
+#if defined(_MSC_VER)
+    _set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);
+#endif
+
+    setvbuf(stdout, NULL, _IONBF, 0);
+
+    list->data[idx].func();
+    fflush(stdout);
+    fflush(stderr);
+    exit(EXIT_SUCCESS);
+
 }
 
 static enum exam_read_status _exam_platform_process_read(struct exam_process *proc, char *buf, size_t cap, size_t *n)
@@ -1345,6 +1394,8 @@ static void _exam_read_output(struct exam_test *test, struct exam_process *proc)
 
 int exam_run(const struct exam_filter *filter, size_t jobs)
 {
+    _exam_platform_maybe_run_child();
+
     _exam_list_sort(&exam_state.test_list);
     exam_state.passed = 0;
     exam_state.failed = 0;
