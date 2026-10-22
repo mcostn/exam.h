@@ -931,6 +931,38 @@ static void _exam_platform_process_wait_io(struct exam_process *procs, size_t co
         _exam_die_perror("WaitForMultipleObjects");
 }
 
+static int _exam_win_code_to_signal(DWORD code)
+{
+    switch (code) {
+        case 0xC0000005u: /* STATUS_ACCESS_VIOLATION */
+        case 0xC0000006u: /* STATUS_IN_PAGE_ERROR */
+        case 0xC00000FDu: /* STATUS_STACK_OVERFLOW */
+        case 0xC0000008u: /* STATUS_INVALID_HANDLE */
+            return SIGSEGV;
+        case 0xC000008Cu: /* STATUS_ARRAY_BOUNDS_EXCEEDED */
+        case 0xC000008Du: /* STATUS_FLOAT_DENORMAL_OPERAND */
+        case 0xC000008Eu: /* STATUS_FLOAT_DIVIDE_BY_ZERO */
+        case 0xC000008Fu: /* STATUS_FLOAT_INEXACT_RESULT */
+        case 0xC0000090u: /* STATUS_FLOAT_INVALID_OPERATION */
+        case 0xC0000091u: /* STATUS_FLOAT_OVERFLOW */
+        case 0xC0000092u: /* STATUS_FLOAT_STACK_CHECK */
+        case 0xC0000093u: /* STATUS_FLOAT_UNDERFLOW */
+        case 0xC0000094u: /* STATUS_INTEGER_DIVIDE_BY_ZERO */
+        case 0xC0000095u: /* STATUS_INTEGER_OVERFLOW */
+            return SIGFPE;
+        case 0xC000001Du: /* STATUS_ILLEGAL_INSTRUCTION */
+        case 0xC0000096u: /* STATUS_PRIVILEGED_INSTRUCTION */
+            return SIGILL;
+        case 0xC0000409u: /* STATUS_STACK_BUFFER_OVERRUN */
+        case 0xC0000374u: /* STATUS_HEAP_CORRUPTION */
+            return SIGABRT;
+        case 0xC000013Au: /* STATUS_CONTROL_C_EXIT */
+            return SIGINT;
+        default:
+            return (int)code;
+    }
+}
+
 static bool _exam_platform_process_try_reap(struct exam_process *proc, struct exam_exit *out)
 {
     DWORD r = WaitForSingleObject(proc->process, 0);
@@ -945,7 +977,7 @@ static bool _exam_platform_process_try_reap(struct exam_process *proc, struct ex
 
     if ((code & 0xF0000000u) == 0xC0000000u) {
         out->kind = EXAM_EXIT_SIGNAL;
-        // out->code = _exam_win_code_to_signal(code); // TOOD: Implement code_to_signal
+        out->code = _exam_win_code_to_signal(code);
     } else {
         out->kind = EXAM_EXIT_NORMAL;
         out->code = (int)code;
