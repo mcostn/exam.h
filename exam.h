@@ -724,8 +724,6 @@ static bool _exam_platform_process_try_reap(struct exam_process *proc, struct ex
 
 #include <windows.h>
 #include <signal.h>
-#include <io.h>
-#include <fcntl.h>
 
 #ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
 #define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
@@ -775,12 +773,41 @@ static bool _exam_platform_is_tty()
     return cached == 1;
 }
 
+static HANDLE _exam_win_job = NULL;
+static bool _exam_win_job_tried = false;
+
+static HANDLE _exam_win_get_job(void)
+{
+    if (_exam_win_job_tried)
+        return _exam_win_job;
+    _exam_win_job_tried = true;
+
+    HANDLE job = CreateJobObjectA(NULL, NULL);
+    if (job == NULL)
+        return NULL;
+
+    JOBOBJECT_EXTENDED_LIMIT_INFORMATION info;
+    memset(&info, 0, sizeof(info));
+    info.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+    if (!SetInformationJobObject(job, JobObjectExtendedLimitInformation,
+                                 &info, sizeof(info))) {
+        CloseHandle(job);
+        return NULL;
+    }
+
+    _exam_win_job = job;
+    return job;
+}
+
 static bool _exam_platform_process_start(struct exam_process *proc, struct exam_test *test)
 {
     DWORD saved;
+    BOOL created;
+    HANDLE job;
 
     char exe[MAX_PATH];
-    char cmd[MAX_PATH + 512];
+    char cmd[MAX_PATH + 4];
+    char child_id[EXAM_WIN_CHILD_ID_SIZE];
 
     DWORD len = GetModuleFileNameA(NULL, exe, MAX_PATH);
     if (len == 0 || len >= MAX_PATH) {
@@ -788,8 +815,14 @@ static bool _exam_platform_process_start(struct exam_process *proc, struct exam_
         return false;
     }
 
-    int written = snprintf(cmd, sizeof(cmd), "\"%s\" --exam-child \"%s\" \"%s\"", exe, test->category, test->name);
+    int written = snprintf(cmd, sizeof(cmd), "\"%s\"", exe);
     if (written < 0 || (size_t)written >= sizeof(cmd)) {
+        SetLastError(ERROR_INSUFFICIENT_BUFFER);
+        return false;
+    }
+
+    written = snprintf(child_id, sizeof(child_id), "%zu", test->registration_index);
+    if (written < 0 || (size_t)written >= sizeof(child_id)) {
         SetLastError(ERROR_INSUFFICIENT_BUFFER);
         return false;
     }
@@ -817,8 +850,29 @@ static bool _exam_platform_process_start(struct exam_process *proc, struct exam_
     si.hStdOutput = out_w;
     si.hStdError = out_w;
 
-    if (!CreateProcessA(NULL, cmd, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi))
+    if (!SetEnvironmentVariableA(EXAM_WIN_CHILD_ENV, child_id))
         goto fail;
+
+    created = CreateProcessA(NULL, cmd, NULL, NULL, TRUE, CREATE_SUSPENDED, NULL, NULL, &si, &pi);
+    saved = GetLastError();
+    SetEnvironmentVariableA(EXAM_WIN_CHILD_ENV, NULL);
+    if (!created) {
+        SetLastError(saved);
+        goto fail;
+    }
+
+    job = _exam_win_get_job();
+    if (job != NULL)
+        AssignProcessToJobObject(job, pi.hProcess);
+
+    if (ResumeThread(pi.hThread) == (DWORD)-1) {
+        saved = GetLastError();
+        TerminateProcess(pi.hProcess, 1);
+        CloseHandle(pi.hThread);
+        CloseHandle(pi.hProcess);
+        SetLastError(saved);
+        goto fail;
+    }
 
     CloseHandle(pi.hThread);
     CloseHandle(out_w);
