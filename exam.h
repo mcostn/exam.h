@@ -529,11 +529,11 @@ enum exam_read_status
 
 struct exam_process;
 
-static size_t _exam_platform_cpu_count();
-static bool _exam_platform_is_tty();
+static size_t _exam_platform_cpu_count(void);
+static bool _exam_platform_is_tty(void);
 static bool _exam_platform_process_start(struct exam_process *proc, struct exam_test *test);
 static void _exam_platform_process_close(struct exam_process *proc);
-static void _exam_platform_maybe_run_child();
+static void _exam_platform_maybe_run_child(void);
 static enum exam_read_status _exam_platform_process_read(struct exam_process *proc, char *buf, size_t cap, size_t *n);
 static void _exam_platform_process_wait_io(struct exam_process *procs, size_t count);
 static bool _exam_platform_process_try_reap(struct exam_process *proc, struct exam_exit *out);
@@ -554,7 +554,7 @@ struct exam_process
     bool eof;
 };
 
-static size_t _exam_platform_cpu_count()
+static size_t _exam_platform_cpu_count(void)
 {
     long cpu_count = sysconf(_SC_NPROCESSORS_ONLN);
     if (cpu_count <= 0)
@@ -563,7 +563,7 @@ static size_t _exam_platform_cpu_count()
     return (size_t)cpu_count;
 }
 
-static bool _exam_platform_is_tty()
+static bool _exam_platform_is_tty(void)
 {
     return isatty(STDOUT_FILENO) || isatty(STDERR_FILENO);
 }
@@ -622,7 +622,7 @@ static void _exam_platform_process_close(struct exam_process *proc)
     close(proc->out_fd);
 }
 
-static void _exam_platform_maybe_run_child()
+static void _exam_platform_maybe_run_child(void)
 {
     // No need to implement this on Posix
 }
@@ -741,7 +741,7 @@ struct exam_process
     HANDLE out_read;
 };
 
-static size_t _exam_platform_cpu_count()
+static size_t _exam_platform_cpu_count(void)
 {
     SYSTEM_INFO si;
     GetSystemInfo(&si);
@@ -751,7 +751,7 @@ static size_t _exam_platform_cpu_count()
     return (size_t)si.dwNumberOfProcessors;
 }
 
-static bool _exam_platform_is_tty()
+static bool _exam_platform_is_tty(void)
 {
     static int cached = -1; // negative used for not set
 
@@ -904,7 +904,7 @@ static void _exam_win_abort_handler(int sig)
     TerminateProcess(GetCurrentProcess(), EXAM_WIN_ABORT_STATUS);
 }
 
-static void _exam_platform_maybe_run_child()
+static void _exam_platform_maybe_run_child(void)
 {
     char id[EXAM_WIN_CHILD_ID_SIZE];
     DWORD n = GetEnvironmentVariableA(EXAM_WIN_CHILD_ENV, id, sizeof(id));
@@ -1732,17 +1732,17 @@ static struct {
     struct exam_filter filter;
 } exam_cli_state = {0};
 
-static int _exam_cli_run();
-static int _exam_cli_list();
-static void _exam_cli_usage();
+static int _exam_cli_run(void);
+static int _exam_cli_list(void);
+static void _exam_cli_usage(void);
 
-static void _exam_cli_on_finish();
+static void _exam_cli_on_finish(void);
 static void _exam_cli_on_test_finish(const struct exam_test *test);
 
 static void _exam_cli_test_output(const struct exam_test *test);
 static const char *_exam_cli_color(const char *color);
 static bool _exam_cli_is_option(const char *str, const char *short_name, const char *long_name);
-static bool _exam_cli_is_color();
+static bool _exam_cli_is_color(void);
 
 int exam_cli_main(int argc, char **argv)
 {
@@ -1864,7 +1864,7 @@ cleanup:
     return rc;
 }
 
-static int _exam_cli_run()
+static int _exam_cli_run(void)
 {
     exam_run(&exam_cli_state.filter, exam_cli_state.jobs);
     if (exam_state.failed > 0 || exam_state.crashed > 0)
@@ -1872,7 +1872,7 @@ static int _exam_cli_run()
     return EXIT_SUCCESS;
 }
 
-static int _exam_cli_list()
+static int _exam_cli_list(void)
 {
     size_t found = 0;
     for (size_t i = 0; i < exam_state.test_list.count; ++i) {
@@ -1893,7 +1893,7 @@ static int _exam_cli_list()
     return EXIT_SUCCESS;
 }
 
-static void _exam_cli_usage()
+static void _exam_cli_usage(void)
 {
     printf("usage: " EXAM_CLI_NAME " [options] [filter...]\n"
            "options:\n"
@@ -1906,7 +1906,7 @@ static void _exam_cli_usage()
            "    -c, --category CATEGORY  category name\n");
 }
 
-static void _exam_cli_on_finish()
+static void _exam_cli_on_finish(void)
 {
     fprintf(stdout,
             "%zu passed, %zu failed, %zu crashed\n",
@@ -2003,7 +2003,7 @@ static bool _exam_cli_is_option(const char *str, const char *short_name, const c
     return false;
 }
 
-static bool _exam_cli_is_color()
+static bool _exam_cli_is_color(void)
 {
     if (exam_cli_state.color == EXAM_COLOR_NEVER)
         return false;
