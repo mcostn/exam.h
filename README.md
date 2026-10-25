@@ -1,6 +1,6 @@
 # exam
 
-A minimal, single-header unit testing library written in C99.
+A minimal, single-header unit testing library for C and C++.
 
 
 ## Example
@@ -19,16 +19,16 @@ DEFINE_TEST(math, subtraction)
     ASSERT_EQ_INT(5 - 2, 1);
 }
 
-int main(void)
+int main(int argc, char **argv)
 {
-    return exam_run(NULL, 0);
+    return exam_cli_main(argc, argv);
 }
 ```
 
 Compile and run with:
 
 ```bash
-cc -std=c99 -o test test.c
+cc -o test test.c
 ./test
 ```
 
@@ -41,9 +41,12 @@ Put `exam.h` somewhere in your project and define `EXAM_IMPLEMENTATION` in **one
 #include "exam.h"
 ```
 
-In other source files, simply include the header normally:
+In other source files, simply include it normally.
 
-```c
-#include "exam.h"
-```
+## Compatibility
 
+exam is designed to work across a wide range of environments. It has been tested on Linux, macOS and Windows with GCC, Clang, TCC and MSVC, in both C and C++.
+
+## License
+
+exam is released under the MIT License. See the `LICENSE` file for details.
