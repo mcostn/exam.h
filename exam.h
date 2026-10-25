@@ -27,7 +27,7 @@ COMPILE_TIME OPTIONS
     #define EXAM_FREE(ptr) better_free
 
         Override the memory allocation functions used internally by exam.
-        By default, these are malloc(), calloc(), realloc(), and free().
+        By default, these are calloc(), realloc(), and free().
         You must either define all three or none.
 
     #define EXAM_NO_AUTO_REGISTRATION
@@ -35,24 +35,24 @@ COMPILE_TIME OPTIONS
         This library automatically registers the tests when you define
         them (using compiler extensions like constructors for GCC and Clang).
         If your compiler does not support such features, you can use this
-        flag tu turn it off and manually register your tests.
+        flag to turn it off and manually register your tests.
 
     #define EXAM_TEST_OUTPUT_SIZE size
 
         The max size of the buffer that holds a test's output
         (stdout and stderr). By default this is set to 1024, but you
-        can increase it or decrease it as long as it's bigger than 1.
+        can increase it or decrease it as long as it's bigger than 0.
 
     #define EXAM_CLI_NAME "name"
 
-        The name showed in the CLI's help. By default it's set to "exam",
+        The name shown in the CLI's help. By default it's set to "exam",
         but you can change this to the name of your executable or whatever
         you desire.
 
     #define EXAM_NO_STL
 
         In case you are using C++, exam offers more functionality intended
-        to use with the STL. To desable it, you can define this macro.
+        to use with the STL. To disable it, you can define this macro.
 
 DOCUMENTATION
 
@@ -481,11 +481,11 @@ extern void exam_register(struct exam_test *test);
 extern int exam_cli_main(int argc, char **argv);
 
 #ifdef EXAM_IMPLEMENTATION
-#include <stdio.h> // printf(), fprintf(), vfprintf(), fputc(), perror(), stdout, stderr
-#include <string.h> // strcmp(), memcmp(), strerror()
-#include <stdarg.h> // va_list, va_start(), va_end()
-#include <errno.h> // errno
-#include <math.h> //  isnan(), isinf(), isfinite()
+#include <stdio.h>
+#include <string.h>
+#include <stdarg.h>
+#include <errno.h>
+#include <math.h>
 
 // Util
 struct exam_state exam_state = {0};
