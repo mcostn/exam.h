@@ -355,11 +355,10 @@ DOCUMENTATION
     static void _EXAM_DEF_NAME(category_name, test_name)(void); \
     EXAM_CONSTRUCTOR(_EXAM_REG_NAME(category_name, test_name)) \
     { \
-        struct exam_test test = { \
-            .category = #category_name, \
-            .name = #test_name, \
-            .func = _EXAM_DEF_NAME(category_name, test_name), \
-        }; \
+        struct exam_test test = {0}; \
+        test.category = #category_name; \
+        test.name = #test_name; \
+        test.func = _EXAM_DEF_NAME(category_name, test_name); \
         exam_register(&test); \
     } \
     static void _EXAM_DEF_NAME(category_name, test_name)(void)
