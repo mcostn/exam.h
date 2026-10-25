@@ -236,8 +236,12 @@ DOCUMENTATION
 #include <stddef.h>
 #include <stdint.h>
 
-#if defined(__linux__) || defined(__APPLE__) || defined(__unix__)
+#if defined(__linux__)
 #define EXAM_POSIX
+#define EXAM_LINUX
+#elif defined(__APPLE__)
+#define EXAM_POSIX
+#define EXAM_APPLE
 #elif defined(_WIN32)
 #define EXAM_WINDOWS
 #else
@@ -538,12 +542,18 @@ static void _exam_platform_process_wait_io(struct exam_process *procs, size_t co
 static bool _exam_platform_process_try_reap(struct exam_process *proc, struct exam_exit *out);
 
 #if defined(EXAM_POSIX)
+
 #include <unistd.h>
 #include <fcntl.h>
 #include <poll.h>
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+
+#ifdef EXAM_APPLE
+#include <mach/mach.h>
+#include <mach/mach_host.h>
+#endif
 
 struct exam_process
 {
@@ -553,6 +563,25 @@ struct exam_process
     bool eof;
 };
 
+#ifdef EXAM_APPLE
+static size_t _exam_platform_cpu_count(void)
+{
+    host_basic_info_data_t info;
+    mach_msg_type_number_t count = HOST_BASIC_INFO_COUNT;
+
+    kern_return_t result = host_info(
+        mach_host_self(),
+        HOST_BASIC_INFO,
+        (host_info_t)&info,
+        &count
+    );
+
+    if (result != KERN_SUCCESS || info.avail_cpus <= 0)
+        return 1;
+
+    return (size_t)info.avail_cpus;
+}
+#else
 static size_t _exam_platform_cpu_count(void)
 {
     long cpu_count = sysconf(_SC_NPROCESSORS_ONLN);
@@ -561,6 +590,7 @@ static size_t _exam_platform_cpu_count(void)
 
     return (size_t)cpu_count;
 }
+#endif
 
 static bool _exam_platform_is_tty(void)
 {
