@@ -302,6 +302,13 @@ DOCUMENTATION
 #define EXAM_CLI_NAME "exam"
 #endif
 
+#define EXAM_FAIL(...) exam_fail_test(__FILE__, __LINE__, __VA_ARGS__)
+#define EXAM_ASSERT_MSG(cond, ...) \
+    do { \
+        if (!(cond)) \
+            EXAM_FAIL(__VA_ARGS__); \
+    } while (0)
+
 #define EXAM_ASSERT_TRUE(cond) exam_assert_true((cond), #cond, __FILE__, __LINE__)
 #define EXAM_ASSERT_FALSE(cond) exam_assert_false((cond), #cond, __FILE__, __LINE__)
 #define EXAM_ASSERT_EQ_PTR(a, b) exam_assert_eq_ptr((a), (b), __FILE__, __LINE__)
@@ -2147,6 +2154,9 @@ void exam_assert_key_val_not_in_map(const K &key, const V &val, const Map &map, 
 #endif // defined(__cplusplus) && !defined(EXAM_NO_STL)
 
 #ifndef EXAM_NO_SHORT_NAMES
+#define FAIL EXAM_FAIL
+#define ASSERT_MSG EXAM_ASSERT_MSG
+
 #define ASSERT_TRUE EXAM_ASSERT_TRUE
 #define ASSERT_FALSE EXAM_ASSERT_FALSE
 #define ASSERT_EQ_PTR EXAM_ASSERT_EQ_PTR

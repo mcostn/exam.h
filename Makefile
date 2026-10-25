@@ -7,7 +7,8 @@ EXAMPLES := \
 	examples/02_cli \
 	examples/03_manual \
 	examples/04_callbacks \
-	examples/05_long_names
+	examples/05_long_names \
+	examples/07_custom_asserts
 
 TESTS := \
 	tests/exam
