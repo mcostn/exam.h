@@ -630,6 +630,8 @@ static bool _exam_platform_process_start(struct exam_process *proc, struct exam_
         }
         close(fildes[1]);
 
+        setvbuf(stdout, NULL, _IONBF, 0);
+
         test->func();
         fflush(stdout);
         fflush(stderr);
