@@ -268,6 +268,22 @@ DOCUMENTATION
 #error "EXAM_CALLOC, EXAM_REALLOC and EXAM_FREE must be defined together."
 #endif
 
+#if defined(EXAM_GCC) || defined(EXAM_CLANG) || defined(EXAM_TCC)
+#define EXAM_NORETURN __attribute__((noreturn))
+#elif defined(EXAM_MSVC)
+#define EXAM_NORETURN __declspec(noreturn)
+#elif defined(__cplusplus) && __cplusplus >= 201103L
+#define EXAM_NORETURN [[noreturn]]
+#else
+#define EXAM_NORETURN
+#endif
+
+#if defined(EXAM_GCC) || defined(EXAM_CLANG)
+#define EXAM_PRINTF(fmt_idx, args_idx) __attribute__((format(printf, fmt_idx, args_idx)))
+#else
+#define EXAM_PRINTF(fmt_idx, args_idx)
+#endif
+
 #ifndef EXAM_NO_AUTO_REGISTRATION
 #if defined(EXAM_GCC) || defined(EXAM_CLANG) || defined(EXAM_TCC)
 #define EXAM_CONSTRUCTOR(func_name) \
@@ -322,7 +338,7 @@ DOCUMENTATION
 #define EXAM_ASSERT_EQ_FLOAT(a, b, eps) exam_assert_eq_float((a), (b), (eps), __FILE__, __LINE__)
 #define EXAM_ASSERT_NEQ_FLOAT(a, b, eps) exam_assert_neq_float((a), (b), (eps), __FILE__, __LINE__)
 #define EXAM_ASSERT_EQ_DOUBLE(a, b, eps) exam_assert_eq_double((a), (b), (eps), __FILE__, __LINE__)
-#define EXAM_ASSERT_NEQ_DOUBLE(a, b, eps) exam_assert_neq_double((a), (b),(eps), __FILE__, __LINE__)
+#define EXAM_ASSERT_NEQ_DOUBLE(a, b, eps) exam_assert_neq_double((a), (b), (eps), __FILE__, __LINE__)
 #define EXAM_ASSERT_EQ_STR(a, b) exam_assert_eq_str((a), (b), __FILE__, __LINE__)
 #define EXAM_ASSERT_NEQ_STR(a, b) exam_assert_neq_str((a), (b), __FILE__, __LINE__)
 #define EXAM_ASSERT_EQ_MEM(a, b, size) exam_assert_eq_mem((a), (b), (size), __FILE__, __LINE__)
@@ -447,7 +463,8 @@ struct exam_state
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
-extern void exam_fail_test(const char *file, size_t line, const char *fmt, ...);
+EXAM_NORETURN extern void exam_fail_test(const char *file, size_t line, const char *fmt, ...) EXAM_PRINTF(3, 4);
+
 extern void exam_assert_true(bool result, const char *expression, const char *file, size_t line);
 extern void exam_assert_false(bool result, const char *expression, const char *file, size_t line);
 extern void exam_assert_eq_ptr(const void *a, const void *b, const char *file, size_t line);
@@ -497,8 +514,8 @@ extern int exam_cli_main(int argc, char **argv);
 // Util
 struct exam_state exam_state = {0};
 
-static void _exam_dief(const char *fmt, ...);
-static void _exam_die_perror(const char *str);
+EXAM_NORETURN static void _exam_dief(const char *fmt, ...) EXAM_PRINTF(1, 2);
+EXAM_NORETURN static void _exam_die_perror(const char *str);
 
 static void _exam_dief(const char *fmt, ...)
 {
