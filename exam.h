@@ -376,7 +376,7 @@ DOCUMENTATION
 
 #ifndef EXAM_NO_AUTO_REGISTRATION
 #define _EXAM_REG_NAME(category_name, test_name) \
-    exam_reg_##category_name##_##test_name
+    exam_reg_category_##category_name##_name_##test_name
 
 #define EXAM_DEFINE_TEST(category_name, test_name) \
     static void _EXAM_DEF_NAME(category_name, test_name)(void); \
