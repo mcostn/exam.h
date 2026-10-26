@@ -371,41 +371,41 @@ DOCUMENTATION
 #define EXAM_ASSERT_KEY_VAL_NOT_IN_MAP(k, v, hm) exam_assert_key_val_not_in_map((k), (v), (hm), __FILE__, __LINE__)
 #endif // defined(__cplusplus) && !defined(EXAM_NO_STL)
 
-#define _EXAM_DEF_NAME(category_name, test_name) \
+#define EXAM_INTERNAL_DEF_NAME(category_name, test_name) \
     exam_def_##category_name##_##test_name
 
 #ifndef EXAM_NO_AUTO_REGISTRATION
-#define _EXAM_REG_NAME(category_name, test_name) \
+#define EXAM_INTERNAL_REG_NAME(category_name, test_name) \
     exam_reg_category_##category_name##_name_##test_name
 
 #define EXAM_DEFINE_TEST(category_name, test_name) \
-    static void _EXAM_DEF_NAME(category_name, test_name)(void); \
-    EXAM_CONSTRUCTOR(_EXAM_REG_NAME(category_name, test_name)) \
+    static void EXAM_INTERNAL_DEF_NAME(category_name, test_name)(void); \
+    EXAM_CONSTRUCTOR(EXAM_INTERNAL_REG_NAME(category_name, test_name)) \
     { \
         struct exam_test test = {0}; \
         test.category = #category_name; \
         test.name = #test_name; \
-        test.func = _EXAM_DEF_NAME(category_name, test_name); \
+        test.func = EXAM_INTERNAL_DEF_NAME(category_name, test_name); \
         exam_register(&test); \
     } \
-    static void _EXAM_DEF_NAME(category_name, test_name)(void)
+    static void EXAM_INTERNAL_DEF_NAME(category_name, test_name)(void)
 
 #else
 
-#define _EXAM_STRUCT_NAME(category_name, test_name) \
+#define EXAM_INTERNAL_STRUCT_NAME(category_name, test_name) \
     exam_test_obj_##category_name##_##test_name
 
 #define EXAM_DEFINE_TEST(category_name, test_name) \
-    static void _EXAM_DEF_NAME(category_name, test_name)(void); \
-    static struct exam_test _EXAM_STRUCT_NAME(category_name, test_name) = { \
+    static void EXAM_INTERNAL_DEF_NAME(category_name, test_name)(void); \
+    static struct exam_test EXAM_INTERNAL_STRUCT_NAME(category_name, test_name) = { \
         .category = #category_name, \
         .name = #test_name, \
-        .func = _EXAM_DEF_NAME(category_name, test_name), \
+        .func = EXAM_INTERNAL_DEF_NAME(category_name, test_name), \
     }; \
-    static void _EXAM_DEF_NAME(category_name, test_name)(void)
+    static void EXAM_INTERNAL_DEF_NAME(category_name, test_name)(void)
 
 #define EXAM_REGISTER_TEST(category_name, test_name) \
-    exam_register(&_EXAM_STRUCT_NAME(category_name, test_name))
+    exam_register(&EXAM_INTERNAL_STRUCT_NAME(category_name, test_name))
 #endif // EXAM_NO_AUTO_REGISTRATION
 
 enum exam_test_state
@@ -514,10 +514,10 @@ extern int exam_cli_main(int argc, char **argv);
 // Util
 struct exam_state exam_state = {0};
 
-EXAM_NORETURN static void _exam_dief(const char *fmt, ...) EXAM_PRINTF(1, 2);
-EXAM_NORETURN static void _exam_die_perror(const char *str);
+EXAM_NORETURN static void exam_internal_dief(const char *fmt, ...) EXAM_PRINTF(1, 2);
+EXAM_NORETURN static void exam_internal_die_perror(const char *str);
 
-static void _exam_dief(const char *fmt, ...)
+static void exam_internal_dief(const char *fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
@@ -527,7 +527,7 @@ static void _exam_dief(const char *fmt, ...)
     exit(EXIT_FAILURE);
 }
 
-static void _exam_die_perror(const char *str)
+static void exam_internal_die_perror(const char *str)
 {
     perror(str);
     exit(EXIT_FAILURE);
@@ -556,14 +556,14 @@ enum exam_read_status
 
 struct exam_process;
 
-static size_t _exam_platform_cpu_count(void);
-static bool _exam_platform_is_tty(void);
-static bool _exam_platform_process_start(struct exam_process *proc, struct exam_test *test);
-static void _exam_platform_process_close(struct exam_process *proc);
-static void _exam_platform_maybe_run_child(void);
-static enum exam_read_status _exam_platform_process_read(struct exam_process *proc, char *buf, size_t cap, size_t *n);
-static void _exam_platform_process_wait_io(struct exam_process *procs, size_t count);
-static bool _exam_platform_process_try_reap(struct exam_process *proc, struct exam_exit *out);
+static size_t exam_internal_platform_cpu_count(void);
+static bool exam_internal_platform_is_tty(void);
+static bool exam_internal_platform_process_start(struct exam_process *proc, struct exam_test *test);
+static void exam_internal_platform_process_close(struct exam_process *proc);
+static void exam_internal_platform_maybe_run_child(void);
+static enum exam_read_status exam_internal_platform_process_read(struct exam_process *proc, char *buf, size_t cap, size_t *n);
+static void exam_internal_platform_process_wait_io(struct exam_process *procs, size_t count);
+static bool exam_internal_platform_process_try_reap(struct exam_process *proc, struct exam_exit *out);
 
 #if defined(EXAM_POSIX)
 
@@ -588,7 +588,7 @@ struct exam_process
 };
 
 #ifdef EXAM_APPLE
-static size_t _exam_platform_cpu_count(void)
+static size_t exam_internal_platform_cpu_count(void)
 {
     host_basic_info_data_t info;
     mach_msg_type_number_t count = HOST_BASIC_INFO_COUNT;
@@ -606,7 +606,7 @@ static size_t _exam_platform_cpu_count(void)
     return (size_t)info.avail_cpus;
 }
 #else
-static size_t _exam_platform_cpu_count(void)
+static size_t exam_internal_platform_cpu_count(void)
 {
     long cpu_count = sysconf(_SC_NPROCESSORS_ONLN);
     if (cpu_count <= 0)
@@ -616,12 +616,12 @@ static size_t _exam_platform_cpu_count(void)
 }
 #endif
 
-static bool _exam_platform_is_tty(void)
+static bool exam_internal_platform_is_tty(void)
 {
     return isatty(STDOUT_FILENO) || isatty(STDERR_FILENO);
 }
 
-static bool _exam_platform_process_start(struct exam_process *proc, struct exam_test *test)
+static bool exam_internal_platform_process_start(struct exam_process *proc, struct exam_test *test)
 {
     int fildes[2];
     if (pipe(fildes) == -1)
@@ -672,17 +672,17 @@ static bool _exam_platform_process_start(struct exam_process *proc, struct exam_
     return true;
 }
 
-static void _exam_platform_process_close(struct exam_process *proc)
+static void exam_internal_platform_process_close(struct exam_process *proc)
 {
     close(proc->out_fd);
 }
 
-static void _exam_platform_maybe_run_child(void)
+static void exam_internal_platform_maybe_run_child(void)
 {
     // No need to implement this on Posix
 }
 
-static enum exam_read_status _exam_platform_process_read(struct exam_process *proc, char *buf, size_t cap, size_t *n)
+static enum exam_read_status exam_internal_platform_process_read(struct exam_process *proc, char *buf, size_t cap, size_t *n)
 {
     for (;;) {
         ssize_t r = read(proc->out_fd, buf, cap);
@@ -704,11 +704,11 @@ static enum exam_read_status _exam_platform_process_read(struct exam_process *pr
     }
 }
 
-static void _exam_platform_process_wait_io(struct exam_process *procs, size_t count)
+static void exam_internal_platform_process_wait_io(struct exam_process *procs, size_t count)
 {
     struct pollfd *fds = (struct pollfd *)EXAM_CALLOC(count, sizeof(*fds));
     if (fds == NULL)
-        _exam_die_perror("calloc");
+        exam_internal_die_perror("calloc");
 
     size_t live = 0;
     for (size_t i = 0; i < count; i++) {
@@ -737,13 +737,13 @@ static void _exam_platform_process_wait_io(struct exam_process *procs, size_t co
         int saved = errno;
         EXAM_FREE(fds);
         errno = saved;
-        _exam_die_perror("poll");
+        exam_internal_die_perror("poll");
     }
 
     EXAM_FREE(fds);
 }
 
-static bool _exam_platform_process_try_reap(struct exam_process *proc, struct exam_exit *out)
+static bool exam_internal_platform_process_try_reap(struct exam_process *proc, struct exam_exit *out)
 {
     int status;
     pid_t pid;
@@ -752,7 +752,7 @@ static bool _exam_platform_process_try_reap(struct exam_process *proc, struct ex
     } while (pid == -1 && errno == EINTR);
 
     if (pid == -1)
-        _exam_die_perror("waitpid");
+        exam_internal_die_perror("waitpid");
     if (pid == 0)
         return false;
 
@@ -763,7 +763,7 @@ static bool _exam_platform_process_try_reap(struct exam_process *proc, struct ex
         out->kind = EXAM_EXIT_SIGNAL;
         out->code = WTERMSIG(status);
     } else {
-        _exam_dief("unexpected wait status");
+        exam_internal_dief("unexpected wait status");
     }
 
     return true;
@@ -796,7 +796,7 @@ struct exam_process
     HANDLE out_read;
 };
 
-static size_t _exam_platform_cpu_count(void)
+static size_t exam_internal_platform_cpu_count(void)
 {
     SYSTEM_INFO si;
     GetSystemInfo(&si);
@@ -806,7 +806,7 @@ static size_t _exam_platform_cpu_count(void)
     return (size_t)si.dwNumberOfProcessors;
 }
 
-static bool _exam_platform_is_tty(void)
+static bool exam_internal_platform_is_tty(void)
 {
     static int cached = -1; // negative used for not set
 
@@ -828,14 +828,14 @@ static bool _exam_platform_is_tty(void)
     return cached == 1;
 }
 
-static HANDLE _exam_win_job = NULL;
-static bool _exam_win_job_tried = false;
+static HANDLE exam_internal_win_job = NULL;
+static bool exam_internal_win_job_tried = false;
 
-static HANDLE _exam_win_get_job(void)
+static HANDLE exam_internal_win_get_job(void)
 {
-    if (_exam_win_job_tried)
-        return _exam_win_job;
-    _exam_win_job_tried = true;
+    if (exam_internal_win_job_tried)
+        return exam_internal_win_job;
+    exam_internal_win_job_tried = true;
 
     HANDLE job = CreateJobObjectA(NULL, NULL);
     if (job == NULL)
@@ -850,11 +850,11 @@ static HANDLE _exam_win_get_job(void)
         return NULL;
     }
 
-    _exam_win_job = job;
+    exam_internal_win_job = job;
     return job;
 }
 
-static bool _exam_platform_process_start(struct exam_process *proc, struct exam_test *test)
+static bool exam_internal_platform_process_start(struct exam_process *proc, struct exam_test *test)
 {
     DWORD saved;
     BOOL created;
@@ -916,7 +916,7 @@ static bool _exam_platform_process_start(struct exam_process *proc, struct exam_
         goto fail;
     }
 
-    job = _exam_win_get_job();
+    job = exam_internal_win_get_job();
     if (job != NULL)
         AssignProcessToJobObject(job, pi.hProcess);
 
@@ -947,19 +947,19 @@ fail:
     return false;
 }
 
-static void _exam_platform_process_close(struct exam_process *proc)
+static void exam_internal_platform_process_close(struct exam_process *proc)
 {
     CloseHandle(proc->out_read);
     CloseHandle(proc->process);
 }
 
-static void _exam_win_abort_handler(int sig)
+static void exam_internal_win_abort_handler(int sig)
 {
     (void)sig;
     TerminateProcess(GetCurrentProcess(), EXAM_WIN_ABORT_STATUS);
 }
 
-static void _exam_platform_maybe_run_child(void)
+static void exam_internal_platform_maybe_run_child(void)
 {
     char id[EXAM_WIN_CHILD_ID_SIZE];
     DWORD n = GetEnvironmentVariableA(EXAM_WIN_CHILD_ENV, id, sizeof(id));
@@ -973,10 +973,10 @@ static void _exam_platform_maybe_run_child(void)
     errno = 0;
     unsigned long long idx = strtoull(id, &end, 10);
     if (errno == ERANGE || end == id || *end != '\0' || idx >= list->count)
-        _exam_dief("invalid %s value '%s'", EXAM_WIN_CHILD_ENV, id);
+        exam_internal_dief("invalid %s value '%s'", EXAM_WIN_CHILD_ENV, id);
 
     SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX | SEM_NOOPENFILEERRORBOX);
-    signal(SIGABRT, _exam_win_abort_handler);
+    signal(SIGABRT, exam_internal_win_abort_handler);
 #if defined(_MSC_VER)
     _set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);
 #endif
@@ -990,7 +990,7 @@ static void _exam_platform_maybe_run_child(void)
 
 }
 
-static enum exam_read_status _exam_platform_process_read(struct exam_process *proc, char *buf, size_t cap, size_t *n)
+static enum exam_read_status exam_internal_platform_process_read(struct exam_process *proc, char *buf, size_t cap, size_t *n)
 {
     DWORD avail = 0;
     if (!PeekNamedPipe(proc->out_read, NULL, 0, NULL, &avail, NULL)) {
@@ -1022,7 +1022,7 @@ static enum exam_read_status _exam_platform_process_read(struct exam_process *pr
     return EXAM_READ_DATA;
 }
 
-static void _exam_platform_process_wait_io(struct exam_process *procs, size_t count)
+static void exam_internal_platform_process_wait_io(struct exam_process *procs, size_t count)
 {
     HANDLE handles[MAXIMUM_WAIT_OBJECTS];
     DWORD n = 0;
@@ -1037,10 +1037,10 @@ static void _exam_platform_process_wait_io(struct exam_process *procs, size_t co
     }
 
     if (WaitForMultipleObjects(n, handles, FALSE, 10) == WAIT_FAILED)
-        _exam_die_perror("WaitForMultipleObjects");
+        exam_internal_die_perror("WaitForMultipleObjects");
 }
 
-static int _exam_win_code_to_signal(DWORD code)
+static int exam_internal_win_code_to_signal(DWORD code)
 {
     switch (code) {
         case 0xC0000005u: /* STATUS_ACCESS_VIOLATION */
@@ -1072,21 +1072,21 @@ static int _exam_win_code_to_signal(DWORD code)
     }
 }
 
-static bool _exam_platform_process_try_reap(struct exam_process *proc, struct exam_exit *out)
+static bool exam_internal_platform_process_try_reap(struct exam_process *proc, struct exam_exit *out)
 {
     DWORD r = WaitForSingleObject(proc->process, 0);
     if (r == WAIT_TIMEOUT)
         return false;
     if (r != WAIT_OBJECT_0)
-        _exam_die_perror("WaitForSingleObject");
+        exam_internal_die_perror("WaitForSingleObject");
 
     DWORD code;
     if (!GetExitCodeProcess(proc->process, &code))
-        _exam_die_perror("GetExitCodeProcess");
+        exam_internal_die_perror("GetExitCodeProcess");
 
     if ((code & 0xF0000000u) == 0xC0000000u) {
         out->kind = EXAM_EXIT_SIGNAL;
-        out->code = _exam_win_code_to_signal(code);
+        out->code = exam_internal_win_code_to_signal(code);
     } else {
         out->kind = EXAM_EXIT_NORMAL;
         out->code = (int)code;
@@ -1096,15 +1096,15 @@ static bool _exam_platform_process_try_reap(struct exam_process *proc, struct ex
 #endif // EXAM_WINDOWS
 
 // Asserts
-static int _exam_test_cmp(const void *a, const void *b);
-static bool _exam_str_cmp(const char *a, const char *b);
-static bool _exam_float_cmp(float a, float b, float eps);
-static bool _exam_double_cmp(double a, double b, double eps);
+static int exam_internal_test_cmp(const void *a, const void *b);
+static bool exam_internal_str_cmp(const char *a, const char *b);
+static bool exam_internal_float_cmp(float a, float b, float eps);
+static bool exam_internal_double_cmp(double a, double b, double eps);
 
-static bool _exam_float_in_range(float x, float min, float max, float eps);
-static bool _exam_double_in_range(double x, double min, double max, double eps);
+static bool exam_internal_float_in_range(float x, float min, float max, float eps);
+static bool exam_internal_double_in_range(double x, double min, double max, double eps);
 
-static const char *_exam_str_repr(const char *str);
+static const char *exam_internal_str_repr(const char *str);
 
 void exam_fail_test(const char *file, size_t line, const char *fmt, ...)
 {
@@ -1185,7 +1185,7 @@ void exam_assert_neq_uint(uintmax_t a, uintmax_t b, const char *file, size_t lin
 
 void exam_assert_eq_float(float a, float b, float eps, const char *file, size_t line)
 {
-    if (!_exam_float_cmp(a, b, eps))
+    if (!exam_internal_float_cmp(a, b, eps))
         exam_fail_test(file, line,
                        "%.9g != %.9g",
                        a, b);
@@ -1193,7 +1193,7 @@ void exam_assert_eq_float(float a, float b, float eps, const char *file, size_t 
 
 void exam_assert_neq_float(float a, float b, float eps, const char *file, size_t line)
 {
-    if (_exam_float_cmp(a, b, eps))
+    if (exam_internal_float_cmp(a, b, eps))
         exam_fail_test(file, line,
                        "%.9g == %.9g",
                        a, b);
@@ -1201,7 +1201,7 @@ void exam_assert_neq_float(float a, float b, float eps, const char *file, size_t
 
 void exam_assert_eq_double(double a, double b, double eps, const char *file, size_t line)
 {
-    if (!_exam_double_cmp(a, b, eps))
+    if (!exam_internal_double_cmp(a, b, eps))
         exam_fail_test(file, line,
                        "%.17g != %.17g",
                        a, b);
@@ -1209,7 +1209,7 @@ void exam_assert_eq_double(double a, double b, double eps, const char *file, siz
 
 void exam_assert_neq_double(double a, double b, double eps, const char *file, size_t line)
 {
-    if (_exam_double_cmp(a, b, eps))
+    if (exam_internal_double_cmp(a, b, eps))
         exam_fail_test(file, line,
                        "%.17g == %.17g",
                        a, b);
@@ -1217,18 +1217,18 @@ void exam_assert_neq_double(double a, double b, double eps, const char *file, si
 
 void exam_assert_eq_str(const char *a, const char *b, const char *file, size_t line)
 {
-    if (!_exam_str_cmp(a, b))
+    if (!exam_internal_str_cmp(a, b))
         exam_fail_test(file, line,
                        "\"%s\" != \"%s\"",
-                       _exam_str_repr(a), _exam_str_repr(b));
+                       exam_internal_str_repr(a), exam_internal_str_repr(b));
 }
 
 void exam_assert_neq_str(const char *a, const char *b, const char *file, size_t line)
 {
-    if (_exam_str_cmp(a, b))
+    if (exam_internal_str_cmp(a, b))
         exam_fail_test(file, line,
                        "%s == %s",
-                       _exam_str_repr(a), _exam_str_repr(b));
+                       exam_internal_str_repr(a), exam_internal_str_repr(b));
 }
 
 void exam_assert_eq_mem(const void *a, const void *b, size_t size, const char *file, size_t line)
@@ -1258,7 +1258,7 @@ void exam_assert_neq_mem(const void *a, const void *b, size_t size, const char *
 void exam_assert_in_range_int(intmax_t x, intmax_t min, intmax_t max, const char *file, size_t line)
 {
     if (min > max)
-        _exam_dief("invalid range [%jd, %jd]", min, max);
+        exam_internal_dief("invalid range [%jd, %jd]", min, max);
 
     if (x < min || x > max)
         exam_fail_test(file, line,
@@ -1269,7 +1269,7 @@ void exam_assert_in_range_int(intmax_t x, intmax_t min, intmax_t max, const char
 void exam_assert_not_in_range_int(intmax_t x, intmax_t min, intmax_t max, const char *file, size_t line)
 {
     if (min > max)
-        _exam_dief("invalid range [%jd, %jd]", min, max);
+        exam_internal_dief("invalid range [%jd, %jd]", min, max);
 
     if (x >= min && x <= max)
         exam_fail_test(file, line,
@@ -1280,7 +1280,7 @@ void exam_assert_not_in_range_int(intmax_t x, intmax_t min, intmax_t max, const 
 void exam_assert_in_range_uint(uintmax_t x, uintmax_t min, uintmax_t max, const char *file, size_t line)
 {
     if (min > max)
-        _exam_dief("invalid range [%ju, %ju]", min, max);
+        exam_internal_dief("invalid range [%ju, %ju]", min, max);
 
     if (x < min || x > max)
         exam_fail_test(file, line,
@@ -1291,7 +1291,7 @@ void exam_assert_in_range_uint(uintmax_t x, uintmax_t min, uintmax_t max, const 
 void exam_assert_not_in_range_uint(uintmax_t x, uintmax_t min, uintmax_t max, const char *file, size_t line)
 {
     if (min > max)
-        _exam_dief("invalid range [%ju, %ju]", min, max);
+        exam_internal_dief("invalid range [%ju, %ju]", min, max);
 
     if (x >= min && x <= max)
         exam_fail_test(file, line,
@@ -1302,9 +1302,9 @@ void exam_assert_not_in_range_uint(uintmax_t x, uintmax_t min, uintmax_t max, co
 void exam_assert_in_range_float(float x, float min, float max, float eps, const char *file, size_t line)
 {
     if (min > max)
-        _exam_dief("invalid range [%.9g, %.9g]", min, max);
+        exam_internal_dief("invalid range [%.9g, %.9g]", min, max);
 
-    if (!_exam_float_in_range(x, min, max, eps))
+    if (!exam_internal_float_in_range(x, min, max, eps))
         exam_fail_test(file, line,
                        "%.9g is not within the range [%.9g, %.9g]",
                        x, min, max);
@@ -1313,9 +1313,9 @@ void exam_assert_in_range_float(float x, float min, float max, float eps, const 
 void exam_assert_not_in_range_float(float x, float min, float max, float eps, const char *file, size_t line)
 {
     if (min > max)
-        _exam_dief("invalid range [%.9g, %.9g]", min, max);
+        exam_internal_dief("invalid range [%.9g, %.9g]", min, max);
 
-    if (_exam_float_in_range(x, min, max, eps))
+    if (exam_internal_float_in_range(x, min, max, eps))
         exam_fail_test(file, line,
                        "%.9g is within the range [%.9g, %.9g]",
                        x, min, max);
@@ -1324,9 +1324,9 @@ void exam_assert_not_in_range_float(float x, float min, float max, float eps, co
 void exam_assert_in_range_double(double x, double min, double max, double eps, const char *file, size_t line)
 {
     if (min > max)
-        _exam_dief("invalid range [%.17g, %.17g]", min, max);
+        exam_internal_dief("invalid range [%.17g, %.17g]", min, max);
 
-    if (!_exam_double_in_range(x, min, max, eps))
+    if (!exam_internal_double_in_range(x, min, max, eps))
         exam_fail_test(file, line,
                        "%.17g is not within the range [%.17g, %.17g]",
                        x, min, max);
@@ -1335,9 +1335,9 @@ void exam_assert_in_range_double(double x, double min, double max, double eps, c
 void exam_assert_not_in_range_double(double x, double min, double max, double eps, const char *file, size_t line)
 {
     if (min > max)
-        _exam_dief("invalid range [%.17g, %.17g]", min, max);
+        exam_internal_dief("invalid range [%.17g, %.17g]", min, max);
 
-    if (_exam_double_in_range(x, min, max, eps))
+    if (exam_internal_double_in_range(x, min, max, eps))
         exam_fail_test(file, line,
                        "%.17g is within the range [%.17g, %.17g]",
                        x, min, max);
@@ -1390,7 +1390,7 @@ void exam_assert_not_in_arr_uint(uintmax_t x, const uintmax_t *arr, size_t count
 void exam_assert_in_arr_float(float x, const float *arr, size_t count, float eps, const char *file, size_t line)
 {
     for (size_t i = 0; i < count; i ++) {
-        if (_exam_float_cmp(x, arr[i], eps))
+        if (exam_internal_float_cmp(x, arr[i], eps))
             return;
     }
 
@@ -1402,7 +1402,7 @@ void exam_assert_in_arr_float(float x, const float *arr, size_t count, float eps
 void exam_assert_not_in_arr_float(float x, const float *arr, size_t count, float eps, const char *file, size_t line)
 {
     for (size_t i = 0; i < count; i ++) {
-        if (_exam_float_cmp(x, arr[i], eps))
+        if (exam_internal_float_cmp(x, arr[i], eps))
             exam_fail_test(file, line,
                            "%.9g in %p (count=%zu)",
                            x, (void*)arr, count);
@@ -1412,7 +1412,7 @@ void exam_assert_not_in_arr_float(float x, const float *arr, size_t count, float
 void exam_assert_in_arr_double(double x, const double *arr, size_t count, double eps, const char *file, size_t line)
 {
     for (size_t i = 0; i < count; i ++) {
-        if (_exam_double_cmp(x, arr[i], eps))
+        if (exam_internal_double_cmp(x, arr[i], eps))
             return;
     }
 
@@ -1424,14 +1424,14 @@ void exam_assert_in_arr_double(double x, const double *arr, size_t count, double
 void exam_assert_not_in_arr_double(double x, const double *arr, size_t count, double eps, const char *file, size_t line)
 {
     for (size_t i = 0; i < count; i ++) {
-        if (_exam_double_cmp(x, arr[i], eps))
+        if (exam_internal_double_cmp(x, arr[i], eps))
             exam_fail_test(file, line,
                            "%.17g in %p (count=%zu)",
                            x, (void*)arr, count);
     }
 }
 
-static int _exam_test_cmp(const void *a, const void *b)
+static int exam_internal_test_cmp(const void *a, const void *b)
 {
     const struct exam_test *test_a = (const struct exam_test *)a;
     const struct exam_test *test_b = (const struct exam_test *)b;
@@ -1441,7 +1441,7 @@ static int _exam_test_cmp(const void *a, const void *b)
     return result;
 }
 
-static bool _exam_str_cmp(const char *a, const char *b)
+static bool exam_internal_str_cmp(const char *a, const char *b)
 {
     if (a == NULL || b == NULL)
         return a == b;
@@ -1449,10 +1449,10 @@ static bool _exam_str_cmp(const char *a, const char *b)
     return strcmp(a, b) == 0;
 }
 
-static bool _exam_float_cmp(float a, float b, float eps)
+static bool exam_internal_float_cmp(float a, float b, float eps)
 {
     if (!isfinite(eps) || eps < 0)
-        _exam_dief("invalid epsilon: %.9g", eps);
+        exam_internal_dief("invalid epsilon: %.9g", eps);
 
     if (isnan(a) && isnan(b))
         return true;
@@ -1472,10 +1472,10 @@ static bool _exam_float_cmp(float a, float b, float eps)
     return diff <= eps * largest;
 }
 
-static bool _exam_double_cmp(double a, double b, double eps)
+static bool exam_internal_double_cmp(double a, double b, double eps)
 {
     if (!isfinite(eps) || eps < 0)
-        _exam_dief("invalid epsilon: %.17g", eps);
+        exam_internal_dief("invalid epsilon: %.17g", eps);
 
     if (isnan(a) && isnan(b))
         return true;
@@ -1495,25 +1495,25 @@ static bool _exam_double_cmp(double a, double b, double eps)
     return diff <= eps * largest;
 }
 
-static bool _exam_float_in_range(float x, float min, float max, float eps)
+static bool exam_internal_float_in_range(float x, float min, float max, float eps)
 {
     if (!isfinite(eps) || eps < 0)
-        _exam_dief("invalid epsilon: %.9g", eps);
+        exam_internal_dief("invalid epsilon: %.9g", eps);
 
-    return (_exam_float_cmp(x, min, eps) || x > min) &&
-           (_exam_float_cmp(x, max, eps) || x < max);
+    return (exam_internal_float_cmp(x, min, eps) || x > min) &&
+           (exam_internal_float_cmp(x, max, eps) || x < max);
 }
 
-static bool _exam_double_in_range(double x, double min, double max, double eps)
+static bool exam_internal_double_in_range(double x, double min, double max, double eps)
 {
     if (!isfinite(eps) || eps < 0)
-        _exam_dief("invalid epsilon: %.17g", eps);
+        exam_internal_dief("invalid epsilon: %.17g", eps);
 
-    return (_exam_double_cmp(x, min, eps) || x > min) &&
-           (_exam_double_cmp(x, max, eps) || x < max);
+    return (exam_internal_double_cmp(x, min, eps) || x > min) &&
+           (exam_internal_double_cmp(x, max, eps) || x < max);
 }
 
-static const char *_exam_str_repr(const char *str)
+static const char *exam_internal_str_repr(const char *str)
 {
     if (str == NULL)
         return "NULL";
@@ -1522,22 +1522,22 @@ static const char *_exam_str_repr(const char *str)
 }
 
 // Runner
-static bool _exam_check_filter(const struct exam_test *test, const struct exam_filter *filter);
+static bool exam_internal_check_filter(const struct exam_test *test, const struct exam_filter *filter);
 
-static void _exam_list_append(struct exam_test_list *list, const struct exam_test *test);
-static void _exam_list_destroy(struct exam_test_list *list);
-static void _exam_list_sort(struct exam_test_list *list);
+static void exam_internal_list_append(struct exam_test_list *list, const struct exam_test *test);
+static void exam_internal_list_destroy(struct exam_test_list *list);
+static void exam_internal_list_sort(struct exam_test_list *list);
 
-static void _exam_run_tests(struct exam_test_list *list, const struct exam_filter *filter, size_t jobs);
-static struct exam_process _exam_start_test(struct exam_test *test, size_t idx);
-static void _exam_finish_test(struct exam_test *test, const struct exam_exit *ex);
-static void _exam_read_output(struct exam_test *test, struct exam_process *proc);
+static void exam_internal_run_tests(struct exam_test_list *list, const struct exam_filter *filter, size_t jobs);
+static struct exam_process exam_internal_start_test(struct exam_test *test, size_t idx);
+static void exam_internal_finish_test(struct exam_test *test, const struct exam_exit *ex);
+static void exam_internal_read_output(struct exam_test *test, struct exam_process *proc);
 
 int exam_run(const struct exam_filter *filter, size_t jobs)
 {
-    _exam_platform_maybe_run_child();
+    exam_internal_platform_maybe_run_child();
 
-    _exam_list_sort(&exam_state.test_list);
+    exam_internal_list_sort(&exam_state.test_list);
     exam_state.passed = 0;
     exam_state.failed = 0;
     exam_state.crashed = 0;
@@ -1546,7 +1546,7 @@ int exam_run(const struct exam_filter *filter, size_t jobs)
         exam_state.on_start();
 
     struct exam_test_list *list = &exam_state.test_list;
-    _exam_run_tests(list, filter, jobs);
+    exam_internal_run_tests(list, filter, jobs);
 
     if (exam_state.on_finish)
         exam_state.on_finish();
@@ -1558,10 +1558,10 @@ int exam_run(const struct exam_filter *filter, size_t jobs)
 
 void exam_register(struct exam_test *test)
 {
-    _exam_list_append(&exam_state.test_list, test);
+    exam_internal_list_append(&exam_state.test_list, test);
 }
 
-static bool _exam_check_filter(const struct exam_test *test, const struct exam_filter *filter)
+static bool exam_internal_check_filter(const struct exam_test *test, const struct exam_filter *filter)
 {
     if (filter == NULL)
         return true;
@@ -1581,10 +1581,10 @@ static bool _exam_check_filter(const struct exam_test *test, const struct exam_f
     return out;
 }
 
-static void _exam_list_append(struct exam_test_list *list, const struct exam_test *test)
+static void exam_internal_list_append(struct exam_test_list *list, const struct exam_test *test)
 {
     if (list->count == SIZE_MAX)
-        _exam_dief("test list too large");
+        exam_internal_dief("test list too large");
 
     size_t new_count = list->count + 1;
     if (list->data == NULL || new_count > list->capacity) {
@@ -1593,18 +1593,18 @@ static void _exam_list_append(struct exam_test_list *list, const struct exam_tes
             new_cap = 4;
         } else {
             if (new_cap > SIZE_MAX / 2)
-                _exam_dief("test list too large");
+                exam_internal_dief("test list too large");
 
             new_cap *= 2;
         }
         if (new_cap < new_count)
             new_cap = new_count;
         if (new_cap > SIZE_MAX / sizeof(*list->data))
-            _exam_dief("test list too large");
+            exam_internal_dief("test list too large");
 
         struct exam_test *data = (struct exam_test *)EXAM_REALLOC(list->data, sizeof(*list->data) * new_cap);
         if (data == NULL)
-            _exam_die_perror("EXAM_REALLOC");
+            exam_internal_die_perror("EXAM_REALLOC");
 
         list->data = data;
         list->capacity = new_cap;
@@ -1615,7 +1615,7 @@ static void _exam_list_append(struct exam_test_list *list, const struct exam_tes
     list->count++;
 }
 
-static void _exam_list_destroy(struct exam_test_list *list)
+static void exam_internal_list_destroy(struct exam_test_list *list)
 {
     if (list->data == NULL)
         return;
@@ -1626,24 +1626,24 @@ static void _exam_list_destroy(struct exam_test_list *list)
     list->capacity = 0;
 }
 
-static void _exam_list_sort(struct exam_test_list *list)
+static void exam_internal_list_sort(struct exam_test_list *list)
 {
-    qsort(list->data, list->count, sizeof(*list->data), _exam_test_cmp);
+    qsort(list->data, list->count, sizeof(*list->data), exam_internal_test_cmp);
 }
 
-static void _exam_run_tests(struct exam_test_list *list, const struct exam_filter *filter, size_t jobs)
+static void exam_internal_run_tests(struct exam_test_list *list, const struct exam_filter *filter, size_t jobs)
 {
     if (list->count == 0)
         return;
 
     if (jobs == 0)
-        jobs = _exam_platform_cpu_count();
+        jobs = exam_internal_platform_cpu_count();
     if (jobs > list->count)
         jobs = list->count;
 
     struct exam_process *running = (struct exam_process *)EXAM_CALLOC(jobs, sizeof(*running));
     if (running == NULL)
-        _exam_die_perror("calloc");
+        exam_internal_die_perror("calloc");
 
     size_t next_idx = 0;
     size_t running_count = 0;
@@ -1651,31 +1651,31 @@ static void _exam_run_tests(struct exam_test_list *list, const struct exam_filte
         while (running_count < jobs && next_idx < list->count) {
             size_t idx = next_idx++;
             struct exam_test *test = &list->data[idx];
-            if (!_exam_check_filter(test, filter))
+            if (!exam_internal_check_filter(test, filter))
                 continue;
 
-            running[running_count++] = _exam_start_test(test, idx);
+            running[running_count++] = exam_internal_start_test(test, idx);
         }
 
         if (running_count == 0)
             break;
 
-        _exam_platform_process_wait_io(running, running_count);
+        exam_internal_platform_process_wait_io(running, running_count);
 
         for (size_t i = 0; i < running_count; ++i)
-            _exam_read_output( &list->data[running[i].test_index], &running[i]);
+            exam_internal_read_output( &list->data[running[i].test_index], &running[i]);
 
         for (size_t i = 0; i < running_count;) {
             struct exam_exit ex;
-            if (!_exam_platform_process_try_reap(&running[i], &ex)) {
+            if (!exam_internal_platform_process_try_reap(&running[i], &ex)) {
                 i++;
                 continue;
             }
 
             struct exam_test *test = &list->data[running[i].test_index];
-            _exam_read_output(test, &running[i]);
-            _exam_finish_test(test, &ex);
-            _exam_platform_process_close(&running[i]);
+            exam_internal_read_output(test, &running[i]);
+            exam_internal_finish_test(test, &ex);
+            exam_internal_platform_process_close(&running[i]);
 
             running[i] = running[--running_count];
         }
@@ -1684,10 +1684,10 @@ static void _exam_run_tests(struct exam_test_list *list, const struct exam_filte
     EXAM_FREE(running);
 }
 
-static struct exam_process _exam_start_test(struct exam_test *test, size_t idx)
+static struct exam_process exam_internal_start_test(struct exam_test *test, size_t idx)
 {
     if (test->state != EXAM_TEST_NONE)
-        _exam_dief("tried to run test with an unexpected state: %d",
+        exam_internal_dief("tried to run test with an unexpected state: %d",
                    test->state);
 
     test->state = EXAM_TEST_RUNNING;
@@ -1700,13 +1700,13 @@ static struct exam_process _exam_start_test(struct exam_test *test, size_t idx)
 
     struct exam_process proc = {0};
     proc.test_index = idx;
-    if (!_exam_platform_process_start(&proc, test))
-        _exam_dief("failed to start test");
+    if (!exam_internal_platform_process_start(&proc, test))
+        exam_internal_dief("failed to start test");
 
     return proc;
 }
 
-static void _exam_finish_test(struct exam_test *test, const struct exam_exit *ex)
+static void exam_internal_finish_test(struct exam_test *test, const struct exam_exit *ex)
 {
      if (ex->kind == EXAM_EXIT_NORMAL) {
         test->state = (ex->code == EXIT_SUCCESS) ? EXAM_TEST_PASSED
@@ -1727,7 +1727,7 @@ static void _exam_finish_test(struct exam_test *test, const struct exam_exit *ex
             exam_state.crashed++;
             break;
         default:
-            _exam_dief("test finished with unexpected state: %d",
+            exam_internal_dief("test finished with unexpected state: %d",
                        test->state);
     }
 
@@ -1735,16 +1735,16 @@ static void _exam_finish_test(struct exam_test *test, const struct exam_exit *ex
         exam_state.on_test_finish(test);
 }
 
-static void _exam_read_output(struct exam_test *test, struct exam_process *proc)
+static void exam_internal_read_output(struct exam_test *test, struct exam_process *proc)
 {
     char buf[256];
     for (;;) {
         size_t n = 0;
-        enum exam_read_status status = _exam_platform_process_read(proc, buf, sizeof(buf), &n);
+        enum exam_read_status status = exam_internal_platform_process_read(proc, buf, sizeof(buf), &n);
         if (status == EXAM_READ_AGAIN || status == EXAM_READ_EOF)
             return;
         if (status == EXAM_READ_ERROR)
-            _exam_die_perror("read");
+            exam_internal_die_perror("read");
 
         size_t remaining = EXAM_TEST_OUTPUT_SIZE - test->output_size;
         size_t copy = n < remaining ? n : remaining;
@@ -1787,17 +1787,17 @@ static struct {
     struct exam_filter filter;
 } exam_cli_state = {0};
 
-static int _exam_cli_run(void);
-static int _exam_cli_list(void);
-static void _exam_cli_usage(void);
+static int exam_internal_cli_run(void);
+static int exam_internal_cli_list(void);
+static void exam_internal_cli_usage(void);
 
-static void _exam_cli_on_finish(void);
-static void _exam_cli_on_test_finish(const struct exam_test *test);
+static void exam_internal_cli_on_finish(void);
+static void exam_internal_cli_on_test_finish(const struct exam_test *test);
 
-static void _exam_cli_test_output(const struct exam_test *test);
-static const char *_exam_cli_color(const char *color);
-static bool _exam_cli_is_option(const char *str, const char *short_name, const char *long_name);
-static bool _exam_cli_is_color(void);
+static void exam_internal_cli_test_output(const struct exam_test *test);
+static const char *exam_internal_cli_color(const char *color);
+static bool exam_internal_cli_is_option(const char *str, const char *short_name, const char *long_name);
+static bool exam_internal_cli_is_color(void);
 
 int exam_cli_main(int argc, char **argv)
 {
@@ -1808,13 +1808,13 @@ int exam_cli_main(int argc, char **argv)
     exam_cli_state.filter.category_name = NULL;
     exam_cli_state.filter.test_name = NULL;
 
-    exam_state.on_finish = _exam_cli_on_finish;
-    exam_state.on_test_finish = _exam_cli_on_test_finish;
+    exam_state.on_finish = exam_internal_cli_on_finish;
+    exam_state.on_test_finish = exam_internal_cli_on_test_finish;
 
     // Options
     int rc = EXIT_SUCCESS;
     for (int i = 1; i < argc; ++i) {
-        if (_exam_cli_is_option(argv[i], "-j", "--jobs")) {
+        if (exam_internal_cli_is_option(argv[i], "-j", "--jobs")) {
             size_t value = 0;
 
             if (i + 1 < argc && argv[i + 1][0] != '-') {
@@ -1833,9 +1833,9 @@ int exam_cli_main(int argc, char **argv)
             }
 
             exam_cli_state.jobs = value;
-        } else if (_exam_cli_is_option(argv[i], "-l", "--list")) {
+        } else if (exam_internal_cli_is_option(argv[i], "-l", "--list")) {
             exam_cli_state.action = EXAM_ACTION_LIST;
-        } else if (_exam_cli_is_option(argv[i], NULL, "--color")) {
+        } else if (exam_internal_cli_is_option(argv[i], NULL, "--color")) {
             if (i == argc - 1) {
                 fprintf(stderr, "usage: --color WHEN (can be auto, always or never)\n");
                 rc = EXIT_FAILURE;
@@ -1857,9 +1857,9 @@ int exam_cli_main(int argc, char **argv)
                 rc = EXIT_FAILURE;
                 goto cleanup;
             }
-        } else if (_exam_cli_is_option(argv[i], "-h", "--help")) {
+        } else if (exam_internal_cli_is_option(argv[i], "-h", "--help")) {
             exam_cli_state.action = EXAM_ACTION_HELP;
-        } else if (_exam_cli_is_option(argv[i], "-n", "--name")) {
+        } else if (exam_internal_cli_is_option(argv[i], "-n", "--name")) {
             if (i == argc - 1) {
                 fprintf(stderr, "usage: --name NAME\n");
                 rc = EXIT_FAILURE;
@@ -1874,7 +1874,7 @@ int exam_cli_main(int argc, char **argv)
             }
 
             exam_cli_state.filter.test_name = name;
-        } else if (_exam_cli_is_option(argv[i], "-c", "--category")) {
+        } else if (exam_internal_cli_is_option(argv[i], "-c", "--category")) {
             if (i == argc - 1) {
                 fprintf(stderr, "usage: --category CATEGORY\n");
                 rc = EXIT_FAILURE;
@@ -1892,21 +1892,21 @@ int exam_cli_main(int argc, char **argv)
         } else {
             fprintf(stderr, "unknown option '%s'\n", argv[i]);
             rc = EXIT_FAILURE;
-            _exam_cli_usage();
+            exam_internal_cli_usage();
             goto cleanup;
         }
     }
 
     switch (exam_cli_state.action) {
         case EXAM_ACTION_RUN:
-            rc = _exam_cli_run();
+            rc = exam_internal_cli_run();
             break;
         case EXAM_ACTION_LIST:
-            rc = _exam_cli_list();
+            rc = exam_internal_cli_list();
             break;
         case EXAM_ACTION_HELP:
             rc = EXIT_SUCCESS;
-            _exam_cli_usage();
+            exam_internal_cli_usage();
             break;
         default:
             rc = EXIT_FAILURE;
@@ -1915,11 +1915,11 @@ int exam_cli_main(int argc, char **argv)
     }
 
 cleanup:
-    _exam_list_destroy(&exam_state.test_list);
+    exam_internal_list_destroy(&exam_state.test_list);
     return rc;
 }
 
-static int _exam_cli_run(void)
+static int exam_internal_cli_run(void)
 {
     exam_run(&exam_cli_state.filter, exam_cli_state.jobs);
     if (exam_state.failed > 0 || exam_state.crashed > 0)
@@ -1927,18 +1927,18 @@ static int _exam_cli_run(void)
     return EXIT_SUCCESS;
 }
 
-static int _exam_cli_list(void)
+static int exam_internal_cli_list(void)
 {
     size_t found = 0;
     for (size_t i = 0; i < exam_state.test_list.count; ++i) {
         const struct exam_test *test = &exam_state.test_list.data[i];
-        if (!_exam_check_filter(test, &exam_cli_state.filter))
+        if (!exam_internal_check_filter(test, &exam_cli_state.filter))
             continue;
 
         printf("%s%s%s/%s\n",
-                _exam_cli_color(EXAM_CLI_CYAN),
+                exam_internal_cli_color(EXAM_CLI_CYAN),
                 test->category,
-                _exam_cli_color(EXAM_CLI_RESET),
+                exam_internal_cli_color(EXAM_CLI_RESET),
                 test->name);
 
         found ++;
@@ -1948,7 +1948,7 @@ static int _exam_cli_list(void)
     return EXIT_SUCCESS;
 }
 
-static void _exam_cli_usage(void)
+static void exam_internal_cli_usage(void)
 {
     printf("usage: " EXAM_CLI_NAME " [options] [filter...]\n"
            "options:\n"
@@ -1961,7 +1961,7 @@ static void _exam_cli_usage(void)
            "    -c, --category CATEGORY  category name\n");
 }
 
-static void _exam_cli_on_finish(void)
+static void exam_internal_cli_on_finish(void)
 {
     fprintf(stdout,
             "%zu passed, %zu failed, %zu crashed\n",
@@ -1970,35 +1970,35 @@ static void _exam_cli_on_finish(void)
             exam_state.crashed);
 }
 
-static void _exam_cli_on_test_finish(const struct exam_test *test)
+static void exam_internal_cli_on_test_finish(const struct exam_test *test)
 {
     switch(test->state) {
         case EXAM_TEST_PASSED:
             fprintf(stdout,
                     "%s[PASS] %s/%s%s\n",
-                    _exam_cli_color(EXAM_CLI_GREEN),
+                    exam_internal_cli_color(EXAM_CLI_GREEN),
                     test->category,
                     test->name,
-                    _exam_cli_color(EXAM_CLI_RESET));
+                    exam_internal_cli_color(EXAM_CLI_RESET));
             break;
         case EXAM_TEST_FAILED:
             fprintf(stderr,
                     "%s[FAIL] %s/%s%s\n",
-                    _exam_cli_color(EXAM_CLI_RED),
+                    exam_internal_cli_color(EXAM_CLI_RED),
                     test->category,
                     test->name,
-                    _exam_cli_color(EXAM_CLI_RESET));
-            _exam_cli_test_output(test);
+                    exam_internal_cli_color(EXAM_CLI_RESET));
+            exam_internal_cli_test_output(test);
             break;
         case EXAM_TEST_CRASHED:
             fprintf(stderr,
                     "%s[CRASH] %s/%s (signal %d)%s\n",
-                    _exam_cli_color(EXAM_CLI_YELLOW),
+                    exam_internal_cli_color(EXAM_CLI_YELLOW),
                     test->category,
                     test->name,
                     test->exit_signal,
-                    _exam_cli_color(EXAM_CLI_RESET));
-            _exam_cli_test_output(test);
+                    exam_internal_cli_color(EXAM_CLI_RESET));
+            exam_internal_cli_test_output(test);
             break;
         default:
             fprintf(stderr,
@@ -2010,7 +2010,7 @@ static void _exam_cli_on_test_finish(const struct exam_test *test)
 
 }
 
-static void _exam_cli_test_output(const struct exam_test *test)
+static void exam_internal_cli_test_output(const struct exam_test *test)
 {
     if (test->output_size <= 0)
         return;
@@ -2019,7 +2019,7 @@ static void _exam_cli_test_output(const struct exam_test *test)
     if (test->state == EXAM_TEST_CRASHED)
         color = EXAM_CLI_YELLOW;
 
-    fputs(_exam_cli_color(color), stderr);
+    fputs(exam_internal_cli_color(color), stderr);
     fputc('\t', stderr);
     for (size_t i = 0; i < test->output_size; i++) {
         char ch = test->output[i];
@@ -2034,18 +2034,18 @@ static void _exam_cli_test_output(const struct exam_test *test)
         fputs("\t...\n", stderr);
     }
 
-    fputs(_exam_cli_color(EXAM_CLI_RESET), stderr);
+    fputs(exam_internal_cli_color(EXAM_CLI_RESET), stderr);
 }
 
-static const char *_exam_cli_color(const char *color)
+static const char *exam_internal_cli_color(const char *color)
 {
-    if (_exam_cli_is_color())
+    if (exam_internal_cli_is_color())
         return color;
 
     return "";
 }
 
-static bool _exam_cli_is_option(const char *str, const char *short_name, const char *long_name)
+static bool exam_internal_cli_is_option(const char *str, const char *short_name, const char *long_name)
 {
     if (str == NULL)
         return false;
@@ -2058,14 +2058,14 @@ static bool _exam_cli_is_option(const char *str, const char *short_name, const c
     return false;
 }
 
-static bool _exam_cli_is_color(void)
+static bool exam_internal_cli_is_color(void)
 {
     if (exam_cli_state.color == EXAM_COLOR_NEVER)
         return false;
     if (exam_cli_state.color == EXAM_COLOR_ALWAYS)
         return true;
 
-    return _exam_platform_is_tty();
+    return exam_internal_platform_is_tty();
 }
 #endif // EXAM_IMPLEMENTATION
 #ifdef __cplusplus
@@ -2078,7 +2078,7 @@ static bool _exam_cli_is_color(void)
 #include <string>
 
 template <typename T>
-std::string _exam_to_string(const T &value)
+std::string exam_internal_to_string(const T &value)
 {
     std::ostringstream stream;
     stream << value;
@@ -2091,7 +2091,7 @@ void exam_assert_in_container(const Value &x, const Container &container, const 
     if (std::find(container.begin(), container.end(), x) == container.end())
         exam_fail_test(file, line,
                        "\"%s\" not in container",
-                       _exam_to_string(x).c_str());
+                       exam_internal_to_string(x).c_str());
 }
 
 template <typename Container, typename Value>
@@ -2100,7 +2100,7 @@ void exam_assert_not_in_container(const Value &x, const Container &container, co
     if (std::find(container.begin(), container.end(), x) != container.end())
         exam_fail_test(file, line,
                        "\"%s\" in container",
-                       _exam_to_string(x).c_str());
+                       exam_internal_to_string(x).c_str());
 }
 
 template <typename K, typename Map>
@@ -2109,7 +2109,7 @@ void exam_assert_key_in_map(const K &key, const Map &map, const char *file, size
     if (map.find(key) == map.end())
         exam_fail_test(file, line,
                        "key \"%s\" not in map",
-                       _exam_to_string(key).c_str());
+                       exam_internal_to_string(key).c_str());
 }
 
 template <typename K, typename Map>
@@ -2118,7 +2118,7 @@ void exam_assert_key_not_in_map(const K &key, const Map &map, const char *file, 
     if (map.find(key) != map.end())
         exam_fail_test(file, line,
                        "key \"%s\" in map",
-                       _exam_to_string(key).c_str());
+                       exam_internal_to_string(key).c_str());
 }
 
 template <typename V, typename Map>
@@ -2130,7 +2130,7 @@ void exam_assert_val_in_map(const V &val, const Map &map, const char *file, size
 
     exam_fail_test(file, line,
                    "value \"%s\" not in map",
-                   _exam_to_string(val).c_str());
+                   exam_internal_to_string(val).c_str());
 }
 
 template <typename V, typename Map>
@@ -2140,7 +2140,7 @@ void exam_assert_val_not_in_map(const V &val, const Map &map, const char *file, 
         if (entry.second == val)
             exam_fail_test(file, line,
                            "value \"%s\" in map",
-                           _exam_to_string(val).c_str());
+                           exam_internal_to_string(val).c_str());
 }
 
 template <typename K, typename V, typename Map>
@@ -2150,12 +2150,12 @@ void exam_assert_key_val_in_map(const K &key, const V &val, const Map &map, cons
     if (it == map.end())
         exam_fail_test(file, line,
                        "key \"%s\" not in map",
-                       _exam_to_string(key).c_str());
+                       exam_internal_to_string(key).c_str());
 
     if (it->second != val)
         exam_fail_test(file, line,
                        "value at key \"%s\" is not \"%s\" in map",
-                       _exam_to_string(key).c_str(), _exam_to_string(val).c_str());
+                       exam_internal_to_string(key).c_str(), exam_internal_to_string(val).c_str());
 }
 
 template <typename K, typename V, typename Map>
@@ -2168,7 +2168,7 @@ void exam_assert_key_val_not_in_map(const K &key, const V &val, const Map &map, 
     if (it->second == val)
         exam_fail_test(file, line,
                        "value at key \"%s\" is \"%s\" in map",
-                       _exam_to_string(key).c_str(), _exam_to_string(val).c_str());
+                       exam_internal_to_string(key).c_str(), exam_internal_to_string(val).c_str());
 }
 #endif // defined(__cplusplus) && !defined(EXAM_NO_STL)
 
