@@ -1478,7 +1478,7 @@ int exam_run(const struct exam_filter *filter, size_t jobs)
     exam_state.failed = 0;
     exam_state.crashed = 0;
 
-    exam_state.timeout_ms = 100;
+    exam_state.timeout_ms = 1000;
 
     if (exam_state.on_start)
         exam_state.on_start();
@@ -1794,6 +1794,25 @@ int exam_cli_main(int argc, char **argv)
             exam_cli_state.jobs = value;
         } else if (exam_internal_cli_is_option(argv[i], "-l", "--list")) {
             exam_cli_state.action = EXAM_ACTION_LIST;
+        } else if (exam_internal_cli_is_option(argv[i], "-t", "--timeout")) {
+            if (i == argc - 1) {
+                fprintf(stderr, "usage: --timeout SECONDS\n");
+                rc = EXIT_FAILURE;
+                goto cleanup;
+            }
+
+            const char *timeout_str = argv[++i];
+            errno = 0;
+            char *end;
+            unsigned long long parsed = strtoull(timeout_str, &end, 10);
+            if (errno == ERANGE || end == timeout_str || *end != '\0' ||
+                parsed > UINT64_MAX / 1000) {
+                fprintf(stderr, "invalid timeout '%s'\n", timeout_str);
+                rc = EXIT_FAILURE;
+                goto cleanup;
+            }
+
+            exam_state.timeout_ms = (uint64_t)parsed * 1000u;
         } else if (exam_internal_cli_is_option(argv[i], NULL, "--color")) {
             if (i == argc - 1) {
                 fprintf(stderr, "usage: --color WHEN (can be auto, always or never)\n");
@@ -1915,6 +1934,8 @@ static void exam_internal_cli_usage(FILE *stream)
            "    -j, --jobs N        run up to N tests at once (default: 1);\n"
            "                        without N, use the number of CPUs\n"
            "    -l, --list          list available tests\n"
+           "    -t, --timeout SECS  kill tests running longer than SECS (default: 1);\n"
+           "                        0 means no limit\n"
            "        --color WHEN    colorize output: auto, always, never\n"
            "    -h, --help          show this message\n"
            "filters (combine them to narrow the selection):\n"
