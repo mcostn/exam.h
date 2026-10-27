@@ -1331,7 +1331,7 @@ EXAM_INTERNAL_DEF_CMP(ge, uint, uintmax_t, "%ju", "<", a >= b)
             exam_internal_dief("invalid epsilon: " fmt, eps); \
         \
         if (isnan(a) || isnan(b)) \
-            return isnan(a) && isnan(b); \
+            return false; \
         if (isinf(a) && isinf(b)) \
             return (a < 0) == (b < 0); \
         \
