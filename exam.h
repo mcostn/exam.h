@@ -355,12 +355,12 @@ DOCUMENTATION
 #error "EXAM_CALLOC, EXAM_REALLOC and EXAM_FREE must be defined together."
 #endif
 
-#if defined(EXAM_GCC) || defined(EXAM_CLANG) || defined(EXAM_TCC)
+#if defined(__cplusplus) && __cplusplus >= 201103L
+#define EXAM_NORETURN [[noreturn]]
+#elif defined(EXAM_GCC) || defined(EXAM_CLANG) || defined(EXAM_TCC)
 #define EXAM_NORETURN __attribute__((noreturn))
 #elif defined(EXAM_MSVC)
 #define EXAM_NORETURN __declspec(noreturn)
-#elif defined(__cplusplus) && __cplusplus >= 201103L
-#define EXAM_NORETURN [[noreturn]]
 #else
 #define EXAM_NORETURN
 #endif
@@ -506,9 +506,18 @@ DOCUMENTATION
 #define EXAM_DEFINE_TEST(category_name, test_name) \
     static void EXAM_INTERNAL_DEF_NAME(category_name, test_name)(void); \
     static struct exam_test EXAM_INTERNAL_STRUCT_NAME(category_name, test_name) = { \
-         .category = #category_name, \
-         .name = #test_name, \
-         .func = EXAM_INTERNAL_DEF_NAME(category_name, test_name), \
+        #category_name, /* category */ \
+        #test_name, /* name */ \
+        EXAM_INTERNAL_DEF_NAME(category_name, test_name), /* func */ \
+        \
+        EXAM_TEST_NONE, /* state */ \
+        0, /* exit_signal */ \
+        \
+        0, /* registration_index */ \
+        \
+        {0}, /* output */ \
+        0, /* output_size */ \
+        false, /* output_truncated */ \
     }; \
     static void EXAM_INTERNAL_DEF_NAME(category_name, test_name)(void)
 
