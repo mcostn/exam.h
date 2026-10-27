@@ -971,6 +971,36 @@ struct exam_process
     bool timed_out;
 };
 
+static void exam_internal_win_die(const char *operation)
+{
+    DWORD error = GetLastError();
+
+    LPSTR message = NULL;
+    DWORD flags = FORMAT_MESSAGE_ALLOCATE_BUFFER |
+                  FORMAT_MESSAGE_FROM_SYSTEM |
+                  FORMAT_MESSAGE_IGNORE_INSERTS;
+
+    FormatMessageA(
+        flags,
+        NULL,
+        error,
+        0,
+        (LPSTR)&message,
+        0,
+        NULL
+    );
+
+    fprintf(stderr, "%s failed (error %lu): %s\n",
+            operation,
+            (unsigned long)error,
+            message ? message : "unknown error");
+
+    if (message)
+        LocalFree(message);
+
+    exit(EXIT_FAILURE);
+}
+
 static size_t exam_internal_platform_cpu_count(void)
 {
     SYSTEM_INFO si;
@@ -1217,7 +1247,7 @@ static void exam_internal_platform_process_wait_io(struct exam_process *procs, s
     }
 
     if (WaitForMultipleObjects(n, handles, FALSE, 10) == WAIT_FAILED)
-        exam_internal_die_perror("WaitForMultipleObjects");
+        exam_internal_win_die("WaitForMultipleObjects");
 }
 
 static int exam_internal_win_code_to_signal(DWORD code)
@@ -1258,11 +1288,11 @@ static bool exam_internal_platform_process_try_reap(struct exam_process *proc, s
     if (r == WAIT_TIMEOUT)
         return false;
     if (r != WAIT_OBJECT_0)
-        exam_internal_die_perror("WaitForSingleObject");
+        exam_internal_win_die("WaitForSingleObject");
 
     DWORD code;
     if (!GetExitCodeProcess(proc->process, &code))
-        exam_internal_die_perror("GetExitCodeProcess");
+        exam_internal_win_die("GetExitCodeProcess");
 
     if ((code & 0xF0000000u) == 0xC0000000u) {
         out->kind = EXAM_EXIT_SIGNAL;
