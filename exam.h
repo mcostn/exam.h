@@ -277,6 +277,20 @@ DOCUMENTATION
                 Checks whether map m does not contain the key k associated with a value equal to v.
                 Passes if the key is absent or its associated value differs from v.
 
+        Custom Asserts
+
+            DEFINE_ASSERT_FUNC(name, ...):
+                Defines a custom assertion function named exam_assert_name.
+                The macro appends const char *file and size_t line parameters
+                to capture the assertion's call site.
+
+            CALL_ASSERT_FUNC(name, ...):
+                Calls a custom assertion function, automatically passing
+                __FILE__ and __LINE__.
+
+            On failure, use exam_fail_test(file, line, ...) to report the
+            error with the correct source location.
+
     Notes
 
         Internal Functions
@@ -400,12 +414,8 @@ DOCUMENTATION
 #define EXAM_CLI_NAME "exam"
 #endif
 
-#define EXAM_FAIL(...) exam_fail_test(__FILE__, __LINE__, __VA_ARGS__)
-#define EXAM_ASSERT_MSG(cond, ...) \
-    do { \
-        if (!(cond)) \
-            EXAM_FAIL(__VA_ARGS__); \
-    } while (0)
+#define EXAM_DEFINE_ASSERT_FUNC(name, ...) void exam_assert_##name(__VA_ARGS__, const char *file, size_t line)
+#define EXAM_CALL_ASSERT_FUNC(name, ...) exam_assert_##name(__VA_ARGS__, __FILE__, __LINE__)
 
 #define EXAM_ASSERT_TRUE(cond) exam_assert_true((cond), #cond, __FILE__, __LINE__)
 #define EXAM_ASSERT_FALSE(cond) exam_assert_false((cond), #cond, __FILE__, __LINE__)
@@ -1256,7 +1266,8 @@ static const char *exam_internal_str_quote(const char *str);
 
 void exam_fail_test(const char *file, size_t line, const char *fmt, ...)
 {
-    fprintf(stderr, "[%s:%zu] ", file, line);
+    if (file != NULL && line > 0)
+        fprintf(stderr, "[%s:%zu] ", file, line);
 
     va_list args;
     va_start(args, fmt);
@@ -2278,6 +2289,9 @@ void exam_assert_key_val_not_in_map(const K &key, const V &val, const Map &map, 
 #ifndef EXAM_NO_SHORT_NAMES
 #define FAIL EXAM_FAIL
 #define ASSERT_MSG EXAM_ASSERT_MSG
+
+#define DEFINE_ASSERT_FUNC EXAM_DEFINE_ASSERT_FUNC
+#define CALL_ASSERT_FUNC EXAM_CALL_ASSERT_FUNC
 
 #define ASSERT_TRUE EXAM_ASSERT_TRUE
 #define ASSERT_FALSE EXAM_ASSERT_FALSE

@@ -3,25 +3,6 @@
 
 #include <stdlib.h>
 
-#define ASSERT_STACK_LEN(stack_expr, expected_expr) \
-    do { \
-        const struct stack *stack_ = (stack_expr); \
-        size_t expected_ = (size_t)(expected_expr); \
-        EXAM_ASSERT_MSG(stack_->len == expected_, \
-                        "stack has %zu items, expected %zu", \
-                        stack_->len, expected_); \
-    } while (0)
-
-#define ASSERT_STACK_CONTAINS(s, value) \
-    do { \
-        int found = 0; \
-        for (size_t i_ = 0; i_ < (s)->len; i_++) \
-            if ((s)->data[i_] == (value)) \
-                found = 1; \
-        if (!found) \
-            EXAM_FAIL("stack does not contain %d", (int)(value)); \
-    } while (0)
-
 struct stack
 {
     int *data;
@@ -48,6 +29,31 @@ static void stack_free(struct stack *s)
     free(s->data);
     stack_init(s);
 }
+
+// Custom Asserts
+DEFINE_ASSERT_FUNC(assert_stack_len, const struct stack *s, size_t len)
+{
+    if (s->len != len)
+        exam_fail_test(file, line,
+                       "stack has %zu items, expected %zu",
+                       s->len, len);
+}
+
+#define ASSERT_STACK_LEN(stack, len) CALL_ASSERT_FUNC(assert_stack_len, (stack), (len))
+
+DEFINE_ASSERT_FUNC(stack_contains, const struct stack *s, int v)
+{
+    for (size_t i = 0; i < s->len; i++) {
+        if (s->data[i] == v)
+            return;
+    }
+
+    exam_fail_test(file, line,
+                   "stack does not have %d",
+                   v);
+}
+
+#define ASSERT_STACK_CONTAINS(stack, v) CALL_ASSERT_FUNC(stack_contains, (stack), (v))
 
 // Tests that should pass
 EXAM_DEFINE_TEST(stack, length)
