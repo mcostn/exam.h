@@ -9,7 +9,7 @@
         #include "exam.h"
 
 LICENSE
-    Copyright (c) 2026 Matei-Stefan Costan
+    Copyright (c) 2026
 
     Licensed under the MIT License.
     See LICENSE for details.
@@ -51,7 +51,7 @@ COMPILE-TIME OPTIONS
 
     #define EXAM_DEFAULT_TIMEOUT_MS ms
 
-        The default millisecondsd to wait before terminating a test. By default,
+        The default milliseconds to wait before terminating a test. By default,
         it's set to 3000, but you can set it to any value as long as it's
         positive.
 
@@ -730,6 +730,7 @@ static bool exam_internal_platform_is_tty(void);
 static bool exam_internal_platform_process_start(struct exam_process *proc, struct exam_test *test);
 static void exam_internal_platform_process_close(struct exam_process *proc);
 static void exam_internal_platform_process_kill(struct exam_process *proc);
+static bool exam_internal_platform_exit_is_kill(const struct exam_exit *ex);
 static void exam_internal_platform_maybe_run_child(void);
 static enum exam_read_status exam_internal_platform_process_read(struct exam_process *proc, char *buf, size_t cap, size_t *n);
 static void exam_internal_platform_process_wait_io(struct exam_process *procs, size_t count);
@@ -817,17 +818,23 @@ static bool exam_internal_platform_process_start(struct exam_process *proc, stru
         close(fildes[0]);
 
         int nul = open("/dev/null", O_RDONLY);
-        if (nul == -1 ||
-            dup2(nul, STDIN_FILENO) == -1 ||
+        if (nul == -1) {
+            perror("open");
+            _exit(EXIT_FAILURE);
+        }
+
+        if (dup2(nul, STDIN_FILENO) == -1 ||
             dup2(fildes[1], STDOUT_FILENO) == -1 ||
             dup2(fildes[1], STDERR_FILENO) == -1) {
             perror("dup2");
             _exit(EXIT_FAILURE);
         }
+
         if (nul != STDIN_FILENO)
             close(nul);
         close(fildes[1]);
 
+        fflush(stdout);
         setvbuf(stdout, NULL, _IONBF, 0);
 
         test->func();
@@ -863,6 +870,11 @@ static void exam_internal_platform_process_kill(struct exam_process *proc)
 {
     if (kill(-proc->pid, SIGKILL) == -1)
         kill(proc->pid, SIGKILL);
+}
+
+static bool exam_internal_platform_exit_is_kill(const struct exam_exit *ex)
+{
+    return ex->kind == EXAM_EXIT_SIGNAL && ex->code == SIGKILL;
 }
 
 static void exam_internal_platform_maybe_run_child(void)
@@ -984,6 +996,7 @@ static uint64_t exam_internal_platform_now_ms(void)
 #define EXAM_WIN_CHILD_ENV "EXAM_CHILD"
 #define EXAM_WIN_CHILD_ID_SIZE 32
 #define EXAM_WIN_ABORT_STATUS 0xC0000409u
+#define EXAM_WIN_KILL_STATUS 0x45584D54u
 
 struct exam_process
 {
@@ -1184,7 +1197,12 @@ static void exam_internal_platform_process_close(struct exam_process *proc)
 
 static void exam_internal_platform_process_kill(struct exam_process *proc)
 {
-    TerminateProcess(proc->process, 1);
+    TerminateProcess(proc->process, EXAM_WIN_KILL_STATUS);
+}
+
+static bool exam_internal_platform_exit_is_kill(const struct exam_exit *ex)
+{
+    return ex->kind == EXAM_EXIT_NORMAL && (DWORD)ex->code == EXAM_WIN_KILL_STATUS;
 }
 
 static void exam_internal_win_abort_handler(int sig)
@@ -1215,6 +1233,7 @@ static void exam_internal_platform_maybe_run_child(void)
     _set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);
 #endif
 
+    fflush(stdout);
     setvbuf(stdout, NULL, _IONBF, 0);
 
     list->data[idx].func();
@@ -1661,7 +1680,6 @@ int exam_run(const struct exam_filter *filter, size_t jobs)
     if (exam_state.on_finish)
         exam_state.on_finish();
 
-    exam_internal_list_destroy(&exam_state.test_list);
     if (exam_state.failed > 0 || exam_state.crashed > 0 || exam_state.timed_out > 0)
         return EXIT_FAILURE;
     return EXIT_SUCCESS;
@@ -1669,6 +1687,12 @@ int exam_run(const struct exam_filter *filter, size_t jobs)
 
 void exam_register(struct exam_test *test)
 {
+    if (test == NULL ||
+        test->category == NULL ||
+        test->name == NULL ||
+        test->func == NULL)
+        exam_internal_dief("tried to register invalid test");
+
     exam_internal_list_append(&exam_state.test_list, test);
 }
 
@@ -1792,19 +1816,6 @@ static void exam_internal_run_tests(struct exam_test_list *list, const struct ex
         for (size_t i = 0; i < running_count; ++i)
             exam_internal_read_output(&list->data[running[i].test_index], &running[i]);
 
-        if (exam_state.timeout_ms > 0) {
-            uint64_t now = exam_internal_platform_now_ms();
-            for (size_t i = 0; i < running_count; i++) {
-                if (running[i].timed_out)
-                    continue;
-
-                if (now - running[i].start_ms >= exam_state.timeout_ms) {
-                    running[i].timed_out = true;
-                    exam_internal_platform_process_kill(&running[i]);
-                }
-            }
-        }
-
         for (size_t i = 0; i < running_count;) {
             struct exam_exit ex;
             if (!exam_internal_platform_process_try_reap(&running[i], &ex)) {
@@ -1818,6 +1829,19 @@ static void exam_internal_run_tests(struct exam_test_list *list, const struct ex
             exam_internal_platform_process_close(&running[i]);
 
             running[i] = running[--running_count];
+        }
+
+        if (exam_state.timeout_ms > 0) {
+            uint64_t now = exam_internal_platform_now_ms();
+            for (size_t i = 0; i < running_count; i++) {
+                if (running[i].timed_out)
+                    continue;
+
+                if (now - running[i].start_ms >= exam_state.timeout_ms) {
+                    running[i].timed_out = true;
+                    exam_internal_platform_process_kill(&running[i]);
+                }
+            }
         }
     }
 
@@ -1849,7 +1873,7 @@ static struct exam_process exam_internal_start_test(struct exam_test *test, size
 
 static void exam_internal_finish_test(struct exam_test *test, const struct exam_exit *ex, bool timed_out)
 {
-    if (timed_out) {
+    if (timed_out && exam_internal_platform_exit_is_kill(ex)) {
         test->state = EXAM_TEST_TIMEOUT;
     } else if (ex->kind == EXAM_EXIT_NORMAL) {
         test->state = (ex->code == EXIT_SUCCESS) ? EXAM_TEST_PASSED
@@ -2089,6 +2113,7 @@ int exam_cli_main(int argc, char **argv)
     }
 
 cleanup:
+    exam_internal_list_destroy(&exam_state.test_list);
     return rc;
 }
 
@@ -2125,7 +2150,7 @@ static void exam_internal_cli_usage(FILE *stream)
     fprintf(stream,
            "usage: " EXAM_CLI_NAME " [options]\n"
            "options:\n"
-           "    -j, --jobs N        run up to N tests at once (default: 1);\n"
+           "    -j, --jobs N        run up to N tests at once (default: 3);\n"
            "                        without N, use the number of CPUs\n"
            "    -l, --list          list available tests\n"
            "    -t, --timeout SECS  kill tests running longer than SECS (default: 1);\n"
