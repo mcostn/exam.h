@@ -800,6 +800,7 @@ static bool exam_internal_platform_process_start(struct exam_process *proc, stru
     }
 
     if (pid == 0) {
+        setpgid(0, 0);
         close(fildes[0]);
         if (dup2(fildes[1], STDOUT_FILENO) == -1 ||
             dup2(fildes[1], STDERR_FILENO) == -1) {
@@ -816,6 +817,7 @@ static bool exam_internal_platform_process_start(struct exam_process *proc, stru
         _exit(EXIT_SUCCESS);
     }
 
+    setpgid(pid, pid);
     close(fildes[1]);
     int flags = fcntl(fildes[0], F_GETFL);
     if (flags == -1 || fcntl(fildes[0], F_SETFL, flags | O_NONBLOCK) == -1) {
@@ -840,7 +842,8 @@ static void exam_internal_platform_process_close(struct exam_process *proc)
 
 static void exam_internal_platform_process_kill(struct exam_process *proc)
 {
-    kill(proc->pid, SIGKILL);
+    if (kill(-proc->pid, SIGKILL) == -1)
+        kill(proc->pid, SIGKILL);
 }
 
 static void exam_internal_platform_maybe_run_child(void)
