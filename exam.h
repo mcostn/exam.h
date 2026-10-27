@@ -1581,6 +1581,8 @@ static void exam_internal_list_append(struct exam_test_list *list, const struct 
 static void exam_internal_list_destroy(struct exam_test_list *list);
 static void exam_internal_list_sort(struct exam_test_list *list);
 
+static void exam_internal_reset_tests(void);
+
 static void exam_internal_run_tests(struct exam_test_list *list, const struct exam_filter *filter, size_t jobs);
 static struct exam_process exam_internal_start_test(struct exam_test *test, size_t idx);
 static void exam_internal_finish_test(struct exam_test *test, const struct exam_exit *ex, bool timed_out);
@@ -1593,6 +1595,8 @@ int exam_run(const struct exam_filter *filter, size_t jobs)
     exam_state.passed = 0;
     exam_state.failed = 0;
     exam_state.crashed = 0;
+    exam_state.timed_out = 0;
+    exam_internal_reset_tests();
 
     if (exam_state.on_start)
         exam_state.on_start();
@@ -1684,6 +1688,19 @@ static void exam_internal_list_sort(struct exam_test_list *list)
         return;
 
     qsort(list->data, list->count, sizeof(*list->data), exam_internal_test_cmp);
+}
+
+static void exam_internal_reset_tests(void)
+{
+    struct exam_test_list *list = &exam_state.test_list;
+    for (size_t i = 0; i < list->count; i++) {
+        struct exam_test *test = &list->data[i];
+        test->state = EXAM_TEST_NONE;
+        test->exit_signal = 0;
+        test->output_size = 0;
+        test->output_truncated = false;
+        test->output[0] = '\0';
+    }
 }
 
 static void exam_internal_run_tests(struct exam_test_list *list, const struct exam_filter *filter, size_t jobs)
