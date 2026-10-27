@@ -535,6 +535,9 @@ extern int exam_run(const struct exam_filter *filter, size_t jobs);
 extern void exam_register(struct exam_test *test);
 
 extern int exam_cli_main(int argc, char **argv);
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #ifdef EXAM_IMPLEMENTATION
 #include <stdio.h>
@@ -1723,7 +1726,7 @@ int exam_cli_main(int argc, char **argv)
                 errno = 0;
                 char *end;
                 unsigned long long parsed = strtoull(jobs_str, &end, 10);
-                if (errno == ERANGE || end == jobs_str || *end != '\0' || parsed > SIZE_MAX) {
+                if (errno == ERANGE || end == jobs_str || *end != '\0' || (size_t)parsed != parsed) {
                     fprintf(stderr, "invalid jobs count '%s'\n", jobs_str);
                     rc = EXIT_FAILURE;
                     goto cleanup;
@@ -1914,7 +1917,7 @@ static void exam_internal_cli_on_test_finish(const struct exam_test *test)
 
 static void exam_internal_cli_test_output(const struct exam_test *test)
 {
-    if (test->output_size <= 0)
+    if (test->output_size == 0)
         return;
 
     const char *color = EXAM_CLI_RED;
@@ -1970,9 +1973,6 @@ static bool exam_internal_cli_is_color(void)
     return exam_internal_platform_is_tty();
 }
 #endif // EXAM_IMPLEMENTATION
-#ifdef __cplusplus
-}
-#endif // __cplusplus
 
 #if defined(__cplusplus) && !defined(EXAM_NO_STL)
 #include <algorithm>
