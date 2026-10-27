@@ -1678,7 +1678,6 @@ enum exam_cli_action
 {
     EXAM_ACTION_RUN = 0,
     EXAM_ACTION_LIST,
-    EXAM_ACTION_HELP,
 };
 
 static struct {
@@ -1690,7 +1689,7 @@ static struct {
 
 static int exam_internal_cli_run(void);
 static int exam_internal_cli_list(void);
-static void exam_internal_cli_usage(void);
+static void exam_internal_cli_usage(FILE *stream);
 
 static void exam_internal_cli_on_finish(void);
 static void exam_internal_cli_on_test_finish(const struct exam_test *test);
@@ -1758,8 +1757,6 @@ int exam_cli_main(int argc, char **argv)
                 rc = EXIT_FAILURE;
                 goto cleanup;
             }
-        } else if (exam_internal_cli_is_option(argv[i], "-h", "--help")) {
-            exam_cli_state.action = EXAM_ACTION_HELP;
         } else if (exam_internal_cli_is_option(argv[i], "-n", "--name")) {
             if (i == argc - 1) {
                 fprintf(stderr, "usage: --name NAME\n");
@@ -1790,10 +1787,14 @@ int exam_cli_main(int argc, char **argv)
             }
 
             exam_cli_state.filter.category_name = name;
+        } else if (exam_internal_cli_is_option(argv[i], "-h", "--help")) {
+            rc = EXIT_SUCCESS;
+            exam_internal_cli_usage(stdout);
+            goto cleanup;
         } else {
             fprintf(stderr, "unknown option '%s'\n", argv[i]);
+            exam_internal_cli_usage(stderr);
             rc = EXIT_FAILURE;
-            exam_internal_cli_usage();
             goto cleanup;
         }
     }
@@ -1804,10 +1805,6 @@ int exam_cli_main(int argc, char **argv)
             break;
         case EXAM_ACTION_LIST:
             rc = exam_internal_cli_list();
-            break;
-        case EXAM_ACTION_HELP:
-            rc = EXIT_SUCCESS;
-            exam_internal_cli_usage();
             break;
         default:
             rc = EXIT_FAILURE;
@@ -1851,9 +1848,10 @@ static int exam_internal_cli_list(void)
     return EXIT_SUCCESS;
 }
 
-static void exam_internal_cli_usage(void)
+static void exam_internal_cli_usage(FILE *stream)
 {
-    printf("usage: " EXAM_CLI_NAME " [options]\n"
+    fprintf(stream,
+           "usage: " EXAM_CLI_NAME " [options]\n"
            "options:\n"
            "    -j, --jobs N        run up to N tests at once (default: 1);\n"
            "                        without N, use the number of CPUs\n"
