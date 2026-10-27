@@ -1924,12 +1924,15 @@ static void exam_internal_cli_usage(FILE *stream)
 
 static void exam_internal_cli_on_finish(void)
 {
-    fprintf(stdout,
-            "%zu passed, %zu failed, %zu crashed, %zu timed out\n",
-            exam_state.passed,
-            exam_state.failed,
-            exam_state.crashed,
-            exam_state.timed_out);
+    if (exam_state.passed > 0)
+        printf("%zu passed", exam_state.passed);
+    if (exam_state.failed > 0)
+        printf(", %zu failed", exam_state.failed);
+    if (exam_state.crashed > 0)
+        printf(", %zu crashed", exam_state.crashed);
+    if (exam_state.timed_out > 0)
+        printf(", %zu timed_out", exam_state.timed_out);
+    printf("\n");
 }
 
 static void exam_internal_cli_on_test_finish(const struct exam_test *test)
