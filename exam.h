@@ -506,9 +506,9 @@ DOCUMENTATION
 #define EXAM_DEFINE_TEST(category_name, test_name) \
     static void EXAM_INTERNAL_DEF_NAME(category_name, test_name)(void); \
     static struct exam_test EXAM_INTERNAL_STRUCT_NAME(category_name, test_name) = { \
-        .category = #category_name, \
-        .name = #test_name, \
-        .func = EXAM_INTERNAL_DEF_NAME(category_name, test_name), \
+         .category = #category_name, \
+         .name = #test_name, \
+         .func = EXAM_INTERNAL_DEF_NAME(category_name, test_name), \
     }; \
     static void EXAM_INTERNAL_DEF_NAME(category_name, test_name)(void)
 
@@ -643,7 +643,21 @@ extern int exam_cli_main(int argc, char **argv);
 #include <math.h>
 
 // Util
-struct exam_state exam_state = {0};
+struct exam_state exam_state = {
+    {0}, // test_list
+
+    NULL, // on_start
+    NULL, // on_finish
+    NULL, // on_test_start
+    NULL, // on_test_finish
+
+    0, // passed
+    0, // failed
+    0, // crashed
+    0, // timet_out
+
+    1000, // timeout_ms
+};
 
 EXAM_NORETURN static void exam_internal_dief(const char *fmt, ...) EXAM_PRINTF(1, 2);
 EXAM_NORETURN static void exam_internal_die_perror(const char *str);
@@ -1570,8 +1584,6 @@ int exam_run(const struct exam_filter *filter, size_t jobs)
     exam_state.passed = 0;
     exam_state.failed = 0;
     exam_state.crashed = 0;
-
-    exam_state.timeout_ms = 1000;
 
     if (exam_state.on_start)
         exam_state.on_start();
