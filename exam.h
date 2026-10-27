@@ -422,7 +422,7 @@ DOCUMENTATION
 #define EXAM_DEFAULT_TIMEOUT_MS 3000
 #endif
 #if EXAM_DEFAULT_TIMEOUT_MS < 0
-#error "EXAM_DEFAULT_TIMEOUT_MS must be positive"
+#error "EXAM_DEFAULT_TIMEOUT_MS must not be negative"
 #endif
 
 #ifndef EXAM_CLI_NAME
@@ -2134,7 +2134,16 @@ cleanup:
 
 static int exam_internal_cli_run(void)
 {
-    return exam_run(&exam_cli_state.filter, exam_cli_state.jobs);
+    int rc = exam_run(&exam_cli_state.filter, exam_cli_state.jobs);
+
+    size_t ran = exam_state.passed + exam_state.failed +
+                 exam_state.crashed + exam_state.timed_out;
+    bool filtered = exam_cli_state.filter.category_name != NULL ||
+                    exam_cli_state.filter.test_name != NULL;
+
+    if (ran == 0 && filtered)
+        return EXIT_SUCCESS;
+    return rc;
 }
 
 static int exam_internal_cli_list(void)
