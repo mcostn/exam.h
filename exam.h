@@ -329,6 +329,8 @@ DOCUMENTATION
 #elif defined(__APPLE__)
 #define EXAM_POSIX
 #define EXAM_APPLE
+#elif defined(__unix__) || defined(__unix) || defined(__CYGWIN__)
+#define EXAM_POSIX
 #elif defined(_WIN32)
 #define EXAM_WINDOWS
 #else
