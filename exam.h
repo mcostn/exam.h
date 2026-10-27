@@ -71,10 +71,10 @@ DOCUMENTATION
 
         int exam_run(const struct exam_filter *filter, size_t jobs):
             This runs all the registered tests and returns EXIT_FAILURE if at
-            least one doesn't pass or crashes, or EXIT_SUCCESS otherwise.
-            filter is used to filter out tests (NULL = no filter, every test
-            satisfies it). Jobs is the number of processes to start (0 = cpu
-            count).
+            least one doesn't pass, crashes or times out, or EXIT_SUCCESS
+            otherwise. filter is used to filter out tests (NULL = no filter,
+            every test satisfies it). Jobs is the number of processes to start
+            (0 = cpu count).
 
     Cli
 
@@ -1637,6 +1637,7 @@ int exam_run(const struct exam_filter *filter, size_t jobs)
     if (exam_state.on_finish)
         exam_state.on_finish();
 
+    exam_internal_list_destroy(&exam_state.test_list);
     if (exam_state.failed > 0 || exam_state.crashed > 0 || exam_state.timed_out > 0)
         return EXIT_FAILURE;
     return EXIT_SUCCESS;
@@ -2064,7 +2065,6 @@ int exam_cli_main(int argc, char **argv)
     }
 
 cleanup:
-    exam_internal_list_destroy(&exam_state.test_list);
     return rc;
 }
 
@@ -2360,7 +2360,7 @@ void exam_assert_key_val_in_map(const K &key, const V &val, const Map &map, cons
                        "key \"%s\" not in map",
                        exam_internal_to_string(key).c_str());
 
-    if (it->second != val)
+    if (!(it->second == val))
         exam_fail_test(file, line,
                        "value at key \"%s\" is not \"%s\" in map",
                        exam_internal_to_string(key).c_str(), exam_internal_to_string(val).c_str());
