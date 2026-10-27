@@ -1853,13 +1853,14 @@ static int exam_internal_cli_list(void)
 
 static void exam_internal_cli_usage(void)
 {
-    printf("usage: " EXAM_CLI_NAME " [options] [filter...]\n"
+    printf("usage: " EXAM_CLI_NAME " [options]\n"
            "options:\n"
-           "    -j, --jobs N        run up to N jobs at once\n"
+           "    -j, --jobs N        run up to N tests at once (default: 1);\n"
+           "                        without N, use the number of CPUs\n"
            "    -l, --list          list available tests\n"
            "        --color WHEN    colorize output: auto, always, never\n"
            "    -h, --help          show this message\n"
-           "filters:\n"
+           "filters (combine them to narrow the selection):\n"
            "    -n, --name NAME          test name\n"
            "    -c, --category CATEGORY  category name\n");
 }
