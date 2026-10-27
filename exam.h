@@ -1162,28 +1162,15 @@ void exam_assert_false(bool res, const char *expression, const char *file, size_
                        expression);
 }
 
-void exam_assert_eq_ptr(const void *a, const void *b, const char *file, size_t line)
-{
-    if (a != b)
-        exam_fail_test(file, line,
-                       "%p != %p",
-                       a, b);
-}
-
-void exam_assert_neq_ptr(const void *a, const void *b, const char *file, size_t line)
-{
-    if (a == b)
-        exam_fail_test(file, line,
-                       "%p == %p",
-                       a, b);
-}
-
 #define EXAM_INTERNAL_DEF_CMP(op, sfx, type, fmt, rel, test) \
     void exam_assert_##op##_##sfx(type a, type b, const char *file, size_t line) \
     { \
         if (!(test)) \
             exam_fail_test(file, line, fmt " " rel " " fmt, a, b); \
     }
+
+EXAM_INTERNAL_DEF_CMP(eq,  ptr, const void *, "%p", "!=", a == b)
+EXAM_INTERNAL_DEF_CMP(neq, ptr, const void *, "%p", "==", a != b)
 
 EXAM_INTERNAL_DEF_CMP(eq, int, intmax_t, "%jd", "!=", a == b)
 EXAM_INTERNAL_DEF_CMP(neq, int, intmax_t, "%jd", "==", a != b)
@@ -1297,181 +1284,99 @@ void exam_assert_neq_mem(const void *a, const void *b, size_t size, const char *
                        size);
 }
 
-void exam_assert_in_range_int(intmax_t x, intmax_t min, intmax_t max, const char *file, size_t line)
-{
-    if (min > max)
-        exam_internal_dief("invalid range [%jd, %jd]", min, max);
-
-    if (x < min || x > max)
-        exam_fail_test(file, line,
-                       "%jd is not within the range [%jd, %jd]",
-                       x, min, max);
-}
-
-void exam_assert_not_in_range_int(intmax_t x, intmax_t min, intmax_t max, const char *file, size_t line)
-{
-    if (min > max)
-        exam_internal_dief("invalid range [%jd, %jd]", min, max);
-
-    if (x >= min && x <= max)
-        exam_fail_test(file, line,
-                       "%jd is within the range [%jd, %jd]",
-                       x, min, max);
-}
-
-void exam_assert_in_range_uint(uintmax_t x, uintmax_t min, uintmax_t max, const char *file, size_t line)
-{
-    if (min > max)
-        exam_internal_dief("invalid range [%ju, %ju]", min, max);
-
-    if (x < min || x > max)
-        exam_fail_test(file, line,
-                       "%ju is not within the range [%ju, %ju]",
-                       x, min, max);
-}
-
-void exam_assert_not_in_range_uint(uintmax_t x, uintmax_t min, uintmax_t max, const char *file, size_t line)
-{
-    if (min > max)
-        exam_internal_dief("invalid range [%ju, %ju]", min, max);
-
-    if (x >= min && x <= max)
-        exam_fail_test(file, line,
-                       "%ju is within the range [%ju, %ju]",
-                       x, min, max);
-}
-
-void exam_assert_in_range_float(float x, float min, float max, float eps, const char *file, size_t line)
-{
-    if (min > max)
-        exam_internal_dief("invalid range [%.9g, %.9g]", min, max);
-
-    if (!exam_internal_float_in_range(x, min, max, eps))
-        exam_fail_test(file, line,
-                       "%.9g is not within the range [%.9g, %.9g]",
-                       x, min, max);
-}
-
-void exam_assert_not_in_range_float(float x, float min, float max, float eps, const char *file, size_t line)
-{
-    if (min > max)
-        exam_internal_dief("invalid range [%.9g, %.9g]", min, max);
-
-    if (exam_internal_float_in_range(x, min, max, eps))
-        exam_fail_test(file, line,
-                       "%.9g is within the range [%.9g, %.9g]",
-                       x, min, max);
-}
-
-void exam_assert_in_range_double(double x, double min, double max, double eps, const char *file, size_t line)
-{
-    if (min > max)
-        exam_internal_dief("invalid range [%.17g, %.17g]", min, max);
-
-    if (!exam_internal_double_in_range(x, min, max, eps))
-        exam_fail_test(file, line,
-                       "%.17g is not within the range [%.17g, %.17g]",
-                       x, min, max);
-}
-
-void exam_assert_not_in_range_double(double x, double min, double max, double eps, const char *file, size_t line)
-{
-    if (min > max)
-        exam_internal_dief("invalid range [%.17g, %.17g]", min, max);
-
-    if (exam_internal_double_in_range(x, min, max, eps))
-        exam_fail_test(file, line,
-                       "%.17g is within the range [%.17g, %.17g]",
-                       x, min, max);
-}
-
-void exam_assert_in_arr_int(intmax_t x, const intmax_t *arr, size_t count, const char *file, size_t line)
-{
-    for (size_t i = 0; i < count; i ++) {
-        if (arr[i] == x)
-            return;
+#define EXAM_INTERNAL_DEF_RANGE(sfx, type, fmt, inside) \
+    void exam_assert_in_range_##sfx(type x, type min, type max, const char *file, size_t line) \
+    { \
+        if (min > max) \
+            exam_internal_dief("invalid range [" fmt ", " fmt "]", min, max); \
+        if (!(inside)) \
+            exam_fail_test(file, line, \
+                           fmt " is not within the range [" fmt ", " fmt "]", \
+                           x, min, max); \
+    } \
+    void exam_assert_not_in_range_##sfx(type x, type min, type max, const char *file, size_t line) \
+    { \
+        if (min > max) \
+            exam_internal_dief("invalid range [" fmt ", " fmt "]", min, max); \
+        if ((inside)) \
+            exam_fail_test(file, line, \
+                           fmt " is within the range [" fmt ", " fmt "]", \
+                           x, min, max); \
     }
 
-    exam_fail_test(file, line,
-                   "%jd not in %p (count=%zu)",
-                   x, (void*)arr, count);
-}
+EXAM_INTERNAL_DEF_RANGE(int,  intmax_t,  "%jd", x >= min && x <= max)
+EXAM_INTERNAL_DEF_RANGE(uint, uintmax_t, "%ju", x >= min && x <= max)
 
-void exam_assert_not_in_arr_int(intmax_t x, const intmax_t *arr, size_t count, const char *file, size_t line)
-{
-    for (size_t i = 0; i < count; i ++) {
-        if (arr[i] == x)
-            exam_fail_test(file, line,
-                           "%jd in %p (count=%zu)",
-                           x, (void*)arr, count);
-    }
-}
-
-void exam_assert_in_arr_uint(uintmax_t x, const uintmax_t *arr, size_t count, const char *file, size_t line)
-{
-    for (size_t i = 0; i < count; i ++) {
-        if (arr[i] == x)
-            return;
-    }
-
-    exam_fail_test(file, line,
-                   "%ju not in %p (count=%zu)",
-                   x, (void*)arr, count);
-}
-
-void exam_assert_not_in_arr_uint(uintmax_t x, const uintmax_t *arr, size_t count, const char *file, size_t line)
-{
-    for (size_t i = 0; i < count; i ++) {
-        if (arr[i] == x)
-            exam_fail_test(file, line,
-                           "%ju in %p (count=%zu)",
-                           x, (void*)arr, count);
-    }
-}
-
-void exam_assert_in_arr_float(float x, const float *arr, size_t count, float eps, const char *file, size_t line)
-{
-    for (size_t i = 0; i < count; i ++) {
-        if (exam_internal_float_cmp(x, arr[i], eps))
-            return;
+#define EXAM_INTERNAL_DEF_RANGE_EPS(sfx, type, fmt, inside) \
+    void exam_assert_in_range_##sfx(type x, type min, type max, type eps, const char *file, size_t line) \
+    { \
+        if (min > max) \
+            exam_internal_dief("invalid range [" fmt ", " fmt "]", min, max); \
+        if (!(inside)) \
+            exam_fail_test(file, line, \
+                           fmt " is not within the range [" fmt ", " fmt "]", \
+                           x, min, max); \
+    } \
+    void exam_assert_not_in_range_##sfx(type x, type min, type max, type eps, const char *file, size_t line) \
+    { \
+        if (min > max) \
+            exam_internal_dief("invalid range [" fmt ", " fmt "]", min, max); \
+        if ((inside)) \
+            exam_fail_test(file, line, \
+                           fmt " is within the range [" fmt ", " fmt "]", \
+                           x, min, max); \
     }
 
-    exam_fail_test(file, line,
-                   "%.9g not in %p (count=%zu)",
-                   x, (void*)arr, count);
-}
+EXAM_INTERNAL_DEF_RANGE_EPS(float,  float,  "%.9g",  exam_internal_float_in_range(x, min, max, eps))
+EXAM_INTERNAL_DEF_RANGE_EPS(double, double, "%.17g", exam_internal_double_in_range(x, min, max, eps))
 
-void exam_assert_not_in_arr_float(float x, const float *arr, size_t count, float eps, const char *file, size_t line)
-{
-    for (size_t i = 0; i < count; i ++) {
-        if (exam_internal_float_cmp(x, arr[i], eps))
-            exam_fail_test(file, line,
-                           "%.9g in %p (count=%zu)",
-                           x, (void*)arr, count);
+#define EXAM_INTERNAL_DEF_ARR(sfx, type, fmt, match) \
+    void exam_assert_in_arr_##sfx(type x, const type *arr, size_t count, const char *file, size_t line) \
+    { \
+        for (size_t i = 0; i < count; i++) { \
+            if ((match)) \
+                return; \
+        } \
+        exam_fail_test(file, line, \
+                       fmt " not in %p (count=%zu)", \
+                       x, (const void *)arr, count); \
+    } \
+    void exam_assert_not_in_arr_##sfx(type x, const type *arr, size_t count, const char *file, size_t line) \
+    { \
+        for (size_t i = 0; i < count; i++) { \
+            if ((match)) \
+                exam_fail_test(file, line, \
+                               fmt " in %p (count=%zu)", \
+                               x, (const void *)arr, count); \
+        } \
     }
-}
 
-void exam_assert_in_arr_double(double x, const double *arr, size_t count, double eps, const char *file, size_t line)
-{
-    for (size_t i = 0; i < count; i ++) {
-        if (exam_internal_double_cmp(x, arr[i], eps))
-            return;
+EXAM_INTERNAL_DEF_ARR(int,  intmax_t,  "%jd", arr[i] == x)
+EXAM_INTERNAL_DEF_ARR(uint, uintmax_t, "%ju", arr[i] == x)
+
+#define EXAM_INTERNAL_DEF_ARR_EPS(sfx, type, fmt, match) \
+    void exam_assert_in_arr_##sfx(type x, const type *arr, size_t count, type eps, const char *file, size_t line) \
+    { \
+        for (size_t i = 0; i < count; i++) { \
+            if ((match)) \
+                return; \
+        } \
+        exam_fail_test(file, line, \
+                       fmt " not in %p (count=%zu)", \
+                       x, (const void *)arr, count); \
+    } \
+    void exam_assert_not_in_arr_##sfx(type x, const type *arr, size_t count, type eps, const char *file, size_t line) \
+    { \
+        for (size_t i = 0; i < count; i++) { \
+            if ((match)) \
+                exam_fail_test(file, line, \
+                               fmt " in %p (count=%zu)", \
+                               x, (const void *)arr, count); \
+        } \
     }
 
-    exam_fail_test(file, line,
-                   "%.17g not in %p (count=%zu)",
-                   x, (void*)arr, count);
-}
-
-void exam_assert_not_in_arr_double(double x, const double *arr, size_t count, double eps, const char *file, size_t line)
-{
-    for (size_t i = 0; i < count; i ++) {
-        if (exam_internal_double_cmp(x, arr[i], eps))
-            exam_fail_test(file, line,
-                           "%.17g in %p (count=%zu)",
-                           x, (void*)arr, count);
-    }
-}
+EXAM_INTERNAL_DEF_ARR_EPS(float,  float,  "%.9g",  exam_internal_float_cmp(x, arr[i], eps))
+EXAM_INTERNAL_DEF_ARR_EPS(double, double, "%.17g", exam_internal_double_cmp(x, arr[i], eps))
 
 static int exam_internal_test_cmp(const void *a, const void *b)
 {
