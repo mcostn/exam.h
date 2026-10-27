@@ -79,7 +79,10 @@ DOCUMENTATION
     Cli
 
         int exam_cli_main(int argc, char **argv):
-            Runs the test suite using the command-line interface.
+            Runs the test suite using the command-line interface. It supports
+            running tests in parallel, listing available tests, filtering by
+            test name or category, setting per-test timeouts, and configuring
+            colored output.
 
     Asserts
 
@@ -107,11 +110,35 @@ DOCUMENTATION
         ASSERT_NEQ_INT(a, b):
             Checks if the signed integer values a and b are not equal.
 
+        ASSERT_LT_INT(a, b):
+            Checks if the signed integer value a is less than b.
+
+        ASSERT_LE_INT(a, b):
+            Checks if the signed integer value a is less than or equal to b.
+
+        ASSERT_GT_INT(a, b):
+            Checks if the signed integer value a is greater than b.
+
+        ASSERT_GE_INT(a, b):
+            Checks if the signed integer value a is greater than or equal to b.
+
         ASSERT_EQ_UINT(a, b):
             Checks if the unsigned integer values a and b are equal.
 
         ASSERT_NEQ_UINT(a, b):
             Checks if the unsigned integer values a and b are not equal.
+
+        ASSERT_LT_UINT(a, b):
+            Checks if the unsigned integer value a is less than b.
+
+        ASSERT_LE_UINT(a, b):
+            Checks if the unsigned integer value a is less than or equal to b.
+
+        ASSERT_GT_UINT(a, b):
+            Checks if the unsigned integer value a is greater than b.
+
+        ASSERT_GE_UINT(a, b):
+            Checks if the unsigned integer value a is greater than or equal to b.
 
         ASSERT_EQ_FLOAT(a, b, eps):
             Checks if the floating-point values a and b are equal within the given epsilon.
@@ -119,11 +146,38 @@ DOCUMENTATION
         ASSERT_NEQ_FLOAT(a, b, eps):
             Checks if the floating-point values a and b are not equal within the given epsilon.
 
+        ASSERT_LT_FLOAT(a, b, eps):
+            Checks if the floating-point value a is less than b, accounting for the given epsilon.
+
+        ASSERT_LE_FLOAT(a, b, eps):
+            Checks if the floating-point value a is less than or equal to b, accounting for the given epsilon.
+
+        ASSERT_GT_FLOAT(a, b, eps):
+            Checks if the floating-point value a is greater than b, accounting for the given epsilon.
+
+        ASSERT_GE_FLOAT(a, b, eps):
+            Checks if the floating-point value a is greater than or equal to b, accounting for the given epsilon.
+
         ASSERT_EQ_DOUBLE(a, b, eps):
             Checks if the double-precision floating-point values a and b are equal within the given epsilon.
 
         ASSERT_NEQ_DOUBLE(a, b, eps):
             Checks if the double-precision floating-point values a and b are not equal within the given epsilon.
+
+        ASSERT_LT_DOUBLE(a, b, eps):
+            Checks if the double-precision floating-point value a is less than b, accounting for the given epsilon.
+
+        ASSERT_LE_DOUBLE(a, b, eps):
+            Checks if the double-precision floating-point value a is less than or equal to b,
+            accounting for the given epsilon.
+
+        ASSERT_GT_DOUBLE(a, b, eps):
+            Checks if the double-precision floating-point value a is greater than b,
+            accounting for the given epsilon.
+
+        ASSERT_GE_DOUBLE(a, b, eps):
+            Checks if the double-precision floating-point value a is greater than or equal to b,
+            accounting for the given epsilon.
 
         ASSERT_EQ_STR(a, b):
             Checks if the null-terminated strings a and b are equal.
@@ -203,25 +257,44 @@ DOCUMENTATION
             ASSERT_NOT_IN_CONTAINER(x, container):
                 Checks whether container does not contain an element equal to x.
 
-            ASSERT_KEY_IN_MAP(k, hm):
-                Checks whether map contains the key k.
+            ASSERT_KEY_IN_MAP(k, m):
+                Checks whether map m contains the key k.
 
-            ASSERT_KEY_NOT_IN_MAP(k, hm):
-                Checks whether map does not contain the key k.
+            ASSERT_KEY_NOT_IN_MAP(k, m):
+                Checks whether map m does not contain the key k.
 
-            ASSERT_VAL_IN_MAP(v, hm):
-                Checks whether map contains a value equal to v.
+            ASSERT_VAL_IN_MAP(v, m):
+                Checks whether map m contains a value equal to v.
 
-            ASSERT_VAL_NOT_IN_MAP(v, hm):
-                Checks whether map does not contain a value equal to v.
+            ASSERT_VAL_NOT_IN_MAP(v, m):
+                Checks whether map m does not contain a value equal to v.
 
-            ASSERT_KEY_VAL_IN_MAP(k, v, hm):
-                Checks whether map contains the key k associated with a value equal to v.
+            ASSERT_KEY_VAL_IN_MAP(k, v, m):
+                Checks whether map m contains the key k associated with a value equal to v.
                 Fails if the key is absent or its associated value differs from v.
 
-            ASSERT_KEY_VAL_NOT_IN_MAP(k, v, hm):
-                Checks whether map does not contain the key k associated with a value equal to v.
+            ASSERT_KEY_VAL_NOT_IN_MAP(k, v, m):
+                Checks whether map m does not contain the key k associated with a value equal to v.
                 Passes if the key is absent or its associated value differs from v.
+
+    Notes
+
+        Internal Functions
+
+            All internal functions are prefixed with exam_internal, while internal macros
+            use EXAM_INTERNAL. Using them from outside the library is discouraged.
+
+        Automatic Registration
+
+            Tests can be registered automatically using compiler-supported constructor
+            attributes, allowing the test suite to be populated before main runs.
+            Constructor support and behavior depend on the platform and compiler.
+
+        Process isolation
+
+            Each test runs in a separate process, isolating crashes and timeouts so that
+            one test does not terminate the entire suite. Tests can run concurrently when
+            multiple jobs are configured.
  */
 
 #ifndef EXAM_H
@@ -388,12 +461,12 @@ DOCUMENTATION
 #if defined(__cplusplus) && !defined(EXAM_NO_STL)
 #define EXAM_ASSERT_IN_CONTAINER(x, container) exam_assert_in_container((x), (container), __FILE__, __LINE__)
 #define EXAM_ASSERT_NOT_IN_CONTAINER(x, container) exam_assert_not_in_container((x), (container), __FILE__, __LINE__)
-#define EXAM_ASSERT_KEY_IN_MAP(k, hm) exam_assert_key_in_map((k), (hm), __FILE__, __LINE__)
-#define EXAM_ASSERT_KEY_NOT_IN_MAP(k, hm) exam_assert_key_not_in_map((k), (hm), __FILE__, __LINE__)
-#define EXAM_ASSERT_VAL_IN_MAP(v, hm) exam_assert_val_in_map((v), (hm), __FILE__, __LINE__)
-#define EXAM_ASSERT_VAL_NOT_IN_MAP(v, hm) exam_assert_val_not_in_map((v), (hm), __FILE__, __LINE__)
-#define EXAM_ASSERT_KEY_VAL_IN_MAP(k, v, hm) exam_assert_key_val_in_map((k), (v), (hm), __FILE__, __LINE__)
-#define EXAM_ASSERT_KEY_VAL_NOT_IN_MAP(k, v, hm) exam_assert_key_val_not_in_map((k), (v), (hm), __FILE__, __LINE__)
+#define EXAM_ASSERT_KEY_IN_MAP(k, m) exam_assert_key_in_map((k), (m), __FILE__, __LINE__)
+#define EXAM_ASSERT_KEY_NOT_IN_MAP(k, m) exam_assert_key_not_in_map((k), (m), __FILE__, __LINE__)
+#define EXAM_ASSERT_VAL_IN_MAP(v, m) exam_assert_val_in_map((v), (m), __FILE__, __LINE__)
+#define EXAM_ASSERT_VAL_NOT_IN_MAP(v, m) exam_assert_val_not_in_map((v), (m), __FILE__, __LINE__)
+#define EXAM_ASSERT_KEY_VAL_IN_MAP(k, v, m) exam_assert_key_val_in_map((k), (v), (m), __FILE__, __LINE__)
+#define EXAM_ASSERT_KEY_VAL_NOT_IN_MAP(k, v, m) exam_assert_key_val_not_in_map((k), (v), (m), __FILE__, __LINE__)
 #endif // defined(__cplusplus) && !defined(EXAM_NO_STL)
 
 #define EXAM_INTERNAL_DEF_NAME(category_name, test_name) \
