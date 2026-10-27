@@ -1969,15 +1969,44 @@ static bool exam_internal_cli_is_color(void)
 
 #if defined(__cplusplus) && !defined(EXAM_NO_STL)
 #include <algorithm>
+#include <ostream>
 #include <sstream>
 #include <string>
+#include <type_traits>
+#include <utility>
+
+template <typename T, typename = void>
+struct exam_internal_is_streamable : std::false_type {};
 
 template <typename T>
-std::string exam_internal_to_string(const T &value)
+struct exam_internal_is_streamable<
+    T,
+    decltype(void(std::declval<std::ostream &>() << std::declval<const T &>()))>
+    : std::true_type {};
+
+template <typename T>
+typename std::enable_if<exam_internal_is_streamable<T>::value, std::string>::type
+exam_internal_to_string(const T &value)
 {
     std::ostringstream stream;
     stream << value;
     return stream.str();
+}
+
+template <typename T>
+typename std::enable_if<!exam_internal_is_streamable<T>::value && std::is_enum<T>::value, std::string>::type
+exam_internal_to_string(const T &value)
+{
+    std::ostringstream stream;
+    stream << +static_cast<typename std::underlying_type<T>::type>(value);
+    return stream.str();
+}
+
+template <typename T>
+typename std::enable_if<!exam_internal_is_streamable<T>::value && !std::is_enum<T>::value, std::string>::type
+exam_internal_to_string(const T &)
+{
+    return "<unprintable>";
 }
 
 template <typename Container, typename Value>
