@@ -14,7 +14,7 @@ LICENSE
     Licensed under the MIT License.
     See LICENSE for details.
 
-COMPILE_TIME OPTIONS
+COMPILE-TIME OPTIONS
 
     #define EXAM_NO_SHORT_NAMES
 
@@ -663,7 +663,7 @@ struct exam_state exam_state = {
     0, // passed
     0, // failed
     0, // crashed
-    0, // timet_out
+    0, // timed_out
 
     1000, // timeout_ms
 };
@@ -1957,12 +1957,18 @@ int exam_cli_main(int argc, char **argv)
             exam_cli_state.action = EXAM_ACTION_LIST;
         } else if (exam_internal_cli_is_option(argv[i], "-t", "--timeout")) {
             if (i == argc - 1) {
-                fprintf(stderr, "usage: --timeout SECONDS\n");
+                fprintf(stderr, "usage: --timeout SECS\n");
                 rc = EXIT_FAILURE;
                 goto cleanup;
             }
 
             const char *timeout_str = argv[++i];
+            if (timeout_str[0] == '-') {
+                fprintf(stderr, "usage: --timeout SECS\n");
+                rc = EXIT_FAILURE;
+                goto cleanup;
+            }
+
             errno = 0;
             char *end;
             unsigned long long parsed = strtoull(timeout_str, &end, 10);
@@ -1982,6 +1988,12 @@ int exam_cli_main(int argc, char **argv)
             }
 
             const char *color_str = argv[++i];
+            if (color_str[0] == '-') {
+                fprintf(stderr, "usage: --color WHEN (can be auto, always or never)\n");
+                rc = EXIT_FAILURE;
+                goto cleanup;
+            }
+
             if (strcmp(color_str, "auto") == 0) {
                 exam_cli_state.color = EXAM_COLOR_AUTO;
             } else if (strcmp(color_str, "always") == 0) {
@@ -2058,10 +2070,7 @@ cleanup:
 
 static int exam_internal_cli_run(void)
 {
-    exam_run(&exam_cli_state.filter, exam_cli_state.jobs);
-    if (exam_state.failed > 0 || exam_state.crashed > 0 || exam_state.timed_out > 0)
-        return EXIT_FAILURE;
-    return EXIT_SUCCESS;
+    return exam_run(&exam_cli_state.filter, exam_cli_state.jobs);
 }
 
 static int exam_internal_cli_list(void)
@@ -2106,14 +2115,31 @@ static void exam_internal_cli_usage(FILE *stream)
 
 static void exam_internal_cli_on_finish(void)
 {
-    if (exam_state.passed > 0)
+    bool previous = false;
+
+    if (exam_state.passed > 0) {
         printf("%zu passed", exam_state.passed);
-    if (exam_state.failed > 0)
-        printf(", %zu failed", exam_state.failed);
-    if (exam_state.crashed > 0)
-        printf(", %zu crashed", exam_state.crashed);
-    if (exam_state.timed_out > 0)
-        printf(", %zu timed_out", exam_state.timed_out);
+        previous = true;
+    }
+
+    if (exam_state.failed > 0) {
+        if (previous) printf(", ");
+        printf("%zu failed", exam_state.failed);
+        previous = true;
+    }
+
+    if (exam_state.crashed > 0) {
+        if (previous) printf(", ");
+        printf("%zu crashed", exam_state.crashed);
+        previous = true;
+    }
+
+    if (exam_state.timed_out > 0) {
+        if (previous) printf(", ");
+        printf("%zu timed out", exam_state.timed_out);
+        previous = true;
+    }
+
     printf("\n");
 }
 
