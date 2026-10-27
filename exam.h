@@ -333,12 +333,28 @@ DOCUMENTATION
 #define EXAM_ASSERT_NON_NULL(ptr) exam_assert_neq_ptr((ptr), NULL, __FILE__, __LINE__)
 #define EXAM_ASSERT_EQ_INT(a, b) exam_assert_eq_int((a), (b), __FILE__, __LINE__)
 #define EXAM_ASSERT_NEQ_INT(a, b) exam_assert_neq_int((a), (b), __FILE__, __LINE__)
+#define EXAM_ASSERT_LT_INT(a, b) exam_assert_lt_int((a), (b), __FILE__, __LINE__)
+#define EXAM_ASSERT_LE_INT(a, b) exam_assert_le_int((a), (b), __FILE__, __LINE__)
+#define EXAM_ASSERT_GT_INT(a, b) exam_assert_gt_int((a), (b), __FILE__, __LINE__)
+#define EXAM_ASSERT_GE_INT(a, b) exam_assert_ge_int((a), (b), __FILE__, __LINE__)
 #define EXAM_ASSERT_EQ_UINT(a, b) exam_assert_eq_uint((a), (b), __FILE__, __LINE__)
 #define EXAM_ASSERT_NEQ_UINT(a, b) exam_assert_neq_uint((a), (b), __FILE__, __LINE__)
+#define EXAM_ASSERT_LT_UINT(a, b) exam_assert_lt_uint((a), (b), __FILE__, __LINE__)
+#define EXAM_ASSERT_LE_UINT(a, b) exam_assert_le_uint((a), (b), __FILE__, __LINE__)
+#define EXAM_ASSERT_GT_UINT(a, b) exam_assert_gt_uint((a), (b), __FILE__, __LINE__)
+#define EXAM_ASSERT_GE_UINT(a, b) exam_assert_ge_uint((a), (b), __FILE__, __LINE__)
 #define EXAM_ASSERT_EQ_FLOAT(a, b, eps) exam_assert_eq_float((a), (b), (eps), __FILE__, __LINE__)
 #define EXAM_ASSERT_NEQ_FLOAT(a, b, eps) exam_assert_neq_float((a), (b), (eps), __FILE__, __LINE__)
+#define EXAM_ASSERT_LT_FLOAT(a, b, eps) exam_assert_lt_float((a), (b), (eps), __FILE__, __LINE__)
+#define EXAM_ASSERT_LE_FLOAT(a, b, eps) exam_assert_le_float((a), (b), (eps), __FILE__, __LINE__)
+#define EXAM_ASSERT_GT_FLOAT(a, b, eps) exam_assert_gt_float((a), (b), (eps), __FILE__, __LINE__)
+#define EXAM_ASSERT_GE_FLOAT(a, b, eps) exam_assert_ge_float((a), (b), (eps), __FILE__, __LINE__)
 #define EXAM_ASSERT_EQ_DOUBLE(a, b, eps) exam_assert_eq_double((a), (b), (eps), __FILE__, __LINE__)
 #define EXAM_ASSERT_NEQ_DOUBLE(a, b, eps) exam_assert_neq_double((a), (b), (eps), __FILE__, __LINE__)
+#define EXAM_ASSERT_LT_DOUBLE(a, b, eps) exam_assert_lt_double((a), (b), (eps), __FILE__, __LINE__)
+#define EXAM_ASSERT_LE_DOUBLE(a, b, eps) exam_assert_le_double((a), (b), (eps), __FILE__, __LINE__)
+#define EXAM_ASSERT_GT_DOUBLE(a, b, eps) exam_assert_gt_double((a), (b), (eps), __FILE__, __LINE__)
+#define EXAM_ASSERT_GE_DOUBLE(a, b, eps) exam_assert_ge_double((a), (b), (eps), __FILE__, __LINE__)
 #define EXAM_ASSERT_EQ_STR(a, b) exam_assert_eq_str((a), (b), __FILE__, __LINE__)
 #define EXAM_ASSERT_NEQ_STR(a, b) exam_assert_neq_str((a), (b), __FILE__, __LINE__)
 #define EXAM_ASSERT_EQ_MEM(a, b, size) exam_assert_eq_mem((a), (b), (size), __FILE__, __LINE__)
@@ -471,12 +487,28 @@ extern void exam_assert_eq_ptr(const void *a, const void *b, const char *file, s
 extern void exam_assert_neq_ptr(const void *a, const void *b, const char *file, size_t line);
 extern void exam_assert_eq_int(intmax_t a, intmax_t b, const char *file, size_t line);
 extern void exam_assert_neq_int(intmax_t a, intmax_t b, const char *file, size_t line);
+extern void exam_assert_lt_int(intmax_t a, intmax_t b, const char *file, size_t line);
+extern void exam_assert_le_int(intmax_t a, intmax_t b, const char *file, size_t line);
+extern void exam_assert_gt_int(intmax_t a, intmax_t b, const char *file, size_t line);
+extern void exam_assert_ge_int(intmax_t a, intmax_t b, const char *file, size_t line);
 extern void exam_assert_eq_uint(uintmax_t a, uintmax_t b, const char *file, size_t line);
 extern void exam_assert_neq_uint(uintmax_t a, uintmax_t b, const char *file, size_t line);
+extern void exam_assert_lt_uint(uintmax_t a, uintmax_t b, const char *file, size_t line);
+extern void exam_assert_le_uint(uintmax_t a, uintmax_t b, const char *file, size_t line);
+extern void exam_assert_gt_uint(uintmax_t a, uintmax_t b, const char *file, size_t line);
+extern void exam_assert_ge_uint(uintmax_t a, uintmax_t b, const char *file, size_t line);
 extern void exam_assert_eq_float(float a, float b, float eps, const char *file, size_t line);
 extern void exam_assert_neq_float(float a, float b, float eps, const char *file, size_t line);
+extern void exam_assert_lt_float(float a, float b, float eps, const char *file, size_t line);
+extern void exam_assert_le_float(float a, float b, float eps, const char *file, size_t line);
+extern void exam_assert_gt_float(float a, float b, float eps, const char *file, size_t line);
+extern void exam_assert_ge_float(float a, float b, float eps, const char *file, size_t line);
 extern void exam_assert_eq_double(double a, double b, double eps, const char *file, size_t line);
 extern void exam_assert_neq_double(double a, double b, double eps, const char *file, size_t line);
+extern void exam_assert_lt_double(double a, double b, double eps, const char *file, size_t line);
+extern void exam_assert_le_double(double a, double b, double eps, const char *file, size_t line);
+extern void exam_assert_gt_double(double a, double b, double eps, const char *file, size_t line);
+extern void exam_assert_ge_double(double a, double b, double eps, const char *file, size_t line);
 extern void exam_assert_eq_str(const char *a, const char *b, const char *file, size_t line);
 extern void exam_assert_neq_str(const char *a, const char *b, const char *file, size_t line);
 extern void exam_assert_neq_mem(const void *a, const void *b, size_t size, const char *file, size_t line);
@@ -1098,11 +1130,6 @@ static bool exam_internal_platform_process_try_reap(struct exam_process *proc, s
 // Asserts
 static int exam_internal_test_cmp(const void *a, const void *b);
 static bool exam_internal_str_cmp(const char *a, const char *b);
-static bool exam_internal_float_cmp(float a, float b, float eps);
-static bool exam_internal_double_cmp(double a, double b, double eps);
-
-static bool exam_internal_float_in_range(float x, float min, float max, float eps);
-static bool exam_internal_double_in_range(double x, double min, double max, double eps);
 
 static const char *exam_internal_str_repr(const char *str);
 
@@ -1151,69 +1178,84 @@ void exam_assert_neq_ptr(const void *a, const void *b, const char *file, size_t 
                        a, b);
 }
 
-void exam_assert_eq_int(intmax_t a, intmax_t b, const char *file, size_t line)
-{
-    if (a != b)
-        exam_fail_test(file, line,
-                       "%jd != %jd",
-                       a, b);
-}
+#define EXAM_INTERNAL_DEF_CMP(op, sfx, type, fmt, rel, test) \
+    void exam_assert_##op##_##sfx(type a, type b, const char *file, size_t line) \
+    { \
+        if (!(test)) \
+            exam_fail_test(file, line, fmt " " rel " " fmt, a, b); \
+    }
 
-void exam_assert_neq_int(intmax_t a, intmax_t b, const char *file, size_t line)
-{
-    if (a == b)
-        exam_fail_test(file, line,
-                       "%jd == %jd",
-                       a, b);
-}
+EXAM_INTERNAL_DEF_CMP(eq, int, intmax_t, "%jd", "!=", a == b)
+EXAM_INTERNAL_DEF_CMP(neq, int, intmax_t, "%jd", "==", a != b)
+EXAM_INTERNAL_DEF_CMP(lt, int, intmax_t, "%jd", ">=", a < b)
+EXAM_INTERNAL_DEF_CMP(le, int, intmax_t, "%jd", ">", a <= b)
+EXAM_INTERNAL_DEF_CMP(gt, int, intmax_t, "%jd", "<=", a > b)
+EXAM_INTERNAL_DEF_CMP(ge, int, intmax_t, "%jd", "<", a >= b)
+EXAM_INTERNAL_DEF_CMP(eq, uint, uintmax_t, "%ju", "!=", a == b)
+EXAM_INTERNAL_DEF_CMP(neq, uint, uintmax_t, "%ju", "==", a != b)
+EXAM_INTERNAL_DEF_CMP(lt, uint, uintmax_t, "%ju", ">=", a < b)
+EXAM_INTERNAL_DEF_CMP(le, uint, uintmax_t, "%ju", ">", a <= b)
+EXAM_INTERNAL_DEF_CMP(gt, uint, uintmax_t, "%ju", "<=", a > b)
+EXAM_INTERNAL_DEF_CMP(ge, uint, uintmax_t, "%ju", "<", a >= b)
 
-void exam_assert_eq_uint(uintmax_t a, uintmax_t b, const char *file, size_t line)
-{
-    if (a != b)
-        exam_fail_test(file, line,
-                       "%ju != %ju",
-                       a, b);
-}
+#define EXAM_INTERNAL_DEF_CMP_EPS(op, sfx, type, fmt, rel, test) \
+    void exam_assert_##op##_##sfx(type a, type b, type eps, const char *file, size_t line) \
+    { \
+        if (!(test)) \
+            exam_fail_test(file, line, fmt " " rel " " fmt, a, b); \
+    }
 
-void exam_assert_neq_uint(uintmax_t a, uintmax_t b, const char *file, size_t line)
-{
-    if (a == b)
-        exam_fail_test(file, line,
-                       "%ju == %ju",
-                       a, b);
-}
+#define EXAM_INTERNAL_DEF_FP_PREDICATES(sfx, type, fmt) \
+    static bool exam_internal_##sfx##_cmp(type a, type b, type eps) \
+    { \
+        if (!isfinite(eps) || eps < 0) \
+            exam_internal_dief("invalid epsilon: " fmt, eps); \
+        \
+        if (isnan(a) || isnan(b)) \
+            return isnan(a) && isnan(b); \
+        if (isinf(a) && isinf(b)) \
+            return (a < 0) == (b < 0); \
+        \
+        type diff = a - b; \
+        diff = (diff > 0 ? diff : -diff); \
+        if (isnan(diff) || isinf(diff)) \
+            return false; \
+        if (diff <= eps) \
+            return true; \
+        \
+        type abs_a = (a > 0 ? a : -a); \
+        type abs_b = (b > 0 ? b : -b); \
+        type largest = (abs_a > abs_b ? abs_a : abs_b); \
+        return diff <= eps * largest; \
+    } \
+    static bool exam_internal_##sfx##_in_range(type x, type min, type max, type eps) \
+    { \
+        return (exam_internal_##sfx##_cmp(x, min, eps) || x > min) && \
+               (exam_internal_##sfx##_cmp(x, max, eps) || x < max); \
+    } \
+    static bool exam_internal_##sfx##_lt(type a, type b, type eps) \
+    { \
+        return a < b && !exam_internal_##sfx##_cmp(a, b, eps); \
+    } \
+    static bool exam_internal_##sfx##_le(type a, type b, type eps) \
+    { \
+        return a < b || (!isnan(a) && exam_internal_##sfx##_cmp(a, b, eps)); \
+    }
 
-void exam_assert_eq_float(float a, float b, float eps, const char *file, size_t line)
-{
-    if (!exam_internal_float_cmp(a, b, eps))
-        exam_fail_test(file, line,
-                       "%.9g != %.9g",
-                       a, b);
-}
-
-void exam_assert_neq_float(float a, float b, float eps, const char *file, size_t line)
-{
-    if (exam_internal_float_cmp(a, b, eps))
-        exam_fail_test(file, line,
-                       "%.9g == %.9g",
-                       a, b);
-}
-
-void exam_assert_eq_double(double a, double b, double eps, const char *file, size_t line)
-{
-    if (!exam_internal_double_cmp(a, b, eps))
-        exam_fail_test(file, line,
-                       "%.17g != %.17g",
-                       a, b);
-}
-
-void exam_assert_neq_double(double a, double b, double eps, const char *file, size_t line)
-{
-    if (exam_internal_double_cmp(a, b, eps))
-        exam_fail_test(file, line,
-                       "%.17g == %.17g",
-                       a, b);
-}
+EXAM_INTERNAL_DEF_FP_PREDICATES(float, float, "%.9g")
+EXAM_INTERNAL_DEF_CMP_EPS(eq, float, float, "%.9g", "!=", exam_internal_float_cmp(a, b, eps))
+EXAM_INTERNAL_DEF_CMP_EPS(neq, float, float, "%.9g", "==", !exam_internal_float_cmp(a, b, eps))
+EXAM_INTERNAL_DEF_CMP_EPS(lt, float, float, "%.9g", ">=", exam_internal_float_lt(a, b, eps))
+EXAM_INTERNAL_DEF_CMP_EPS(le, float, float, "%.9g", ">", exam_internal_float_le(a, b, eps))
+EXAM_INTERNAL_DEF_CMP_EPS(gt, float, float, "%.9g", "<=", exam_internal_float_lt(b, a, eps))
+EXAM_INTERNAL_DEF_CMP_EPS(ge, float, float, "%.9g", "<", exam_internal_float_le(b, a, eps))
+EXAM_INTERNAL_DEF_FP_PREDICATES(double, double, "%.17g")
+EXAM_INTERNAL_DEF_CMP_EPS(eq, double, double, "%.17g", "!=", exam_internal_double_cmp(a, b, eps))
+EXAM_INTERNAL_DEF_CMP_EPS(neq, double, double, "%.17g", "==", !exam_internal_double_cmp(a, b, eps))
+EXAM_INTERNAL_DEF_CMP_EPS(lt, double, double, "%.17g", ">=", exam_internal_double_lt(a, b, eps))
+EXAM_INTERNAL_DEF_CMP_EPS(le, double, double, "%.17g", ">", exam_internal_double_le(a, b, eps))
+EXAM_INTERNAL_DEF_CMP_EPS(gt, double, double, "%.17g", "<=", exam_internal_double_lt(b, a, eps))
+EXAM_INTERNAL_DEF_CMP_EPS(ge, double, double, "%.17g", "<", exam_internal_double_le(b, a, eps))
 
 void exam_assert_eq_str(const char *a, const char *b, const char *file, size_t line)
 {
@@ -1449,69 +1491,6 @@ static bool exam_internal_str_cmp(const char *a, const char *b)
     return strcmp(a, b) == 0;
 }
 
-static bool exam_internal_float_cmp(float a, float b, float eps)
-{
-    if (!isfinite(eps) || eps < 0)
-        exam_internal_dief("invalid epsilon: %.9g", eps);
-
-    if (isnan(a) && isnan(b))
-        return true;
-    if (isinf(a) && isinf(b))
-        return ((a < 0) == (b < 0));
-
-    float diff = a - b;
-    diff = (diff > 0 ? diff : -diff);
-    if (isnan(diff) || isinf(diff))
-        return false;
-    if (diff <= eps)
-        return true;
-
-    float absA = (a > 0 ? a : -a);
-    float absB = (b > 0 ? b : -b);
-    float largest = (absA > absB ? absA : absB);
-    return diff <= eps * largest;
-}
-
-static bool exam_internal_double_cmp(double a, double b, double eps)
-{
-    if (!isfinite(eps) || eps < 0)
-        exam_internal_dief("invalid epsilon: %.17g", eps);
-
-    if (isnan(a) && isnan(b))
-        return true;
-    if (isinf(a) && isinf(b))
-        return ((a < 0) == (b < 0));
-
-    double diff = a - b;
-    diff = (diff > 0 ? diff : -diff);
-    if (isnan(diff) || isinf(diff))
-        return false;
-    if (diff <= eps)
-        return true;
-
-    double absA = (a > 0 ? a : -a);
-    double absB = (b > 0 ? b : -b);
-    double largest = (absA > absB ? absA : absB);
-    return diff <= eps * largest;
-}
-
-static bool exam_internal_float_in_range(float x, float min, float max, float eps)
-{
-    if (!isfinite(eps) || eps < 0)
-        exam_internal_dief("invalid epsilon: %.9g", eps);
-
-    return (exam_internal_float_cmp(x, min, eps) || x > min) &&
-           (exam_internal_float_cmp(x, max, eps) || x < max);
-}
-
-static bool exam_internal_double_in_range(double x, double min, double max, double eps)
-{
-    if (!isfinite(eps) || eps < 0)
-        exam_internal_dief("invalid epsilon: %.17g", eps);
-
-    return (exam_internal_double_cmp(x, min, eps) || x > min) &&
-           (exam_internal_double_cmp(x, max, eps) || x < max);
-}
 
 static const char *exam_internal_str_repr(const char *str)
 {
@@ -2184,12 +2163,28 @@ void exam_assert_key_val_not_in_map(const K &key, const V &val, const Map &map, 
 #define ASSERT_NON_NULL EXAM_ASSERT_NON_NULL
 #define ASSERT_EQ_INT EXAM_ASSERT_EQ_INT
 #define ASSERT_NEQ_INT EXAM_ASSERT_NEQ_INT
+#define ASSERT_LT_INT EXAM_ASSERT_LT_INT
+#define ASSERT_LE_INT EXAM_ASSERT_LE_INT
+#define ASSERT_GT_INT EXAM_ASSERT_GT_INT
+#define ASSERT_GE_INT EXAM_ASSERT_GE_INT
 #define ASSERT_EQ_UINT EXAM_ASSERT_EQ_UINT
 #define ASSERT_NEQ_UINT EXAM_ASSERT_NEQ_UINT
+#define ASSERT_LT_UINT EXAM_ASSERT_LT_UINT
+#define ASSERT_LE_UINT EXAM_ASSERT_LE_UINT
+#define ASSERT_GT_UINT EXAM_ASSERT_GT_UINT
+#define ASSERT_GE_UINT EXAM_ASSERT_GE_UINT
 #define ASSERT_EQ_FLOAT EXAM_ASSERT_EQ_FLOAT
 #define ASSERT_NEQ_FLOAT EXAM_ASSERT_NEQ_FLOAT
+#define ASSERT_LT_FLOAT EXAM_ASSERT_LT_FLOAT
+#define ASSERT_LE_FLOAT EXAM_ASSERT_LE_FLOAT
+#define ASSERT_GT_FLOAT EXAM_ASSERT_GT_FLOAT
+#define ASSERT_GE_FLOAT EXAM_ASSERT_GE_FLOAT
 #define ASSERT_EQ_DOUBLE EXAM_ASSERT_EQ_DOUBLE
 #define ASSERT_NEQ_DOUBLE EXAM_ASSERT_NEQ_DOUBLE
+#define ASSERT_LT_DOUBLE EXAM_ASSERT_LT_DOUBLE
+#define ASSERT_LE_DOUBLE EXAM_ASSERT_LE_DOUBLE
+#define ASSERT_GT_DOUBLE EXAM_ASSERT_GT_DOUBLE
+#define ASSERT_GE_DOUBLE EXAM_ASSERT_GE_DOUBLE
 #define ASSERT_EQ_STR EXAM_ASSERT_EQ_STR
 #define ASSERT_NEQ_STR EXAM_ASSERT_NEQ_STR
 #define ASSERT_EQ_MEM EXAM_ASSERT_EQ_MEM
