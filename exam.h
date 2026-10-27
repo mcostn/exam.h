@@ -9,7 +9,7 @@
         #include "exam.h"
 
 LICENSE
-    Copyright (c) 2026
+    Copyright (c) 2026 Matei-Stefan Costan
 
     Licensed under the MIT License.
     See LICENSE for details.
@@ -53,7 +53,7 @@ COMPILE-TIME OPTIONS
 
         The default milliseconds to wait before terminating a test. By default,
         it's set to 3000, but you can set it to any value as long as it's
-        positive.
+        positive. A value of 0 means no limit.
 
     #define EXAM_NO_STL
 
@@ -683,6 +683,24 @@ struct exam_state exam_state = {
     EXAM_DEFAULT_TIMEOUT_MS, // timeout_ms
 };
 
+EXAM_NORETURN static void exam_internal_child_exit(int code);
+static void exam_internal_child_exit(int code)
+{
+    fflush(stdout);
+    fflush(stderr);
+    _Exit(code);
+}
+
+static bool exam_internal_in_child = false;
+
+EXAM_NORETURN static void exam_internal_exit(int code);
+static void exam_internal_exit(int code)
+{
+    if (exam_internal_in_child)
+        exam_internal_child_exit(code);
+    exit(code);
+}
+
 EXAM_NORETURN static void exam_internal_dief(const char *fmt, ...) EXAM_PRINTF(1, 2);
 EXAM_NORETURN static void exam_internal_die_perror(const char *str);
 
@@ -693,13 +711,13 @@ static void exam_internal_dief(const char *fmt, ...)
     vfprintf(stderr, fmt, args);
     va_end(args);
     fputc('\n', stderr);
-    exit(EXIT_FAILURE);
+    exam_internal_exit(EXIT_FAILURE);
 }
 
 static void exam_internal_die_perror(const char *str)
 {
     perror(str);
-    exit(EXIT_FAILURE);
+    exam_internal_exit(EXIT_FAILURE);
 }
 
 // Platform
@@ -814,33 +832,32 @@ static bool exam_internal_platform_process_start(struct exam_process *proc, stru
     }
 
     if (pid == 0) {
+        exam_internal_in_child = true;
+
         setpgid(0, 0);
         close(fildes[0]);
 
-        int nul = open("/dev/null", O_RDONLY);
-        if (nul == -1) {
-            perror("open");
-            _exit(EXIT_FAILURE);
-        }
-
-        if (dup2(nul, STDIN_FILENO) == -1 ||
-            dup2(fildes[1], STDOUT_FILENO) == -1 ||
+        if (dup2(fildes[1], STDOUT_FILENO) == -1 ||
             dup2(fildes[1], STDERR_FILENO) == -1) {
             perror("dup2");
             _exit(EXIT_FAILURE);
         }
 
+        int nul = open("/dev/null", O_RDONLY);
+        if (nul == -1)
+            exam_internal_dief("failed to open /dev/null: %s", strerror(errno));
+        if (dup2(nul, STDIN_FILENO) == -1)
+            exam_internal_dief("failed to redirect stdin: %s", strerror(errno));
         if (nul != STDIN_FILENO)
             close(nul);
+
         close(fildes[1]);
 
         fflush(stdout);
         setvbuf(stdout, NULL, _IONBF, 0);
 
         test->func();
-        fflush(stdout);
-        fflush(stderr);
-        _exit(EXIT_SUCCESS);
+        exam_internal_child_exit(EXIT_SUCCESS);
     }
 
     setpgid(pid, pid);
@@ -1035,7 +1052,7 @@ static void exam_internal_win_die(const char *operation)
     if (message)
         LocalFree(message);
 
-    exit(EXIT_FAILURE);
+    exam_internal_exit(EXIT_FAILURE);
 }
 
 static size_t exam_internal_platform_cpu_count(void)
@@ -1227,6 +1244,7 @@ static void exam_internal_platform_maybe_run_child(void)
     if (errno == ERANGE || end == id || *end != '\0' || idx >= list->count)
         exam_internal_dief("invalid %s value '%s'", EXAM_WIN_CHILD_ENV, id);
 
+    exam_internal_in_child = true;
     SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX | SEM_NOOPENFILEERRORBOX);
     signal(SIGABRT, exam_internal_win_abort_handler);
 #if defined(_MSC_VER)
@@ -1237,10 +1255,7 @@ static void exam_internal_platform_maybe_run_child(void)
     setvbuf(stdout, NULL, _IONBF, 0);
 
     list->data[idx].func();
-    fflush(stdout);
-    fflush(stderr);
-    exit(EXIT_SUCCESS);
-
+    exam_internal_child_exit(EXIT_SUCCESS);
 }
 
 static enum exam_read_status exam_internal_platform_process_read(struct exam_process *proc, char *buf, size_t cap, size_t *n)
@@ -1371,7 +1386,7 @@ void exam_fail_test(const char *file, size_t line, const char *fmt, ...)
     va_end(args);
 
     fputc('\n', stderr);
-    exit(EXIT_FAILURE);
+    exam_internal_exit(EXIT_FAILURE);
 }
 
 void exam_assert_true(bool res, const char *expression, const char *file, size_t line)
@@ -2150,10 +2165,10 @@ static void exam_internal_cli_usage(FILE *stream)
     fprintf(stream,
            "usage: " EXAM_CLI_NAME " [options]\n"
            "options:\n"
-           "    -j, --jobs N        run up to N tests at once (default: 3);\n"
+           "    -j, --jobs N        run up to N tests at once (default: 1);\n"
            "                        without N, use the number of CPUs\n"
            "    -l, --list          list available tests\n"
-           "    -t, --timeout SECS  kill tests running longer than SECS (default: 1);\n"
+           "    -t, --timeout SECS  kill tests running longer than SECS (default: 3);\n"
            "                        0 means no limit\n"
            "        --color WHEN    colorize output: auto, always, never\n"
            "    -h, --help          show this message\n"
@@ -2188,6 +2203,9 @@ static void exam_internal_cli_on_finish(void)
         printf("%zu timed out", exam_state.timed_out);
         previous = true;
     }
+
+    if (!previous)
+        printf("no tests ran");
 
     printf("\n");
 }
