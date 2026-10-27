@@ -285,7 +285,16 @@ DOCUMENTATION
 #endif
 
 #ifndef EXAM_NO_AUTO_REGISTRATION
-#if defined(EXAM_GCC) || defined(EXAM_CLANG) || defined(EXAM_TCC)
+#if defined(__cplusplus)
+#define EXAM_CONSTRUCTOR(func_name) \
+        static void func_name(void); \
+        namespace { \
+            struct func_name##_registrar { \
+                func_name##_registrar(void) { func_name(); } \
+            } func_name##_instance; \
+        } \
+        static void func_name(void)
+#elif defined(EXAM_GCC) || defined(EXAM_CLANG) || defined(EXAM_TCC)
 #define EXAM_CONSTRUCTOR(func_name) \
     static void func_name(void) __attribute__((constructor)); \
     static void func_name(void)
@@ -296,15 +305,15 @@ DOCUMENTATION
     __declspec(allocate(".CRT$XCU")) void (*func_name##_)(void) = func_name; \
     __pragma(comment(linker, "/include:" prefix #func_name "_")) \
     static void func_name(void)
-
 #ifdef _WIN64
 #define EXAM_CONSTRUCTOR(func_name) EXAM_CONSTRUCTOR_IMPL(func_name, "")
 #else
 #define EXAM_CONSTRUCTOR(func_name) EXAM_CONSTRUCTOR_IMPL(func_name, "_")
-#endif
+#endif // _WIN64
 #else
 #error "Automatic registration not supported for your compiler"
 #endif
+#define EXAM_CONSTRUCTOR_EXPAND(func_name) EXAM_CONSTRUCTOR(func_name)
 #endif // EXAM_NO_AUTO_REGISTRATION
 
 #ifndef EXAM_TEST_OUTPUT_SIZE
@@ -396,7 +405,7 @@ DOCUMENTATION
 
 #define EXAM_DEFINE_TEST(category_name, test_name) \
     static void EXAM_INTERNAL_DEF_NAME(category_name, test_name)(void); \
-    EXAM_CONSTRUCTOR(EXAM_INTERNAL_REG_NAME(category_name, test_name)) \
+    EXAM_CONSTRUCTOR_EXPAND(EXAM_INTERNAL_REG_NAME(category_name, test_name)) \
     { \
         struct exam_test test = {0}; \
         test.category = #category_name; \
