@@ -1436,7 +1436,6 @@ int exam_run(const struct exam_filter *filter, size_t jobs)
 {
     exam_internal_platform_maybe_run_child();
 
-    exam_internal_list_sort(&exam_state.test_list);
     exam_state.passed = 0;
     exam_state.failed = 0;
     exam_state.crashed = 0;
@@ -1527,6 +1526,9 @@ static void exam_internal_list_destroy(struct exam_test_list *list)
 
 static void exam_internal_list_sort(struct exam_test_list *list)
 {
+    if (list->count <= 1)
+        return;
+
     qsort(list->data, list->count, sizeof(*list->data), exam_internal_test_cmp);
 }
 
@@ -1828,6 +1830,8 @@ static int exam_internal_cli_run(void)
 
 static int exam_internal_cli_list(void)
 {
+    exam_internal_list_sort(&exam_state.test_list);
+
     size_t found = 0;
     for (size_t i = 0; i < exam_state.test_list.count; ++i) {
         const struct exam_test *test = &exam_state.test_list.data[i];
