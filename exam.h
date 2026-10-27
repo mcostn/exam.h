@@ -49,6 +49,12 @@ COMPILE-TIME OPTIONS
         but you can change this to the name of your executable or whatever
         you desire.
 
+    #define EXAM_DEFAULT_TIMEOUT_MS ms
+
+        The default millisecondsd to wait before terminating a test. By default,
+        it's set to 3000, but you can set it to any value as long as it's
+        positive.
+
     #define EXAM_NO_STL
 
         In case you are using C++, exam offers more functionality intended
@@ -412,6 +418,13 @@ DOCUMENTATION
 #error "EXAM_TEST_OUTPUT_SIZE must be greater than zero"
 #endif
 
+#ifndef EXAM_DEFAULT_TIMEOUT_MS
+#define EXAM_DEFAULT_TIMEOUT_MS 3000
+#endif
+#if EXAM_DEFAULT_TIMEOUT_MS < 0
+#error "EXAM_DEFAULT_TIMEOUT_MS must be positive"
+#endif
+
 #ifndef EXAM_CLI_NAME
 #define EXAM_CLI_NAME "exam"
 #endif
@@ -667,7 +680,7 @@ struct exam_state exam_state = {
     0, // crashed
     0, // timed_out
 
-    1000, // timeout_ms
+    EXAM_DEFAULT_TIMEOUT_MS, // timeout_ms
 };
 
 EXAM_NORETURN static void exam_internal_dief(const char *fmt, ...) EXAM_PRINTF(1, 2);
@@ -802,11 +815,17 @@ static bool exam_internal_platform_process_start(struct exam_process *proc, stru
     if (pid == 0) {
         setpgid(0, 0);
         close(fildes[0]);
-        if (dup2(fildes[1], STDOUT_FILENO) == -1 ||
+
+        int nul = open("/dev/null", O_RDONLY);
+        if (nul == -1 ||
+            dup2(nul, STDIN_FILENO) == -1 ||
+            dup2(fildes[1], STDOUT_FILENO) == -1 ||
             dup2(fildes[1], STDERR_FILENO) == -1) {
             perror("dup2");
             _exit(EXIT_FAILURE);
         }
+        if (nul != STDIN_FILENO)
+            close(nul);
         close(fildes[1]);
 
         setvbuf(stdout, NULL, _IONBF, 0);
