@@ -1637,7 +1637,7 @@ int exam_run(const struct exam_filter *filter, size_t jobs)
     if (exam_state.on_finish)
         exam_state.on_finish();
 
-    if (exam_state.failed > 0 || exam_state.crashed > 0)
+    if (exam_state.failed > 0 || exam_state.crashed > 0 || exam_state.timed_out > 0)
         return EXIT_FAILURE;
     return EXIT_SUCCESS;
 }
@@ -2355,9 +2355,6 @@ void exam_assert_key_val_not_in_map(const K &key, const V &val, const Map &map, 
 #endif // defined(__cplusplus) && !defined(EXAM_NO_STL)
 
 #ifndef EXAM_NO_SHORT_NAMES
-#define FAIL EXAM_FAIL
-#define ASSERT_MSG EXAM_ASSERT_MSG
-
 #define DEFINE_ASSERT_FUNC EXAM_DEFINE_ASSERT_FUNC
 #define CALL_ASSERT_FUNC EXAM_CALL_ASSERT_FUNC
 
