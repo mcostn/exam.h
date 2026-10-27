@@ -1132,6 +1132,7 @@ static int exam_internal_test_cmp(const void *a, const void *b);
 static bool exam_internal_str_cmp(const char *a, const char *b);
 
 static const char *exam_internal_str_repr(const char *str);
+static const char *exam_internal_str_quote(const char *str);
 
 void exam_fail_test(const char *file, size_t line, const char *fmt, ...)
 {
@@ -1248,16 +1249,18 @@ void exam_assert_eq_str(const char *a, const char *b, const char *file, size_t l
 {
     if (!exam_internal_str_cmp(a, b))
         exam_fail_test(file, line,
-                       "\"%s\" != \"%s\"",
-                       exam_internal_str_repr(a), exam_internal_str_repr(b));
+                       "%s%s%s != %s%s%s",
+                       exam_internal_str_quote(a), exam_internal_str_repr(a), exam_internal_str_quote(a),
+                       exam_internal_str_quote(b), exam_internal_str_repr(b), exam_internal_str_quote(b));
 }
 
 void exam_assert_neq_str(const char *a, const char *b, const char *file, size_t line)
 {
     if (exam_internal_str_cmp(a, b))
         exam_fail_test(file, line,
-                       "%s == %s",
-                       exam_internal_str_repr(a), exam_internal_str_repr(b));
+                       "%s%s%s == %s%s%s",
+                       exam_internal_str_quote(a), exam_internal_str_repr(a), exam_internal_str_quote(a),
+                       exam_internal_str_quote(b), exam_internal_str_repr(b), exam_internal_str_quote(b));
 }
 
 void exam_assert_eq_mem(const void *a, const void *b, size_t size, const char *file, size_t line)
@@ -1403,6 +1406,14 @@ static const char *exam_internal_str_repr(const char *str)
         return "NULL";
 
     return str;
+}
+
+static const char *exam_internal_str_quote(const char *str)
+{
+    if (str == NULL)
+        return "";
+
+    return "\"";
 }
 
 // Runner
