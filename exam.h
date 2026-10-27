@@ -431,6 +431,7 @@ enum exam_test_state
     EXAM_TEST_PASSED,
     EXAM_TEST_FAILED,
     EXAM_TEST_CRASHED,
+    EXAM_TEST_TIMEOUT,
 };
 
 struct exam_test
@@ -474,6 +475,9 @@ struct exam_state
     size_t passed;
     size_t failed;
     size_t crashed;
+    size_t timed_out;
+
+    uint64_t timeout_ms;
 };
 
 #ifdef __cplusplus
@@ -595,10 +599,12 @@ static size_t exam_internal_platform_cpu_count(void);
 static bool exam_internal_platform_is_tty(void);
 static bool exam_internal_platform_process_start(struct exam_process *proc, struct exam_test *test);
 static void exam_internal_platform_process_close(struct exam_process *proc);
+static void exam_internal_platform_process_kill(struct exam_process *proc);
 static void exam_internal_platform_maybe_run_child(void);
 static enum exam_read_status exam_internal_platform_process_read(struct exam_process *proc, char *buf, size_t cap, size_t *n);
 static void exam_internal_platform_process_wait_io(struct exam_process *procs, size_t count);
 static bool exam_internal_platform_process_try_reap(struct exam_process *proc, struct exam_exit *out);
+static uint64_t exam_internal_platform_now_ms(void);
 
 #if defined(EXAM_POSIX)
 
@@ -608,6 +614,7 @@ static bool exam_internal_platform_process_try_reap(struct exam_process *proc, s
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <time.h>
 
 #ifdef EXAM_APPLE
 #include <mach/mach.h>
@@ -620,6 +627,8 @@ struct exam_process
     pid_t pid;
     int out_fd;
     bool eof;
+    uint64_t start_ms;
+    bool timed_out;
 };
 
 #ifdef EXAM_APPLE
@@ -710,6 +719,11 @@ static bool exam_internal_platform_process_start(struct exam_process *proc, stru
 static void exam_internal_platform_process_close(struct exam_process *proc)
 {
     close(proc->out_fd);
+}
+
+static void exam_internal_platform_process_kill(struct exam_process *proc)
+{
+    kill(proc->pid, SIGKILL);
 }
 
 static void exam_internal_platform_maybe_run_child(void)
@@ -803,6 +817,15 @@ static bool exam_internal_platform_process_try_reap(struct exam_process *proc, s
 
     return true;
 }
+
+static uint64_t exam_internal_platform_now_ms(void)
+{
+    struct timespec ts;
+    if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0)
+        exam_internal_die_perror("clock_gettime");
+
+    return (uint64_t)ts.tv_sec * 1000u + (uint64_t)ts.tv_nsec / 1000000u;
+}
 #elif defined(EXAM_WINDOWS)
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -829,6 +852,8 @@ struct exam_process
     bool eof;
     HANDLE process;
     HANDLE out_read;
+    uint64_t start_ms;
+    bool timed_out;
 };
 
 static size_t exam_internal_platform_cpu_count(void)
@@ -988,6 +1013,11 @@ static void exam_internal_platform_process_close(struct exam_process *proc)
     CloseHandle(proc->process);
 }
 
+static void exam_internal_platform_process_kill(struct exam_process *proc)
+{
+    TerminateProcess(proc->process, 1);
+}
+
 static void exam_internal_win_abort_handler(int sig)
 {
     (void)sig;
@@ -1127,6 +1157,11 @@ static bool exam_internal_platform_process_try_reap(struct exam_process *proc, s
         out->code = (int)code;
     }
     return true;
+}
+
+static uint64_t exam_internal_platform_now_ms(void)
+{
+    return (uint64_t)GetTickCount64();
 }
 #endif // EXAM_WINDOWS
 
@@ -1432,7 +1467,7 @@ static void exam_internal_list_sort(struct exam_test_list *list);
 
 static void exam_internal_run_tests(struct exam_test_list *list, const struct exam_filter *filter, size_t jobs);
 static struct exam_process exam_internal_start_test(struct exam_test *test, size_t idx);
-static void exam_internal_finish_test(struct exam_test *test, const struct exam_exit *ex);
+static void exam_internal_finish_test(struct exam_test *test, const struct exam_exit *ex, bool timed_out);
 static void exam_internal_read_output(struct exam_test *test, struct exam_process *proc);
 
 int exam_run(const struct exam_filter *filter, size_t jobs)
@@ -1442,6 +1477,8 @@ int exam_run(const struct exam_filter *filter, size_t jobs)
     exam_state.passed = 0;
     exam_state.failed = 0;
     exam_state.crashed = 0;
+
+    exam_state.timeout_ms = 100;
 
     if (exam_state.on_start)
         exam_state.on_start();
@@ -1567,7 +1604,20 @@ static void exam_internal_run_tests(struct exam_test_list *list, const struct ex
         exam_internal_platform_process_wait_io(running, running_count);
 
         for (size_t i = 0; i < running_count; ++i)
-            exam_internal_read_output( &list->data[running[i].test_index], &running[i]);
+            exam_internal_read_output(&list->data[running[i].test_index], &running[i]);
+
+        if (exam_state.timeout_ms > 0) {
+            uint64_t now = exam_internal_platform_now_ms();
+            for (size_t i = 0; i < running_count; i++) {
+                if (running[i].timed_out)
+                    continue;
+
+                if (now - running[i].start_ms >= exam_state.timeout_ms) {
+                    running[i].timed_out = true;
+                    exam_internal_platform_process_kill(&running[i]);
+                }
+            }
+        }
 
         for (size_t i = 0; i < running_count;) {
             struct exam_exit ex;
@@ -1578,7 +1628,7 @@ static void exam_internal_run_tests(struct exam_test_list *list, const struct ex
 
             struct exam_test *test = &list->data[running[i].test_index];
             exam_internal_read_output(test, &running[i]);
-            exam_internal_finish_test(test, &ex);
+            exam_internal_finish_test(test, &ex, running[i].timed_out);
             exam_internal_platform_process_close(&running[i]);
 
             running[i] = running[--running_count];
@@ -1607,14 +1657,17 @@ static struct exam_process exam_internal_start_test(struct exam_test *test, size
     if (!exam_internal_platform_process_start(&proc, test))
         exam_internal_dief("failed to start test");
 
+    proc.start_ms = exam_internal_platform_now_ms();
     return proc;
 }
 
-static void exam_internal_finish_test(struct exam_test *test, const struct exam_exit *ex)
+static void exam_internal_finish_test(struct exam_test *test, const struct exam_exit *ex, bool timed_out)
 {
      if (ex->kind == EXAM_EXIT_NORMAL) {
         test->state = (ex->code == EXIT_SUCCESS) ? EXAM_TEST_PASSED
                                                  : EXAM_TEST_FAILED;
+    } else if (timed_out) {
+        test->state = EXAM_TEST_TIMEOUT;
     } else {
         test->state = EXAM_TEST_CRASHED;
         test->exit_signal = ex->code;
@@ -1630,9 +1683,12 @@ static void exam_internal_finish_test(struct exam_test *test, const struct exam_
         case EXAM_TEST_CRASHED:
             exam_state.crashed++;
             break;
+        case EXAM_TEST_TIMEOUT:
+            exam_state.timed_out++;
+            break;
         default:
             exam_internal_dief("test finished with unexpected state: %d",
-                       test->state);
+                               test->state);
     }
 
     if (exam_state.on_test_finish)
@@ -1869,10 +1925,11 @@ static void exam_internal_cli_usage(FILE *stream)
 static void exam_internal_cli_on_finish(void)
 {
     fprintf(stdout,
-            "%zu passed, %zu failed, %zu crashed\n",
+            "%zu passed, %zu failed, %zu crashed, %zu timed out\n",
             exam_state.passed,
             exam_state.failed,
-            exam_state.crashed);
+            exam_state.crashed,
+            exam_state.timed_out);
 }
 
 static void exam_internal_cli_on_test_finish(const struct exam_test *test)
@@ -1905,6 +1962,15 @@ static void exam_internal_cli_on_test_finish(const struct exam_test *test)
                     exam_internal_cli_color(EXAM_CLI_RESET));
             exam_internal_cli_test_output(test);
             break;
+        case EXAM_TEST_TIMEOUT:
+            fprintf(stderr,
+                    "%s[TIMEOUT] %s/%s%s\n",
+                    exam_internal_cli_color(EXAM_CLI_YELLOW),
+                    test->category,
+                    test->name,
+                    exam_internal_cli_color(EXAM_CLI_RESET));
+            exam_internal_cli_test_output(test);
+            break;
         default:
             fprintf(stderr,
                     "%s unexpected state (%d)\n",
@@ -1921,7 +1987,7 @@ static void exam_internal_cli_test_output(const struct exam_test *test)
         return;
 
     const char *color = EXAM_CLI_RED;
-    if (test->state == EXAM_TEST_CRASHED)
+    if (test->state == EXAM_TEST_CRASHED || test->state == EXAM_TEST_TIMEOUT)
         color = EXAM_CLI_YELLOW;
 
     fputs(exam_internal_cli_color(color), stderr);
