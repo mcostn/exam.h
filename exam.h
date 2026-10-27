@@ -1756,11 +1756,11 @@ static struct exam_process exam_internal_start_test(struct exam_test *test, size
 
 static void exam_internal_finish_test(struct exam_test *test, const struct exam_exit *ex, bool timed_out)
 {
-     if (ex->kind == EXAM_EXIT_NORMAL) {
+    if (timed_out) {
+        test->state = EXAM_TEST_TIMEOUT;
+    } else if (ex->kind == EXAM_EXIT_NORMAL) {
         test->state = (ex->code == EXIT_SUCCESS) ? EXAM_TEST_PASSED
                                                  : EXAM_TEST_FAILED;
-    } else if (timed_out) {
-        test->state = EXAM_TEST_TIMEOUT;
     } else {
         test->state = EXAM_TEST_CRASHED;
         test->exit_signal = ex->code;
@@ -1991,7 +1991,7 @@ cleanup:
 static int exam_internal_cli_run(void)
 {
     exam_run(&exam_cli_state.filter, exam_cli_state.jobs);
-    if (exam_state.failed > 0 || exam_state.crashed > 0)
+    if (exam_state.failed > 0 || exam_state.crashed > 0 || exam_state.timed_out > 0)
         return EXIT_FAILURE;
     return EXIT_SUCCESS;
 }
