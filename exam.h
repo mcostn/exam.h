@@ -495,7 +495,7 @@ DOCUMENTATION
 #endif // defined(__cplusplus) && !defined(EXAM_NO_STL)
 
 #define EXAM_INTERNAL_DEF_NAME(category_name, test_name) \
-    exam_def_##category_name##_##test_name
+    exam_def_category_##category_name##_name_##test_name
 
 #ifndef EXAM_NO_AUTO_REGISTRATION
 #define EXAM_INTERNAL_REG_NAME(category_name, test_name) \
