@@ -90,6 +90,32 @@ DOCUMENTATION
             test name or category, setting per-test timeouts, and configuring
             colored output.
 
+    Callbacks
+
+        You can observe a run by setting these members of exam_state before
+        running the tests:
+
+        void on_start(void):
+            Called once per exam_run(), after the counters are reset and before
+            the first test starts.
+
+        void on_finish(void):
+            Called once, after every test has finished and before exam_run()
+            returns. The members passed, failed, crashed and timed_out inside
+            exam_sate hold the final totals.
+
+        viod on_test_start(const struct exam_test *test):
+            Called just before a test's process is launched. Tests that don't
+            match the filter are skipped and never reach the callbacks.
+
+        void on_test_finish(const struct exam_test *test):
+            Called when a test has ended, after its result is known. The
+            counters in exam_state already include it. With multiple jobs, tests
+            finish in completion order, not registration order.
+
+        exam_cli_main() installs its own callbacks, replacing any you set earlier.
+        To use custom callbacks, call exam_run() directly.
+
     Asserts
 
         ASSERT_TRUE(cond):
