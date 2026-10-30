@@ -2177,13 +2177,14 @@ static void exam_internal_cli_usage(FILE *stream)
            "    -j, --jobs N        run up to N tests at once (default: 1);\n"
            "                        without N, use the number of CPUs\n"
            "    -l, --list          list available tests\n"
-           "    -t, --timeout SECS  kill tests running longer than SECS (default: 3);\n"
+           "    -t, --timeout SECS  kill tests running longer than SECS (default: %g);\n"
            "                        0 means no limit\n"
            "        --color WHEN    colorize output: auto, always, never\n"
            "    -h, --help          show this message\n"
            "filters (combine them to narrow the selection):\n"
            "    -n, --name NAME          test name\n"
-           "    -c, --category CATEGORY  category name\n");
+           "    -c, --category CATEGORY  category name\n",
+           (double)EXAM_DEFAULT_TIMEOUT_MS / 1000.0);
 }
 
 static void exam_internal_cli_on_finish(void)
