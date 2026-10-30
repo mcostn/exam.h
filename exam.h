@@ -1244,6 +1244,16 @@ static void exam_internal_platform_maybe_run_child(void)
     if (errno == ERANGE || end == id || *end != '\0' || idx >= list->count)
         exam_internal_dief("invalid %s value '%s'", EXAM_WIN_CHILD_ENV, id);
 
+    struct exam_test *target = NULL;
+    for (size_t i = 0; i < list->count; i++) {
+        if (list->data[i].registration_index == (size_t)idx) {
+            target = &list->data[i];
+            break;
+        }
+    }
+    if (target == NULL)
+        exam_internal_dief("no test with registration index %llu", idx);
+
     exam_internal_in_child = true;
     SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX | SEM_NOOPENFILEERRORBOX);
     signal(SIGABRT, exam_internal_win_abort_handler);
@@ -1254,7 +1264,7 @@ static void exam_internal_platform_maybe_run_child(void)
     fflush(stdout);
     setvbuf(stdout, NULL, _IONBF, 0);
 
-    list->data[idx].func();
+    target->func();
     exam_internal_child_exit(EXIT_SUCCESS);
 }
 
