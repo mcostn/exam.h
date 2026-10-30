@@ -6,14 +6,31 @@ on:
 
 jobs:
   tests:
-    runs-on: ubuntu-latest
+    name: tests / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Build tests
-        run: make tests
+      - name: Setup MSVC
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
 
-      - name: Run tests
-        run: ./tests/exam -j
+      - name: Build and run (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          ./build.sh tests
+          ./tests/exam -j
+
+      - name: Build and run (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          call build.bat tests
+          if errorlevel 1 exit /b 1
+          tests\exam.exe -j

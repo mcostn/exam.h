@@ -5,77 +5,43 @@ on:
   pull_request:
 
 jobs:
-  build:
-    name: ${{ matrix.os }} / ${{ matrix.compiler }} / ${{ matrix.standard }}
+  unix:
+    name: ${{ matrix.os }} / ${{ matrix.cc }}
     runs-on: ${{ matrix.os }}
 
     strategy:
       fail-fast: false
       matrix:
         include:
-          - { os: ubuntu-latest, compiler: gcc,   standard: c99 }
-          - { os: ubuntu-latest, compiler: g++,   standard: c++11 }
-          - { os: ubuntu-latest, compiler: clang, standard: c99 }
-          - { os: ubuntu-latest, compiler: clang++, standard: c++11 }
-          - { os: ubuntu-latest, compiler: tcc,   standard: c99 }
-
-          - { os: macos-latest, compiler: gcc,   standard: c99 }
-          - { os: macos-latest, compiler: g++,   standard: c++11 }
-          - { os: macos-latest, compiler: clang, standard: c99 }
-          - { os: macos-latest, compiler: clang++, standard: c++11 }
-
-          - { os: windows-latest, compiler: msvc, standard: c99 }
-          - { os: windows-latest, compiler: msvc, standard: c++11 }
+          - { os: ubuntu-latest, cc: gcc,   cxx: g++ }
+          - { os: ubuntu-latest, cc: clang, cxx: clang++ }
+          - { os: macos-latest,  cc: gcc,   cxx: g++ }
+          - { os: macos-latest,  cc: clang, cxx: clang++ }
 
     steps:
       - uses: actions/checkout@v4
+      - name: Build examples and tests
+        env:
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
+        run: ./build.sh all
 
-      - name: Install TCC (Ubuntu)
-        if: matrix.compiler == 'tcc' && runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y tcc
+  tcc:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y tcc
+      - name: Build tests with TCC
+        env:
+          CC: tcc
+          CFLAGS: -I. -Wall
+        run: ./build.sh tests
 
-      - name: Setup MSVC
-        if: matrix.compiler == 'msvc'
-        uses: ilammy/msvc-dev-cmd@v1
-
-      - name: Build (GCC / Clang)
-        if: matrix.os != 'windows-latest' && matrix.compiler != 'tcc'
-        shell: bash
-        run: |
-          case "${{ matrix.standard }}" in
-            c++*) ext=cpp ;;
-            *)    ext=c ;;
-          esac
-
-          printf '#define EXAM_IMPLEMENTATION\n#include "exam.h"\nint main(void) { return 0; }\n' > "build_test.$ext"
-
-          ${{ matrix.compiler }} \
-            -std=${{ matrix.standard }} \
-            -Wall -Wextra -Wpedantic \
-            -I. "build_test.$ext" -o build_test
-
-      - name: Build (TCC)
-        if: matrix.compiler == 'tcc'
-        shell: bash
-        run: |
-          printf '#define EXAM_IMPLEMENTATION\n#include "exam.h"\nint main(void) { return 0; }\n' > build_test.c
-          tcc -Wall -I. build_test.c -o build_test
-
-      - name: Build (MSVC)
-        if: matrix.compiler == 'msvc'
-        shell: pwsh
-        run: |
-          @'
-          #define EXAM_IMPLEMENTATION
-          #include "exam.h"
-          int main(void) { return 0; }
-          '@ | Set-Content build_test.cpp
-
-          if ("${{ matrix.standard }}" -eq "c99") {
-            Move-Item build_test.cpp build_test.c
-            cl /nologo /W4 /std:c99 /I. build_test.c
-          } else {
-            cl /nologo /W4 /std:${{ matrix.standard }} /EHsc /I. build_test.cpp
-          }
+  msvc:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ilammy/msvc-dev-cmd@v1
+      - name: Build examples and tests
+        shell: cmd
+        run: build.bat all
