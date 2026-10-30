@@ -15,6 +15,7 @@ C_EXAMPLES="
     examples/04_callbacks
     examples/05_long_names
     examples/07_custom_asserts
+    examples/08_context
 "
 CXX_EXAMPLES="
     examples/06_C++

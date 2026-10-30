@@ -116,6 +116,15 @@ DOCUMENTATION
         exam_cli_main() installs its own callbacks, replacing any you set earlier.
         To use custom callbacks, call exam_run() directly.
 
+    Context
+
+       WITH_CONTEXT(fmt, ...):
+            Attaches a printf-style message to every assert in the statement
+            or block that follows. If one of those asserts fails, the message
+            is appended to the failure output. The context is cleared when the
+            statement or block ends, so it never leaks into later asserts. The
+            message is truncated if it is longer than 255 characters.
+
     Asserts
 
         ASSERT_TRUE(cond):
@@ -358,10 +367,6 @@ DOCUMENTATION
 #ifndef EXAM_H
 #define EXAM_H
 
-#if !defined(_WIN32) && !defined(_POSIX_C_SOURCE) && !defined(_GNU_SOURCE) && !defined(_DEFAULT_SOURCE)
-#define _POSIX_C_SOURCE 200809L
-#endif
-
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -466,6 +471,11 @@ DOCUMENTATION
 #ifndef EXAM_CLI_NAME
 #define EXAM_CLI_NAME "exam"
 #endif
+
+#define EXAM_WITH_CONTEXT(...) \
+     for (int exam_internal_once = (exam_set_context(__VA_ARGS__), 1); \
+          exam_internal_once; \
+          exam_internal_once = (exam_clear_context(), 0))
 
 #define EXAM_DEFINE_ASSERT_FUNC(name, ...) void exam_assert_##name(__VA_ARGS__, const char *file, size_t line)
 #define EXAM_CALL_ASSERT_FUNC(name, ...) exam_assert_##name(__VA_ARGS__, __FILE__, __LINE__)
@@ -637,6 +647,9 @@ struct exam_state
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
+extern void exam_set_context(const char *fmt, ...) EXAM_PRINTF(1, 2);
+extern void exam_clear_context(void);
+
 EXAM_NORETURN extern void exam_fail_test(const char *file, size_t line, const char *fmt, ...) EXAM_PRINTF(3, 4);
 
 extern void exam_assert_true(bool result, const char *expression, const char *file, size_t line);
@@ -1416,6 +1429,22 @@ static uint64_t exam_internal_platform_now_ms(void)
 }
 #endif // EXAM_WINDOWS
 
+// Context
+static char exam_internal_context[256];
+
+void exam_set_context(const char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(exam_internal_context, sizeof(exam_internal_context), fmt, args);
+    va_end(args);
+}
+
+void exam_clear_context(void)
+{
+    exam_internal_context[0] = '\0';
+}
+
 // Asserts
 static int exam_internal_test_cmp(const void *a, const void *b);
 static bool exam_internal_str_cmp(const char *a, const char *b);
@@ -1432,6 +1461,9 @@ void exam_fail_test(const char *file, size_t line, const char *fmt, ...)
     va_start(args, fmt);
     vfprintf(stderr, fmt, args);
     va_end(args);
+
+    if (exam_internal_context[0] != '\0')
+        fprintf(stderr, " (%s)", exam_internal_context);
 
     fputc('\n', stderr);
     exam_internal_exit(EXIT_FAILURE);
@@ -2506,6 +2538,8 @@ void exam_assert_key_val_not_in_map(const K &key, const V &val, const Map &map, 
 #endif // defined(__cplusplus) && !defined(EXAM_NO_STL)
 
 #ifndef EXAM_NO_SHORT_NAMES
+#define WITH_CONTEXT EXAM_WITH_CONTEXT
+
 #define DEFINE_ASSERT_FUNC EXAM_DEFINE_ASSERT_FUNC
 #define CALL_ASSERT_FUNC EXAM_CALL_ASSERT_FUNC
 
