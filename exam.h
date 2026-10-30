@@ -315,6 +315,12 @@ DOCUMENTATION
             Each test runs in a separate process, isolating crashes and timeouts so that
             one test does not terminate the entire suite. Tests can run concurrently when
             multiple jobs are configured.
+
+            On Windows there is no fork(), so each test runs in a fresh copy of your executable,
+            started with no arguments. That copy runs main() from the top until it reaches exam_run()
+            or exam_cli_main(), which detects that it is a child, runs the test, and exits. So call
+            exam_cli_main() (or exam_run()) first in main(), before any output, argument handling,
+            or other side effects, or those will run once per test on Windows.
  */
 
 #ifndef EXAM_H
