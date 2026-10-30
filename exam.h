@@ -321,6 +321,12 @@ DOCUMENTATION
             or exam_cli_main(), which detects that it is a child, runs the test, and exits. So call
             exam_cli_main() (or exam_run()) first in main(), before any output, argument handling,
             or other side effects, or those will run once per test on Windows.
+
+        POSIX builds
+
+            In strict standard modes (-std=c99/c11/c17), exam needs POSIX 2008 declarations.
+            Compile with -D_POSIX_C_SOURCE=200809L, or use a gnu* standard.
+
  */
 
 #ifndef EXAM_H
