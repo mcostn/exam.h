@@ -1432,7 +1432,7 @@ EXAM_INTERNAL_DEF_CMP(ge, uint, uintmax_t, "%ju", "<", a >= b)
     void exam_assert_##op##_##sfx(type a, type b, type eps, const char *file, size_t line) \
     { \
         if (!(test)) \
-            exam_fail_test(file, line, fmt " " rel " " fmt, a, b); \
+            exam_fail_test(file, line, fmt " " rel " " fmt " (eps=" fmt ")", a, b, eps); \
     }
 
 #define EXAM_INTERNAL_DEF_FP_PREDICATES(sfx, type, fmt) \
@@ -1563,8 +1563,8 @@ EXAM_INTERNAL_DEF_RANGE(uint, uintmax_t, "%ju", x >= min && x <= max)
             exam_internal_dief("invalid range [" fmt ", " fmt "]", min, max); \
         if (!(inside)) \
             exam_fail_test(file, line, \
-                           fmt " is not within the range [" fmt ", " fmt "]", \
-                           x, min, max); \
+                           fmt " is not within the range [" fmt ", " fmt "] (eps=" fmt ")", \
+                           x, min, max, eps); \
     } \
     void exam_assert_not_in_range_##sfx(type x, type min, type max, type eps, const char *file, size_t line) \
     { \
@@ -1572,8 +1572,8 @@ EXAM_INTERNAL_DEF_RANGE(uint, uintmax_t, "%ju", x >= min && x <= max)
             exam_internal_dief("invalid range [" fmt ", " fmt "]", min, max); \
         if ((inside)) \
             exam_fail_test(file, line, \
-                           fmt " is within the range [" fmt ", " fmt "]", \
-                           x, min, max); \
+                           fmt " is within the range [" fmt ", " fmt "] (eps=" fmt ")", \
+                           x, min, max, eps); \
     }
 
 EXAM_INTERNAL_DEF_RANGE_EPS(float,  float,  "%.9g",  exam_internal_float_in_range(x, min, max, eps))
@@ -1611,16 +1611,16 @@ EXAM_INTERNAL_DEF_ARR(uint, uintmax_t, "%ju", arr[i] == x)
                 return; \
         } \
         exam_fail_test(file, line, \
-                       fmt " not in %p (count=%zu)", \
-                       x, (const void *)arr, count); \
+                       fmt " not in %p (count=%zu, eps=" fmt ")", \
+                       x, (const void *)arr, count, eps); \
     } \
     void exam_assert_not_in_arr_##sfx(type x, const type *arr, size_t count, type eps, const char *file, size_t line) \
     { \
         for (size_t i = 0; i < count; i++) { \
             if ((match)) \
                 exam_fail_test(file, line, \
-                               fmt " in %p (count=%zu)", \
-                               x, (const void *)arr, count); \
+                               fmt " in %p (count=%zu, eps=" fmt ")", \
+                               x, (const void *)arr, count, eps); \
         } \
     }
 
