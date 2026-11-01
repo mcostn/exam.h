@@ -41,7 +41,7 @@ call :build_tests
 exit /b %errorlevel%
 
 :clean
-del /q examples\*.exe tests\*.exe >nul 2>nul
+del /q examples\*.exe unit_tests.exe >nul 2>nul
 if exist build rmdir /s /q build
 exit /b 0
 
@@ -56,7 +56,8 @@ exit /b %errorlevel%
 
 :build_tests
 if not exist %OBJ% mkdir %OBJ%
-call :build_c tests\exam
+echo CL  unit_tests.c
+cl %CFLAGS% /Fo%OBJ%\ /Fe:unit_tests.exe unit_tests.c
 exit /b %errorlevel%
 
 :build_c

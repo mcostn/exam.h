@@ -20,9 +20,6 @@ C_EXAMPLES="
 CXX_EXAMPLES="
     examples/06_C++
 "
-TESTS="
-    tests/exam
-"
 
 usage() {
     echo "usage: $0 [all|examples|tests|clean]" >&2
@@ -44,13 +41,15 @@ build_examples() {
 }
 
 build_tests() {
-    for t in $TESTS; do build_c "$t"; done
+    echo "CC  unit_tests.c"
+    $CC $CFLAGS -o unit_tests unit_tests.c
 }
 
 clean() {
-    for f in $C_EXAMPLES $CXX_EXAMPLES $TESTS; do
+    for f in $C_EXAMPLES $CXX_EXAMPLES; do
         rm -f "$f"
     done
+    rm -f unit_tests
 }
 
 target=${1:-all}

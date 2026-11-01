@@ -60,6 +60,13 @@ COMPILE-TIME OPTIONS
         In case you are using C++, exam offers more functionality intended
         to use with the STL. To disable it, you can define this macro.
 
+    #define EXAM_UNIT_TESTS
+
+        In case you make changes to exam, you can define this to add the
+        internal unit tests used to test the library to your suite. In case
+        you are using manual registration, they can be registered with the
+        function exam_register_unit_tests().
+
 DOCUMENTATION
 
     Managing Tests
@@ -706,6 +713,11 @@ extern int exam_run(const struct exam_filter *filter, size_t jobs);
 extern void exam_register(struct exam_test *test);
 
 extern int exam_cli_main(int argc, char **argv);
+
+#if defined(EXAM_UNIT_TESTS) && defined(EXAM_NO_AUTO_REGISTRATION)
+extern void exam_register_unit_tests(void);
+#endif // defined(EXAM_UNIT_TESTS) && defined(EXAM_NO_AUTO_REGISTRATION)
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus
@@ -2608,4 +2620,26 @@ void exam_assert_key_val_not_in_map(const K &key, const V &val, const Map &map, 
 #define DEFINE_TEST EXAM_DEFINE_TEST
 #define REGISTER_TEST EXAM_REGISTER_TEST
 #endif // EXAM_NO_SHORT_NAMES
+
+#if defined(EXAM_UNIT_TESTS) && defined(EXAM_IMPLEMENTATION)
+EXAM_DEFINE_TEST(exam, assert_true)
+{
+    int condition = 1;
+    EXAM_ASSERT_TRUE(condition);
+}
+
+EXAM_DEFINE_TEST(exam, assert_false)
+{
+    int condition = 0;
+    EXAM_ASSERT_FALSE(condition);
+}
+
+#ifdef EXAM_NO_AUTO_REGISTRATION
+void exam_register_unit_tests(void)
+{
+    REGISTER_TEST(exam, assert_true);
+    REGISTER_TEST(exam, assert_false);
+}
+#endif // EXAM_NO_AUTO_REGISTRATION
+#endif // defined(EXAM_UNIT_TESTS) && defined(EXAM_IMPLEMENTATION)
 #endif // EXAM_H
