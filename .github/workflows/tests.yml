@@ -33,4 +33,4 @@ jobs:
         run: |
           call build.bat tests
           if errorlevel 1 exit /b 1
-          tests\unit_tests.exe -j
+          unit_tests.exe -j

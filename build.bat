@@ -55,17 +55,17 @@ call :build_cpp examples\06_C++
 exit /b %errorlevel%
 
 :build_tests
-if not exist %OBJ% mkdir %OBJ%
+if not exist "%OBJ%" mkdir "%OBJ%"
 echo CL  unit_tests.c
-cl %CFLAGS% /Fo%OBJ%\ /Fe:unit_tests.exe unit_tests.c
+cl %CFLAGS% /Fo"%OBJ%\\" /Fe"unit_tests.exe" unit_tests.c
 exit /b %errorlevel%
 
 :build_c
 echo CL  %~1.c
-cl %CFLAGS% /Fo%OBJ%\ /Fe%~1.exe %~1.c
+cl %CFLAGS% /Fo"%OBJ%\\" /Fe"%~1.exe" "%~1.c"
 exit /b %errorlevel%
 
 :build_cpp
 echo CL  %~1.cpp
-cl %CXXFLAGS% /Fo%OBJ%\ /Fe%~1.exe %~1.cpp
+cl %CXXFLAGS% /Fo"%OBJ%\\" /Fe"%~1.exe" "%~1.cpp"
 exit /b %errorlevel%
