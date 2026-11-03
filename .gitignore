@@ -8,6 +8,4 @@ examples/*
 !examples/*.h
 !examples/*.hpp
 
-tests/*
-!tests/*.c
-!tests/*.h
+unit_tests

@@ -2624,14 +2624,276 @@ void exam_assert_key_val_not_in_map(const K &key, const V &val, const Map &map, 
 #if defined(EXAM_UNIT_TESTS) && defined(EXAM_IMPLEMENTATION)
 EXAM_DEFINE_TEST(exam, assert_true)
 {
-    int condition = 1;
-    EXAM_ASSERT_TRUE(condition);
+    int cond = 1;
+    EXAM_ASSERT_TRUE(cond);
 }
 
 EXAM_DEFINE_TEST(exam, assert_false)
 {
-    int condition = 0;
-    EXAM_ASSERT_FALSE(condition);
+    int cond = 0;
+    EXAM_ASSERT_FALSE(cond);
+}
+
+EXAM_DEFINE_TEST(exam, assert_eq_pointer)
+{
+    int val = 10;
+    int *p1 = &val;
+    int *p2 = &val;
+    EXAM_ASSERT_EQ_PTR(p1, p2);
+}
+
+EXAM_DEFINE_TEST(exam, assert_neq_pointer)
+{
+    int val1 = 10;
+    int val2 = 20;
+    int *p1 = &val1;
+    int *p2 = &val2;
+    EXAM_ASSERT_NEQ_PTR(p1, p2);
+}
+
+EXAM_DEFINE_TEST(exam, assert_null)
+{
+    int *ptr = NULL;
+    EXAM_ASSERT_NULL(ptr);
+}
+
+EXAM_DEFINE_TEST(exam, assert_non_null)
+{
+    int val = 10;
+    int *ptr = &val;
+    EXAM_ASSERT_NON_NULL(ptr);
+}
+
+EXAM_DEFINE_TEST(exam, assert_eq_int)
+{
+    EXAM_ASSERT_EQ_INT(100, 100);
+}
+
+EXAM_DEFINE_TEST(exam, assert_neq_int)
+{
+   EXAM_ASSERT_NEQ_INT(100, 200);
+}
+
+EXAM_DEFINE_TEST(exam, assert_lt_int)
+{
+    EXAM_ASSERT_LT_INT(-10, 10);
+}
+
+EXAM_DEFINE_TEST(exam, assert_le_int)
+{
+    EXAM_ASSERT_LE_INT(10, 10);
+}
+
+EXAM_DEFINE_TEST(exam, assert_gt_int)
+{
+   EXAM_ASSERT_GT_INT(20, 10);
+}
+
+EXAM_DEFINE_TEST(exam, assert_ge_int)
+{
+   EXAM_ASSERT_GE_INT(10, 10);
+}
+
+EXAM_DEFINE_TEST(exam, assert_eq_uint)
+{
+    EXAM_ASSERT_EQ_UINT(100, 100);
+}
+
+EXAM_DEFINE_TEST(exam, assert_neq_uint)
+{
+    EXAM_ASSERT_NEQ_UINT(100, 200);
+}
+
+EXAM_DEFINE_TEST(exam, assert_lt_uint)
+{
+    EXAM_ASSERT_LT_UINT(10, 20);
+}
+
+EXAM_DEFINE_TEST(exam, assert_le_uint)
+{
+    EXAM_ASSERT_LE_UINT(10, 10);
+}
+
+EXAM_DEFINE_TEST(exam, assert_gt_uint)
+{
+    EXAM_ASSERT_GT_UINT(20, 10);
+}
+
+EXAM_DEFINE_TEST(exam, assert_ge_uint)
+{
+    EXAM_ASSERT_GE_UINT(10, 10);
+}
+
+EXAM_DEFINE_TEST(exam, assert_eq_float)
+{
+    EXAM_ASSERT_EQ_FLOAT(1.0f, 1.0f, 0.0f);
+}
+
+EXAM_DEFINE_TEST(exam, assert_neq_float)
+{
+    EXAM_ASSERT_NEQ_FLOAT(1.0f, 2.0f, 0.0f);
+}
+
+EXAM_DEFINE_TEST(exam, assert_lt_float)
+{
+    EXAM_ASSERT_LT_FLOAT(1.0f, 2.0f, 0.0f);
+}
+
+EXAM_DEFINE_TEST(exam, assert_le_float)
+{
+    EXAM_ASSERT_LE_FLOAT(2.0f, 2.0f, 0.0f);
+}
+
+EXAM_DEFINE_TEST(exam, assert_gt_float)
+{
+    EXAM_ASSERT_GT_FLOAT(2.0f, 1.0f, 0.0f);
+}
+
+EXAM_DEFINE_TEST(exam, assert_ge_float)
+{
+    EXAM_ASSERT_GE_FLOAT(2.0f, 2.0f, 0.0f);
+}
+
+EXAM_DEFINE_TEST(exam, assert_eq_double)
+{
+    EXAM_ASSERT_EQ_DOUBLE(1.0, 1.0, 0.0);
+}
+
+EXAM_DEFINE_TEST(exam, assert_neq_double)
+{
+    EXAM_ASSERT_NEQ_DOUBLE(1.0, 2.0, 0.0);
+}
+
+EXAM_DEFINE_TEST(exam, assert_lt_double)
+{
+    EXAM_ASSERT_LT_DOUBLE(1.0, 2.0, 0.0);
+}
+
+EXAM_DEFINE_TEST(exam, assert_le_double)
+{
+    EXAM_ASSERT_LE_DOUBLE(2.0, 2.0, 0.0);
+}
+
+EXAM_DEFINE_TEST(exam, assert_gt_double)
+{
+    EXAM_ASSERT_GT_DOUBLE(2.0, 1.0, 0.0);
+}
+
+EXAM_DEFINE_TEST(exam, assert_ge_double)
+{
+    EXAM_ASSERT_GE_DOUBLE(2.0, 2.0, 0.0);
+}
+
+EXAM_DEFINE_TEST(exam, assert_eq_str)
+{
+    EXAM_ASSERT_EQ_STR("hello", "hello");
+}
+
+EXAM_DEFINE_TEST(exam, assert_neq_str)
+{
+    EXAM_ASSERT_NEQ_STR("hello", "world");
+}
+
+EXAM_DEFINE_TEST(exam, assert_eq_mem)
+{
+    const unsigned char a[] = { 1, 2, 3, 4 };
+    const unsigned char b[] = { 1, 2, 3, 4 };
+    EXAM_ASSERT_EQ_MEM(a, b, sizeof(a));
+}
+
+EXAM_DEFINE_TEST(exam, assert_neq_mem)
+{
+    const unsigned char a[] = { 1, 2, 3, 4 };
+    const unsigned char b[] = { 1, 2, 3, 5 };
+    EXAM_ASSERT_NEQ_MEM(a, b, sizeof(a));
+}
+
+EXAM_DEFINE_TEST(exam, assert_in_range_int)
+{
+    EXAM_ASSERT_IN_RANGE_INT(5, 0, 10);
+}
+
+EXAM_DEFINE_TEST(exam, assert_not_in_range_int)
+{
+    EXAM_ASSERT_NOT_IN_RANGE_INT(15, 0, 10);
+}
+
+EXAM_DEFINE_TEST(exam, assert_in_range_uint)
+{
+    EXAM_ASSERT_IN_RANGE_UINT(5, 0, 10);
+}
+
+EXAM_DEFINE_TEST(exam, assert_not_in_range_uint)
+{
+    EXAM_ASSERT_NOT_IN_RANGE_UINT(15, 0, 10);
+}
+
+EXAM_DEFINE_TEST(exam, assert_in_range_float)
+{
+    EXAM_ASSERT_IN_RANGE_FLOAT(5.0f, 0.0f, 10.0f, 0.0f);
+}
+
+EXAM_DEFINE_TEST(exam, assert_not_in_range_float)
+{
+    EXAM_ASSERT_NOT_IN_RANGE_FLOAT(15.0f, 0.0f, 10.0f, 0.0f);
+}
+
+EXAM_DEFINE_TEST(exam, assert_in_range_double)
+{
+    EXAM_ASSERT_IN_RANGE_DOUBLE(5.0, 0.0, 10.0, 0.0);
+}
+
+EXAM_DEFINE_TEST(exam, assert_not_in_range_double)
+{
+    EXAM_ASSERT_NOT_IN_RANGE_DOUBLE(15.0, 0.0, 10.0, 0.0);
+}
+
+EXAM_DEFINE_TEST(exam, assert_in_arr_int)
+{
+    const intmax_t values[] = { 10, 20, 30 };
+    EXAM_ASSERT_IN_ARR_INT(20, values, 3);
+}
+
+EXAM_DEFINE_TEST(exam, assert_not_in_arr_int)
+{
+    const intmax_t values[] = { 10, 20, 30 };
+    EXAM_ASSERT_NOT_IN_ARR_INT(40, values, 3);
+}
+
+EXAM_DEFINE_TEST(exam, assert_in_arr_uint)
+{
+    const uintmax_t values[] = { 10, 20, 30 };
+    EXAM_ASSERT_IN_ARR_UINT(20, values, 3);
+}
+
+EXAM_DEFINE_TEST(exam, assert_not_in_arr_uint)
+{
+    const uintmax_t values[] = { 10, 20, 30 };
+    EXAM_ASSERT_NOT_IN_ARR_UINT(40, values, 3);
+}
+
+EXAM_DEFINE_TEST(exam, assert_in_arr_float)
+{
+    const float values[] = { 1.0f, 2.0f, 3.0f };
+    EXAM_ASSERT_IN_ARR_FLOAT(2.0f, values, 3, 0.0f);
+}
+
+EXAM_DEFINE_TEST(exam, assert_not_in_arr_float)
+{
+    const float values[] = { 1.0f, 2.0f, 3.0f };
+    EXAM_ASSERT_NOT_IN_ARR_FLOAT(4.0f, values, 3, 0.0f);
+}
+
+EXAM_DEFINE_TEST(exam, assert_in_arr_double)
+{
+    const double values[] = { 1.0, 2.0, 3.0 };
+    EXAM_ASSERT_IN_ARR_DOUBLE(2.0, values, 3, 0.0);
+}
+
+EXAM_DEFINE_TEST(exam, assert_not_in_arr_double)
+{
+    const double values[] = { 1.0, 2.0, 3.0 };
+    EXAM_ASSERT_NOT_IN_ARR_DOUBLE(4.0, values, 3, 0.0);
 }
 
 #ifdef EXAM_NO_AUTO_REGISTRATION
@@ -2639,6 +2901,54 @@ void exam_register_unit_tests(void)
 {
     REGISTER_TEST(exam, assert_true);
     REGISTER_TEST(exam, assert_false);
+    REGISTER_TEST(exam, assert_eq_pointer);
+    REGISTER_TEST(exam, assert_neq_pointer);
+    REGISTER_TEST(exam, assert_null);
+    REGISTER_TEST(exam, assert_non_null);
+    REGISTER_TEST(exam, assert_eq_int);
+    REGISTER_TEST(exam, assert_neq_int);
+    REGISTER_TEST(exam, assert_lt_int);
+    REGISTER_TEST(exam, assert_le_int);
+    REGISTER_TEST(exam, assert_gt_int);
+    REGISTER_TEST(exam, assert_ge_int);
+    REGISTER_TEST(exam, assert_eq_uint);
+    REGISTER_TEST(exam, assert_neq_uint);
+    REGISTER_TEST(exam, assert_lt_uint);
+    REGISTER_TEST(exam, assert_le_uint);
+    REGISTER_TEST(exam, assert_gt_uint);
+    REGISTER_TEST(exam, assert_ge_uint);
+    REGISTER_TEST(exam, assert_eq_float);
+    REGISTER_TEST(exam, assert_neq_float);
+    REGISTER_TEST(exam, assert_lt_float);
+    REGISTER_TEST(exam, assert_le_float);
+    REGISTER_TEST(exam, assert_gt_float);
+    REGISTER_TEST(exam, assert_ge_float);
+    REGISTER_TEST(exam, assert_eq_double);
+    REGISTER_TEST(exam, assert_neq_double);
+    REGISTER_TEST(exam, assert_lt_double);
+    REGISTER_TEST(exam, assert_le_double);
+    REGISTER_TEST(exam, assert_gt_double);
+    REGISTER_TEST(exam, assert_ge_double);
+    REGISTER_TEST(exam, assert_eq_str);
+    REGISTER_TEST(exam, assert_neq_str);
+    REGISTER_TEST(exam, assert_eq_mem);
+    REGISTER_TEST(exam, assert_neq_mem);
+    REGISTER_TEST(exam, assert_in_range_int);
+    REGISTER_TEST(exam, assert_not_in_range_int);
+    REGISTER_TEST(exam, assert_in_range_uint);
+    REGISTER_TEST(exam, assert_not_in_range_uint);
+    REGISTER_TEST(exam, assert_in_range_float);
+    REGISTER_TEST(exam, assert_not_in_range_float);
+    REGISTER_TEST(exam, assert_in_range_double);
+    REGISTER_TEST(exam, assert_not_in_range_double);
+    REGISTER_TEST(exam, assert_in_arr_int);
+    REGISTER_TEST(exam, assert_not_in_arr_int);
+    REGISTER_TEST(exam, assert_in_arr_uint);
+    REGISTER_TEST(exam, assert_not_in_arr_uint);
+    REGISTER_TEST(exam, assert_in_arr_float);
+    REGISTER_TEST(exam, assert_not_in_arr_float);
+    REGISTER_TEST(exam, assert_in_arr_double);
+    REGISTER_TEST(exam, assert_not_in_arr_double);
 }
 #endif // EXAM_NO_AUTO_REGISTRATION
 #endif // defined(EXAM_UNIT_TESTS) && defined(EXAM_IMPLEMENTATION)
