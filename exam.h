@@ -2896,6 +2896,85 @@ EXAM_DEFINE_TEST(exam, assert_not_in_arr_double)
     EXAM_ASSERT_NOT_IN_ARR_DOUBLE(4.0, values, 3, 0.0);
 }
 
+#ifdef __cplusplus
+#include <vector>
+#include <list>
+#include <map>
+#include <string>
+
+EXAM_DEFINE_TEST(exam, assert_in_container)
+{
+    std::vector<int> values = { 10, 20, 30 };
+    EXAM_ASSERT_IN_CONTAINER(20, values);
+}
+
+EXAM_DEFINE_TEST(exam, assert_not_in_container)
+{
+    std::vector<int> values = { 10, 20, 30 };
+    EXAM_ASSERT_NOT_IN_CONTAINER(40, values);
+}
+
+EXAM_DEFINE_TEST(exam, assert_key_in_map)
+{
+    std::map<int, std::string> values = {
+        { 1, "one" },
+        { 2, "two" },
+        { 3, "three" }
+    };
+    EXAM_ASSERT_KEY_IN_MAP(2, values);
+}
+
+EXAM_DEFINE_TEST(exam, assert_key_not_in_map)
+{
+    std::map<int, std::string> values = {
+        { 1, "one" },
+        { 2, "two" },
+        { 3, "three" }
+    };
+    EXAM_ASSERT_KEY_NOT_IN_MAP(4, values);
+}
+
+EXAM_DEFINE_TEST(exam, assert_val_in_map)
+{
+    std::map<int, std::string> values = {
+        { 1, "one" },
+        { 2, "two" },
+        { 3, "three" }
+    };
+    EXAM_ASSERT_VAL_IN_MAP(std::string("two"), values);
+}
+
+EXAM_DEFINE_TEST(exam, assert_val_not_in_map)
+{
+    std::map<int, std::string> values = {
+        { 1, "one" },
+        { 2, "two" },
+        { 3, "three" }
+    };
+    EXAM_ASSERT_VAL_NOT_IN_MAP(std::string("four"), values);
+}
+
+EXAM_DEFINE_TEST(exam, assert_key_val_in_map)
+{
+    std::map<int, std::string> values = {
+        { 1, "one" },
+        { 2, "two" },
+        { 3, "three" }
+    };
+    EXAM_ASSERT_KEY_VAL_IN_MAP(2, std::string("two"), values);
+}
+
+EXAM_DEFINE_TEST(exam, assert_key_val_not_in_map)
+{
+    std::map<int, std::string> values = {
+        { 1, "one" },
+        { 2, "two" },
+        { 3, "three" }
+    };
+    EXAM_ASSERT_KEY_VAL_NOT_IN_MAP(2, std::string("four"), values);
+}
+#endif // __cplusplus
+
 #ifdef EXAM_NO_AUTO_REGISTRATION
 void exam_register_unit_tests(void)
 {
@@ -2949,6 +3028,16 @@ void exam_register_unit_tests(void)
     REGISTER_TEST(exam, assert_not_in_arr_float);
     REGISTER_TEST(exam, assert_in_arr_double);
     REGISTER_TEST(exam, assert_not_in_arr_double);
+#ifdef __cplusplus
+    REGISTER_TEST(exam, assert_in_container);
+    REGISTER_TEST(exam, assert_not_in_container);
+    REGISTER_TEST(exam, assert_key_in_map);
+    REGISTER_TEST(exam, assert_key_not_in_map);
+    REGISTER_TEST(exam, assert_val_in_map);
+    REGISTER_TEST(exam, assert_val_not_in_map);
+    REGISTER_TEST(exam, assert_key_val_in_map);
+    REGISTER_TEST(exam, assert_key_val_not_in_map);
+#endif // __cplusplus
 }
 #endif // EXAM_NO_AUTO_REGISTRATION
 #endif // defined(EXAM_UNIT_TESTS) && defined(EXAM_IMPLEMENTATION)

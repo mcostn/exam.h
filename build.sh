@@ -42,7 +42,7 @@ build_examples() {
 
 build_tests() {
     echo "CC  unit_tests.c"
-    $CC $CFLAGS -o unit_tests unit_tests.c
+    $CXX $CXXFLAGS -o unit_tests unit_tests.c
 }
 
 clean() {
