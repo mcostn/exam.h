@@ -560,10 +560,11 @@ DOCUMENTATION
     static void EXAM_INTERNAL_DEF_NAME(category_name, test_name)(void); \
     EXAM_CONSTRUCTOR_EXPAND(EXAM_INTERNAL_REG_NAME(category_name, test_name)) \
     { \
-        struct exam_test test = {0}; \
-        test.category = #category_name; \
-        test.name = #test_name; \
-        test.func = EXAM_INTERNAL_DEF_NAME(category_name, test_name); \
+        struct exam_test test = EXAM_TEST_INIT_EX( \
+            #category_name, \
+            #test_name, \
+            EXAM_INTERNAL_DEF_NAME(category_name, test_name) \
+        ); \
         exam_register(&test); \
     } \
     static void EXAM_INTERNAL_DEF_NAME(category_name, test_name)(void)
@@ -575,20 +576,11 @@ DOCUMENTATION
 
 #define EXAM_DEFINE_TEST(category_name, test_name) \
     static void EXAM_INTERNAL_DEF_NAME(category_name, test_name)(void); \
-    static struct exam_test EXAM_INTERNAL_STRUCT_NAME(category_name, test_name) = { \
-        #category_name, /* category */ \
-        #test_name, /* name */ \
-        EXAM_INTERNAL_DEF_NAME(category_name, test_name), /* func */ \
-        \
-        EXAM_TEST_NONE, /* state */ \
-        0, /* exit_signal */ \
-        \
-        0, /* registration_index */ \
-        \
-        {0}, /* output */ \
-        0, /* output_size */ \
-        false, /* output_truncated */ \
-    }; \
+    static struct exam_test EXAM_INTERNAL_STRUCT_NAME(category_name, test_name) = EXAM_TEST_INIT_EX( \
+        #category_name, \
+        #test_name, \
+        EXAM_INTERNAL_DEF_NAME(category_name, test_name) \
+    ); \
     static void EXAM_INTERNAL_DEF_NAME(category_name, test_name)(void)
 
 #define EXAM_REGISTER_TEST(category_name, test_name) \
@@ -621,6 +613,21 @@ struct exam_test
     bool output_truncated;
 };
 
+#define EXAM_TEST_INIT_EX(category_name, test_name, func) \
+    { \
+        (category_name), /* category */ \
+        (test_name), /* name */ \
+        (func), /* func */ \
+        EXAM_TEST_NONE, /* state */ \
+        0, /* exit_signal */ \
+        0, /* registration_index */ \
+        { 0 }, /* output */ \
+        0, /* output_size */ \
+        false /* output_truncated */ \
+    }
+
+#define EXAM_TEST_INIT EXAM_TEST_INIT_EX(NULL, NULL, NULL)
+
 struct exam_test_list
 {
     struct exam_test *data;
@@ -628,11 +635,24 @@ struct exam_test_list
     size_t capacity;
 };
 
+#define EXAM_TEST_LIST_INIT \
+    { \
+        NULL, /* data */ \
+        0, /* count */ \
+        0 /* capacity */ \
+    }
+
 struct exam_filter
 {
     const char *category_name;
     const char *test_name;
 };
+
+#define EXAM_FILTER_INIT \
+    { \
+        NULL, /* category_name */ \
+        NULL /* test_name */ \
+    }
 
 struct exam_state
 {
@@ -650,6 +670,20 @@ struct exam_state
 
     uint64_t timeout_ms;
 };
+
+#define EXAM_STATE_INIT \
+    { \
+        EXAM_TEST_LIST_INIT, /* test_list */ \
+        NULL, /* on_start */ \
+        NULL, /* on_finish */ \
+        NULL, /* on_test_start */ \
+        NULL, /* on_test_finish */ \
+        0, /* passed */ \
+        0, /* failed */ \
+        0, /* crashed */ \
+        0, /* timed_out */ \
+        EXAM_DEFAULT_TIMEOUT_MS /* timeout_ms */ \
+    }
 
 #ifdef __cplusplus
 extern "C" {
@@ -730,21 +764,7 @@ extern void exam_register_unit_tests(void);
 #include <math.h>
 
 // Util
-struct exam_state exam_state = {
-    {0}, // test_list
-
-    NULL, // on_start
-    NULL, // on_finish
-    NULL, // on_test_start
-    NULL, // on_test_finish
-
-    0, // passed
-    0, // failed
-    0, // crashed
-    0, // timed_out
-
-    EXAM_DEFAULT_TIMEOUT_MS, // timeout_ms
-};
+struct exam_state exam_state = EXAM_STATE_INIT;
 
 EXAM_NORETURN static void exam_internal_child_exit(int code);
 static void exam_internal_child_exit(int code)
@@ -842,6 +862,16 @@ struct exam_process
     uint64_t start_ms;
     bool timed_out;
 };
+
+#define EXAM_PROCESS_INIT \
+    { \
+        0, /* test_index */ \
+        0, /* pid */ \
+        0, /* out_fd */ \
+        false, /* eof */ \
+        0, /* start_ms */ \
+        false /* timed_out */ \
+    }
 
 #ifdef EXAM_APPLE
 static size_t exam_internal_platform_cpu_count(void)
@@ -1087,6 +1117,16 @@ struct exam_process
     uint64_t start_ms;
     bool timed_out;
 };
+
+#define EXAM_PROCESS_INIT \
+    { \
+        0,     /* test_index */ \
+        false, /* eof */ \
+        NULL,  /* process */ \
+        NULL,  /* out_read */ \
+        0,     /* start_ms */ \
+        false  /* timed_out */ \
+    }
 
 static void exam_internal_win_die(const char *operation)
 {
@@ -1969,7 +2009,7 @@ static struct exam_process exam_internal_start_test(struct exam_test *test, size
     if (exam_state.on_test_start)
         exam_state.on_test_start(test);
 
-    struct exam_process proc = {0};
+    struct exam_process proc = EXAM_PROCESS_INIT;
     proc.test_index = idx;
     if (!exam_internal_platform_process_start(&proc, test))
         exam_internal_dief("failed to start test");
@@ -2061,7 +2101,12 @@ static struct {
     enum exam_cli_action action;
     enum exam_cli_color color;
     struct exam_filter filter;
-} exam_cli_state = {0};
+} exam_cli_state = {
+    1, /* jobs */
+    EXAM_ACTION_RUN, /* action */
+    EXAM_COLOR_AUTO, /* color */
+    EXAM_FILTER_INIT /* filter */
+};
 
 static int exam_internal_cli_run(void);
 static int exam_internal_cli_list(void);
