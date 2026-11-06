@@ -1641,6 +1641,8 @@ void exam_assert_eq_mem(const void *a, const void *b, size_t size, const char *f
 {
     if (size == 0 || memcmp(a, b, size) == 0)
         return;
+    if (size > 0 && (a == NULL || b == NULL))
+        exam_fail_test(file, line, "invalid memory assertion arguments");
 
     const unsigned char *expected = (const unsigned char *)a;
     const unsigned char *actual = (const unsigned char *)b;
@@ -1658,6 +1660,8 @@ void exam_assert_neq_mem(const void *a, const void *b, size_t size, const char *
 {
     if (size == 0)
         return;
+    if (size > 0 && (a == NULL || b == NULL))
+        exam_fail_test(file, line, "invalid memory assertion arguments");
 
     if (memcmp(a, b, size) == 0)
         exam_fail_test(file, line,
