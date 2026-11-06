@@ -132,6 +132,23 @@ DOCUMENTATION
             statement or block ends, so it never leaks into later asserts. The
             message is truncated if it is longer than 255 characters.
 
+    Fixtures
+
+        DEFINE_FIXTURE_SETUP(fixture):
+            Defines the setup function for struct fixture. The body gets
+            a pointer called exam_fixture. The struct is zeroed first.
+            Asserts are allowed. Required for every fixture.
+
+        DEFINE_FIXTURE_TEARDOWN(fixture):
+            Defines the teardown function. Runs after the test body, and
+            also after a failed assert in the body or in teardown's
+            caller. It does not run if setup fails, or if the test
+            crashes or times out. Required for every fixture.
+
+        DEFINE_FIXTURE_TEST(fixture, test_name):
+            Defines a test that gets a fresh fixture. Setup and teardown
+            must be defined before it.
+
     Asserts
 
         ASSERT_TRUE(cond):
@@ -484,6 +501,33 @@ DOCUMENTATION
           exam_internal_once; \
           exam_internal_once = (exam_clear_context(), 0))
 
+#define EXAM_INTERNAL_FX_BODY(fixture, test_name) \
+     exam_fx_body_##fixture##_##test_name
+
+#define EXAM_DEFINE_FIXTURE_SETUP(fixture) \
+     static void exam_internal_fx_setup_##fixture(struct fixture *exam_fixture)
+
+#define EXAM_DEFINE_FIXTURE_TEARDOWN(fixture) \
+    static void exam_internal_fx_teardown_##fixture(struct fixture *exam_fixture); \
+    static void exam_internal_fx_thunk_##fixture(void *p) \
+    { \
+        exam_internal_fx_teardown_##fixture((struct fixture *)p); \
+    } \
+    static void exam_internal_fx_teardown_##fixture(struct fixture *exam_fixture)
+
+#define EXAM_DEFINE_FIXTURE_TEST(fixture, test_name) \
+    static void EXAM_INTERNAL_FX_BODY(fixture, test_name)(struct fixture *exam_fixture); \
+    EXAM_DEFINE_TEST(fixture, test_name) \
+    { \
+        struct fixture fx; \
+        memset(&fx, 0, sizeof(fx)); \
+        exam_internal_fx_setup_##fixture(&fx); \
+        exam_internal_teardown_arm(exam_internal_fx_thunk_##fixture, &fx); \
+        EXAM_INTERNAL_FX_BODY(fixture, test_name)(&fx); \
+        exam_internal_teardown_run(); \
+    } \
+    static void EXAM_INTERNAL_FX_BODY(fixture, test_name)(struct fixture *exam_fixture)
+
 #define EXAM_DEFINE_ASSERT_FUNC(name, ...) void exam_assert_##name(__VA_ARGS__, const char *file, size_t line)
 #define EXAM_CALL_ASSERT_FUNC(name, ...) exam_assert_##name(__VA_ARGS__, __FILE__, __LINE__)
 
@@ -691,6 +735,9 @@ extern "C" {
 extern void exam_set_context(const char *fmt, ...) EXAM_PRINTF(1, 2);
 extern void exam_clear_context(void);
 
+extern void exam_internal_teardown_arm(void (*fn)(void *), void *arg);
+extern void exam_internal_teardown_run(void);
+
 EXAM_NORETURN extern void exam_fail_test(const char *file, size_t line, const char *fmt, ...) EXAM_PRINTF(3, 4);
 
 extern void exam_assert_true(bool result, const char *expression, const char *file, size_t line);
@@ -776,11 +823,30 @@ static void exam_internal_child_exit(int code)
 
 static bool exam_internal_in_child = false;
 
+static void (*exam_internal_teardown_fn)(void *) = NULL;
+static void *exam_internal_teardown_arg = NULL;
+
+void exam_internal_teardown_arm(void (*fn)(void *), void *arg)
+{
+    exam_internal_teardown_fn = fn;
+    exam_internal_teardown_arg = arg;
+}
+
+void exam_internal_teardown_run(void)
+{
+    void (*fn)(void *) = exam_internal_teardown_fn;
+    exam_internal_teardown_fn = NULL;
+    if (fn)
+        fn(exam_internal_teardown_arg);
+}
+
 EXAM_NORETURN static void exam_internal_exit(int code);
 static void exam_internal_exit(int code)
 {
-    if (exam_internal_in_child)
+    if (exam_internal_in_child) {
+        exam_internal_teardown_run();
         exam_internal_child_exit(code);
+    }
     exit(code);
 }
 
@@ -2600,6 +2666,10 @@ void exam_assert_key_val_not_in_map(const K &key, const V &val, const Map &map, 
 
 #ifndef EXAM_NO_SHORT_NAMES
 #define WITH_CONTEXT EXAM_WITH_CONTEXT
+
+#define DEFINE_FIXTURE_SETUP EXAM_DEFINE_FIXTURE_SETUP
+#define DEFINE_FIXTURE_TEARDOWN EXAM_DEFINE_FIXTURE_TEARDOWN
+#define DEFINE_FIXTURE_TEST EXAM_DEFINE_FIXTURE_TEST
 
 #define DEFINE_ASSERT_FUNC EXAM_DEFINE_ASSERT_FUNC
 #define CALL_ASSERT_FUNC EXAM_CALL_ASSERT_FUNC

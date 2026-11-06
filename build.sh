@@ -16,6 +16,7 @@ C_EXAMPLES="
     examples/05_long_names
     examples/07_custom_asserts
     examples/08_context
+    examples/09_fixtures
 "
 CXX_EXAMPLES="
     examples/06_C++
