@@ -109,9 +109,9 @@ DOCUMENTATION
         void on_finish(void):
             Called once, after every test has finished and before exam_run()
             returns. The members passed, failed, crashed and timed_out inside
-            exam_sate hold the final totals.
+            exam_state hold the final totals.
 
-        viod on_test_start(const struct exam_test *test):
+        void on_test_start(const struct exam_test *test):
             Called just before a test's process is launched. Tests that don't
             match the filter are skipped and never reach the callbacks.
 
