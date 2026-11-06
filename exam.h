@@ -2673,31 +2673,30 @@ void exam_assert_key_val_not_in_map(const K &key, const V &val, const Map &map, 
 #if defined(EXAM_UNIT_TESTS) && defined(EXAM_IMPLEMENTATION)
 EXAM_DEFINE_TEST(exam, assert_true)
 {
-    int cond = 1;
-    EXAM_ASSERT_TRUE(cond);
+    EXAM_ASSERT_TRUE(1);
 }
 
 EXAM_DEFINE_TEST(exam, assert_false)
 {
-    int cond = 0;
-    EXAM_ASSERT_FALSE(cond);
+    EXAM_ASSERT_FALSE(0);
 }
 
 EXAM_DEFINE_TEST(exam, assert_eq_pointer)
 {
     int val = 10;
-    int *p1 = &val;
-    int *p2 = &val;
-    EXAM_ASSERT_EQ_PTR(p1, p2);
+    EXAM_ASSERT_EQ_PTR(&val, &val);
+}
+
+EXAM_DEFINE_TEST(exam, assert_eq_null_pointers)
+{
+    EXAM_ASSERT_EQ_PTR(NULL, NULL);
 }
 
 EXAM_DEFINE_TEST(exam, assert_neq_pointer)
 {
     int val1 = 10;
     int val2 = 20;
-    int *p1 = &val1;
-    int *p2 = &val2;
-    EXAM_ASSERT_NEQ_PTR(p1, p2);
+    EXAM_ASSERT_NEQ_PTR(&val1, &val2);
 }
 
 EXAM_DEFINE_TEST(exam, assert_null)
@@ -2838,9 +2837,24 @@ EXAM_DEFINE_TEST(exam, assert_eq_str)
     EXAM_ASSERT_EQ_STR("hello", "hello");
 }
 
+EXAM_DEFINE_TEST(exam, assert_eq_empty_strings)
+{
+    EXAM_ASSERT_EQ_STR("", "");
+}
+
+EXAM_DEFINE_TEST(exam, assert_eq_null_strings)
+{
+    EXAM_ASSERT_EQ_STR(NULL, NULL);
+}
+
 EXAM_DEFINE_TEST(exam, assert_neq_str)
 {
     EXAM_ASSERT_NEQ_STR("hello", "world");
+}
+
+EXAM_DEFINE_TEST(exam, assert_neq_null_and_string)
+{
+    EXAM_ASSERT_NEQ_STR(NULL, "hello");
 }
 
 EXAM_DEFINE_TEST(exam, assert_eq_mem)
@@ -2850,11 +2864,21 @@ EXAM_DEFINE_TEST(exam, assert_eq_mem)
     EXAM_ASSERT_EQ_MEM(a, b, sizeof(a));
 }
 
+EXAM_DEFINE_TEST(exam, assert_eq_mem_zero_size)
+{
+    EXAM_ASSERT_EQ_MEM(NULL, NULL, 0);
+}
+
 EXAM_DEFINE_TEST(exam, assert_neq_mem)
 {
     const unsigned char a[] = { 1, 2, 3, 4 };
     const unsigned char b[] = { 1, 2, 3, 5 };
     EXAM_ASSERT_NEQ_MEM(a, b, sizeof(a));
+}
+
+EXAM_DEFINE_TEST(exam, assert_neq_mem_zero_size)
+{
+    EXAM_ASSERT_NEQ_MEM(NULL, NULL, 0);
 }
 
 EXAM_DEFINE_TEST(exam, assert_in_range_int)
@@ -3030,6 +3054,7 @@ void exam_register_unit_tests(void)
     REGISTER_TEST(exam, assert_true);
     REGISTER_TEST(exam, assert_false);
     REGISTER_TEST(exam, assert_eq_pointer);
+    REGISTER_TEST(exam, assert_eq_null_pointers);
     REGISTER_TEST(exam, assert_neq_pointer);
     REGISTER_TEST(exam, assert_null);
     REGISTER_TEST(exam, assert_non_null);
@@ -3058,9 +3083,14 @@ void exam_register_unit_tests(void)
     REGISTER_TEST(exam, assert_gt_double);
     REGISTER_TEST(exam, assert_ge_double);
     REGISTER_TEST(exam, assert_eq_str);
+    REGISTER_TEST(exam, assert_eq_empty_strings);
+    REGISTER_TEST(exam, assert_eq_null_strings);
     REGISTER_TEST(exam, assert_neq_str);
+    REGISTER_TEST(exam, assert_neq_null_and_string);
     REGISTER_TEST(exam, assert_eq_mem);
+    REGISTER_TEST(exam, assert_eq_mem_zero_size);
     REGISTER_TEST(exam, assert_neq_mem);
+    REGISTER_TEST(exam, assert_neq_mem_zero_size);
     REGISTER_TEST(exam, assert_in_range_int);
     REGISTER_TEST(exam, assert_not_in_range_int);
     REGISTER_TEST(exam, assert_in_range_uint);
