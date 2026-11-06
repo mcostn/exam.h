@@ -149,6 +149,12 @@ DOCUMENTATION
             Defines a test that gets a fresh fixture. Setup and teardown
             must be defined before it.
 
+        DEFINE_FIXTURE_TEST_IN(fixture, category_name, test_name):
+            Like DEFINE_FIXTURE_TEST, but the test is registered under
+            the given category instead of the fixture's name. Use it to
+            share a category between fixtures, or to spread one
+            fixture's tests across categories.
+
     Asserts
 
         ASSERT_TRUE(cond):
@@ -501,8 +507,8 @@ DOCUMENTATION
           exam_internal_once; \
           exam_internal_once = (exam_clear_context(), 0))
 
-#define EXAM_INTERNAL_FX_BODY(fixture, test_name) \
-     exam_fx_body_##fixture##_##test_name
+#define EXAM_INTERNAL_FX_BODY(category, test_name) \
+     exam_fx_body_category_##category##_name_##test_name
 
 #define EXAM_DEFINE_FIXTURE_SETUP(fixture) \
      static void exam_internal_fx_setup_##fixture(struct fixture *exam_fixture)
@@ -515,18 +521,21 @@ DOCUMENTATION
     } \
     static void exam_internal_fx_teardown_##fixture(struct fixture *exam_fixture)
 
-#define EXAM_DEFINE_FIXTURE_TEST(fixture, test_name) \
-    static void EXAM_INTERNAL_FX_BODY(fixture, test_name)(struct fixture *exam_fixture); \
-    EXAM_DEFINE_TEST(fixture, test_name) \
+#define EXAM_DEFINE_FIXTURE_TEST_IN(fixture, category_name, test_name) \
+    static void EXAM_INTERNAL_FX_BODY(category_name, test_name)(struct fixture *exam_fixture); \
+    EXAM_DEFINE_TEST(category_name, test_name) \
     { \
         struct fixture fx; \
         memset(&fx, 0, sizeof(fx)); \
         exam_internal_fx_setup_##fixture(&fx); \
         exam_internal_teardown_arm(exam_internal_fx_thunk_##fixture, &fx); \
-        EXAM_INTERNAL_FX_BODY(fixture, test_name)(&fx); \
+        EXAM_INTERNAL_FX_BODY(category_name, test_name)(&fx); \
         exam_internal_teardown_run(); \
     } \
-    static void EXAM_INTERNAL_FX_BODY(fixture, test_name)(struct fixture *exam_fixture)
+    static void EXAM_INTERNAL_FX_BODY(category_name, test_name)(struct fixture *exam_fixture)
+
+#define EXAM_DEFINE_FIXTURE_TEST(fixture, test_name) \
+     EXAM_DEFINE_FIXTURE_TEST_IN(fixture, fixture, test_name)
 
 #define EXAM_DEFINE_ASSERT_FUNC(name, ...) void exam_assert_##name(__VA_ARGS__, const char *file, size_t line)
 #define EXAM_CALL_ASSERT_FUNC(name, ...) exam_assert_##name(__VA_ARGS__, __FILE__, __LINE__)
@@ -2669,6 +2678,7 @@ void exam_assert_key_val_not_in_map(const K &key, const V &val, const Map &map, 
 
 #define DEFINE_FIXTURE_SETUP EXAM_DEFINE_FIXTURE_SETUP
 #define DEFINE_FIXTURE_TEARDOWN EXAM_DEFINE_FIXTURE_TEARDOWN
+#define DEFINE_FIXTURE_TEST_IN EXAM_DEFINE_FIXTURE_TEST_IN
 #define DEFINE_FIXTURE_TEST EXAM_DEFINE_FIXTURE_TEST
 
 #define DEFINE_ASSERT_FUNC EXAM_DEFINE_ASSERT_FUNC
