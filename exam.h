@@ -2180,18 +2180,24 @@ static struct {
     enum exam_cli_action action;
     enum exam_cli_color color;
     struct exam_filter filter;
+    bool verbose;
 } exam_cli_state = {
     1, /* jobs */
     EXAM_ACTION_RUN, /* action */
     EXAM_COLOR_AUTO, /* color */
-    EXAM_FILTER_INIT /* filter */
+    EXAM_FILTER_INIT, /* filter */
+    false, /* verbose */
 };
+
+static void exam_internal_cli_infof(const char *fmt, ...) EXAM_PRINTF(1, 2);
 
 static int exam_internal_cli_run(void);
 static int exam_internal_cli_list(void);
 static void exam_internal_cli_usage(FILE *stream);
 
+static void exam_internal_cli_on_start(void);
 static void exam_internal_cli_on_finish(void);
+static void exam_internal_cli_on_test_start(const struct exam_test *test);
 static void exam_internal_cli_on_test_finish(const struct exam_test *test);
 
 static void exam_internal_cli_test_output(const struct exam_test *test);
@@ -2208,7 +2214,9 @@ int exam_cli_main(int argc, char **argv)
     exam_cli_state.filter.category_name = NULL;
     exam_cli_state.filter.test_name = NULL;
 
+    exam_state.on_start = exam_internal_cli_on_start;
     exam_state.on_finish = exam_internal_cli_on_finish;
+    exam_state.on_test_start = exam_internal_cli_on_test_start;
     exam_state.on_test_finish = exam_internal_cli_on_test_finish;
 
     // Options
@@ -2322,6 +2330,8 @@ int exam_cli_main(int argc, char **argv)
             rc = EXIT_SUCCESS;
             exam_internal_cli_usage(stdout);
             goto cleanup;
+        } else if (exam_internal_cli_is_option(argv[i], "--verbose", NULL)) {
+            exam_cli_state.verbose = true;
         } else {
             fprintf(stderr, "unknown option '%s'\n", argv[i]);
             exam_internal_cli_usage(stderr);
@@ -2348,8 +2358,21 @@ cleanup:
     return rc;
 }
 
+static void exam_internal_cli_infof(const char *fmt, ...)
+{
+    if (!exam_cli_state.verbose)
+        return;
+
+    va_list args;
+    va_start(args, fmt);
+    vprintf(fmt, args);
+    va_end(args);
+    fputc('\n', stdout);
+}
+
 static int exam_internal_cli_run(void)
 {
+    exam_internal_cli_infof("running tests");
     int rc = exam_run(&exam_cli_state.filter, exam_cli_state.jobs);
 
     size_t ran = exam_state.passed + exam_state.failed +
@@ -2364,6 +2387,7 @@ static int exam_internal_cli_run(void)
 
 static int exam_internal_cli_list(void)
 {
+    exam_internal_cli_infof("listing tests");
     exam_internal_list_sort(&exam_state.test_list);
 
     size_t found = 0;
@@ -2397,14 +2421,22 @@ static void exam_internal_cli_usage(FILE *stream)
            "                        0 means no limit\n"
            "        --color WHEN    colorize output: auto, always, never\n"
            "    -h, --help          show this message\n"
+           "    --verbose           show more logs\n"
            "filters (combine them to narrow the selection):\n"
            "    -n, --name NAME          test name\n"
            "    -c, --category CATEGORY  category name\n",
            (double)EXAM_DEFAULT_TIMEOUT_MS / 1000.0);
 }
 
+static void exam_internal_cli_on_start(void)
+{
+    exam_internal_cli_infof("cli started");
+}
+
 static void exam_internal_cli_on_finish(void)
 {
+    exam_internal_cli_infof("cli finished");
+
     bool previous = false;
 
     if (exam_state.passed > 0) {
@@ -2436,8 +2468,23 @@ static void exam_internal_cli_on_finish(void)
     printf("\n");
 }
 
+static void exam_internal_cli_on_test_start(const struct exam_test *test)
+{
+    exam_internal_cli_infof("%stest %s/%s started%s",
+                            exam_internal_cli_color(EXAM_CLI_CYAN),
+                            test->category,
+                            test->name,
+                            exam_internal_cli_color(EXAM_CLI_RESET));
+}
+
 static void exam_internal_cli_on_test_finish(const struct exam_test *test)
 {
+    exam_internal_cli_infof("%stest %s/%s finished%s",
+                            exam_internal_cli_color(EXAM_CLI_CYAN),
+                            test->category,
+                            test->name,
+                            exam_internal_cli_color(EXAM_CLI_RESET));
+
     switch(test->state) {
         case EXAM_TEST_PASSED:
             fprintf(stdout,
