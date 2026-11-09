@@ -1,6 +1,6 @@
 #define EXAM_IMPLEMENTATION
 #define EXAM_NO_AUTO_REGISTRATION
-#include "../exam.h"
+#include "exam.h"
 
 EXAM_DEFINE_TEST(math, addition)
 {

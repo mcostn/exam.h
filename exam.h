@@ -67,6 +67,12 @@ COMPILE-TIME OPTIONS
         you are using manual registration, they can be registered with the
         function exam_register_unit_tests().
 
+    #define EXAM_NO_ISOLATION
+
+        Runs each test in the main process, instead of creating a new one. Failed
+        asserts are caught with longjmp, but crashes and timeouts can't be isolated
+        (a crash kills the whole suite), jobs settings are ignored.
+
 DOCUMENTATION
 
     Managing Tests
@@ -819,9 +825,17 @@ extern void exam_register_unit_tests(void);
 #include <errno.h>
 #include <math.h>
 
+#ifdef EXAM_NO_ISOLATION
+#include <setjmp.h>
+#endif // EXAM_NO_ISOLATION
+
 // Util
 struct exam_state exam_state = EXAM_STATE_INIT;
 
+#ifdef EXAM_NO_ISOLATION
+static jmp_buf exam_internal_jmp;
+static bool exam_internal_in_test = false;
+#else
 EXAM_NORETURN static void exam_internal_child_exit(int code);
 static void exam_internal_child_exit(int code)
 {
@@ -831,6 +845,7 @@ static void exam_internal_child_exit(int code)
 }
 
 static bool exam_internal_in_child = false;
+#endif // EXAM_NO_ISOLATION
 
 static void (*exam_internal_teardown_fn)(void *) = NULL;
 static void *exam_internal_teardown_arg = NULL;
@@ -852,10 +867,17 @@ void exam_internal_teardown_run(void)
 EXAM_NORETURN static void exam_internal_exit(int code);
 static void exam_internal_exit(int code)
 {
+#ifdef EXAM_NO_ISOLATION
+    if (exam_internal_in_test) {
+        exam_internal_teardown_run();
+        longjmp(exam_internal_jmp, 1);
+    }
+#else
     if (exam_internal_in_child) {
         exam_internal_teardown_run();
         exam_internal_child_exit(code);
     }
+#endif // EXAM_NO_ISOLATION
     exit(code);
 }
 
@@ -891,6 +913,7 @@ struct exam_exit
     int code;
 };
 
+#ifndef EXAM_NO_ISOLATION
 enum exam_read_status
 {
     EXAM_READ_DATA,
@@ -976,11 +999,6 @@ static size_t exam_internal_platform_cpu_count(void)
     return (size_t)cpu_count;
 }
 #endif
-
-static bool exam_internal_platform_is_tty(void)
-{
-    return isatty(STDOUT_FILENO) || isatty(STDERR_FILENO);
-}
 
 static bool exam_internal_platform_process_start(struct exam_process *proc, struct exam_test *test)
 {
@@ -1241,28 +1259,6 @@ static size_t exam_internal_platform_cpu_count(void)
         return 1;
 
     return (size_t)si.dwNumberOfProcessors;
-}
-
-static bool exam_internal_platform_is_tty(void)
-{
-    static int cached = -1; // negative used for not set
-
-    if (cached < 0) {
-        cached = 0;
-        HANDLE handles[2] = {
-            GetStdHandle(STD_OUTPUT_HANDLE),
-            GetStdHandle(STD_ERROR_HANDLE)
-        };
-
-        for (int i = 0; i < 2; i++) {
-            DWORD mode;
-            if (GetConsoleMode(handles[i], &mode) &&
-                SetConsoleMode(handles[i], mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING))
-                cached = 1;
-        }
-    }
-
-    return cached == 1;
 }
 
 static HANDLE exam_internal_win_job = NULL;
@@ -1555,6 +1551,7 @@ static uint64_t exam_internal_platform_now_ms(void)
     return (uint64_t)GetTickCount64();
 }
 #endif // EXAM_WINDOWS
+#endif // EXAM_NO_ISOLATION
 
 // Context
 static char exam_internal_context[256];
@@ -1883,13 +1880,18 @@ static void exam_internal_list_sort(struct exam_test_list *list);
 static void exam_internal_reset_tests(void);
 
 static void exam_internal_run_tests(struct exam_test_list *list, const struct exam_filter *filter, size_t jobs);
-static struct exam_process exam_internal_start_test(struct exam_test *test, size_t idx);
 static void exam_internal_finish_test(struct exam_test *test, const struct exam_exit *ex, bool timed_out);
+
+#ifndef EXAM_NO_ISOLATION
+static struct exam_process exam_internal_start_test(struct exam_test *test, size_t idx);
 static void exam_internal_read_output(struct exam_test *test, struct exam_process *proc);
+#endif // EXAM_NO_ISOLATION
 
 int exam_run(const struct exam_filter *filter, size_t jobs)
 {
+#ifndef EXAM_NO_ISOLATION
     exam_internal_platform_maybe_run_child();
+#endif // EXAM_NO_ISOLATION
 
     exam_state.passed = 0;
     exam_state.failed = 0;
@@ -2008,6 +2010,48 @@ static void exam_internal_reset_tests(void)
     }
 }
 
+#ifdef EXAM_NO_ISOLATION
+static void exam_internal_run_tests(struct exam_test_list *list, const struct exam_filter *filter, size_t jobs)
+{
+    (void)jobs;
+
+    for (size_t i = 0; i < list->count; i++) {
+        struct exam_test *test = &list->data[i];
+        if (!exam_internal_check_filter(test, filter))
+            continue;
+
+        if (test->state != EXAM_TEST_NONE)
+            exam_internal_dief("tried to run test with an unexpected state: %d", test->state);
+
+        test->state = EXAM_TEST_RUNNING;
+        test->output[0] = '\0';
+        test->output_size = 0;
+        test->output_truncated = false;
+
+        if (exam_state.on_test_start)
+            exam_state.on_test_start(test);
+
+        exam_clear_context();
+        fflush(stdout);
+        fflush(stderr);
+
+        struct exam_exit ex = { EXAM_EXIT_NORMAL, EXIT_SUCCESS };
+        exam_internal_in_test = true;
+        if (setjmp(exam_internal_jmp) == 0)
+            test->func();
+        else
+            ex.code = EXIT_FAILURE;
+        exam_internal_in_test = false;
+
+        exam_internal_teardown_fn = NULL;
+        exam_clear_context();
+        fflush(stdout);
+        fflush(stderr);
+
+        exam_internal_finish_test(test, &ex, false);
+    }
+}
+#else
 static void exam_internal_run_tests(struct exam_test_list *list, const struct exam_filter *filter, size_t jobs)
 {
     if (list->count == 0)
@@ -2097,11 +2141,41 @@ static struct exam_process exam_internal_start_test(struct exam_test *test, size
     return proc;
 }
 
+static void exam_internal_read_output(struct exam_test *test, struct exam_process *proc)
+{
+    char buf[256];
+    for (;;) {
+        size_t n = 0;
+        enum exam_read_status status = exam_internal_platform_process_read(proc, buf, sizeof(buf), &n);
+        if (status == EXAM_READ_AGAIN || status == EXAM_READ_EOF)
+            return;
+        if (status == EXAM_READ_ERROR)
+            exam_internal_die_perror("read");
+
+        size_t remaining = EXAM_TEST_OUTPUT_SIZE - test->output_size;
+        size_t copy = n < remaining ? n : remaining;
+        if (copy > 0) {
+            memcpy(test->output + test->output_size, buf, copy);
+            test->output_size += copy;
+            test->output[test->output_size] = '\0';
+        }
+
+        if (n > copy)
+            test->output_truncated = true;
+    }
+}
+#endif // EXAM_NO_ISOLATION
+
 static void exam_internal_finish_test(struct exam_test *test, const struct exam_exit *ex, bool timed_out)
 {
+#ifndef EXAM_NO_ISOLATION
     if (timed_out && exam_internal_platform_exit_is_kill(ex)) {
         test->state = EXAM_TEST_TIMEOUT;
-    } else if (ex->kind == EXAM_EXIT_NORMAL) {
+    } else
+#else
+    (void)timed_out;
+#endif // EXAM_NO_ISOLATION
+    if (ex->kind == EXAM_EXIT_NORMAL) {
         test->state = (ex->code == EXIT_SUCCESS) ? EXAM_TEST_PASSED
                                                  : EXAM_TEST_FAILED;
     } else {
@@ -2131,29 +2205,41 @@ static void exam_internal_finish_test(struct exam_test *test, const struct exam_
         exam_state.on_test_finish(test);
 }
 
-static void exam_internal_read_output(struct exam_test *test, struct exam_process *proc)
+#if defined(EXAM_POSIX)
+#include <unistd.h>
+static bool exam_internal_platform_is_tty(void)
 {
-    char buf[256];
-    for (;;) {
-        size_t n = 0;
-        enum exam_read_status status = exam_internal_platform_process_read(proc, buf, sizeof(buf), &n);
-        if (status == EXAM_READ_AGAIN || status == EXAM_READ_EOF)
-            return;
-        if (status == EXAM_READ_ERROR)
-            exam_internal_die_perror("read");
-
-        size_t remaining = EXAM_TEST_OUTPUT_SIZE - test->output_size;
-        size_t copy = n < remaining ? n : remaining;
-        if (copy > 0) {
-            memcpy(test->output + test->output_size, buf, copy);
-            test->output_size += copy;
-            test->output[test->output_size] = '\0';
-        }
-
-        if (n > copy)
-            test->output_truncated = true;
-    }
+    return isatty(STDOUT_FILENO) || isatty(STDERR_FILENO);
 }
+#elif defined(EXAM_WINDOWS)
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+#ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
+#define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
+#endif
+static bool exam_internal_platform_is_tty(void)
+{
+    static int cached = -1;
+    if (cached < 0) {
+        cached = 0;
+        HANDLE handles[2] = { GetStdHandle(STD_OUTPUT_HANDLE), GetStdHandle(STD_ERROR_HANDLE) };
+        for (int i = 0; i < 2; i++) {
+            DWORD mode;
+            if (GetConsoleMode(handles[i], &mode) &&
+                SetConsoleMode(handles[i], mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING))
+                cached = 1;
+        }
+    }
+    return cached == 1;
+}
+#else
+static bool exam_internal_platform_is_tty(void)
+{
+    return false;
+}
+#endif
 
 // Cli
 #define EXAM_CLI_RESET  "\033[0m"

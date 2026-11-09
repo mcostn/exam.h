@@ -1,5 +1,5 @@
 #define EXAM_IMPLEMENTATION
-#include "../exam.h"
+#include "exam.h"
 
 EXAM_DEFINE_TEST(math, addition)
 {
