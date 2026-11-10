@@ -1,4 +1,4 @@
-/*  exam - v0.1 - unit testing library
+/*  exam - unit testing library
 
     This is a single-header library that provides a portable
     and easy-to-use way for writing and running unit-tests
@@ -407,6 +407,10 @@ DOCUMENTATION
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+
+#define EXAM_VERSION_MAJOR 1
+#define EXAM_VERSION_MINOR 0
+#define EXAM_VERSION_PATCH 0
 
 #if defined(__linux__)
 #define EXAM_POSIX
@@ -2280,6 +2284,7 @@ static void exam_internal_cli_infof(const char *fmt, ...) EXAM_PRINTF(1, 2);
 static int exam_internal_cli_run(void);
 static int exam_internal_cli_list(void);
 static void exam_internal_cli_usage(FILE *stream);
+static void exam_internal_cli_version(FILE *stream);
 
 static void exam_internal_cli_on_start(void);
 static void exam_internal_cli_on_finish(void);
@@ -2418,6 +2423,10 @@ int exam_cli_main(int argc, char **argv)
             goto cleanup;
         } else if (exam_internal_cli_is_option(argv[i], "--verbose", NULL)) {
             exam_cli_state.verbose = true;
+        } else if (exam_internal_cli_is_option(argv[i], "--version", NULL)) {
+            exam_internal_cli_version(stdout);
+            rc = EXIT_SUCCESS;
+            goto cleanup;
         } else {
             fprintf(stderr, "unknown option '%s'\n", argv[i]);
             exam_internal_cli_usage(stderr);
@@ -2497,6 +2506,7 @@ static int exam_internal_cli_list(void)
 
 static void exam_internal_cli_usage(FILE *stream)
 {
+    exam_internal_cli_version(stream);
     fprintf(stream,
            "usage: " EXAM_CLI_NAME " [options]\n"
            "options:\n"
@@ -2508,10 +2518,21 @@ static void exam_internal_cli_usage(FILE *stream)
            "        --color WHEN    colorize output: auto, always, never\n"
            "    -h, --help          show this message\n"
            "    --verbose           show more logs\n"
+           "    --version           show version\n"
            "filters (combine them to narrow the selection):\n"
            "    -n, --name NAME          test name\n"
            "    -c, --category CATEGORY  category name\n",
            (double)EXAM_DEFAULT_TIMEOUT_MS / 1000.0);
+}
+
+static void exam_internal_cli_version(FILE *stream)
+{
+    fprintf(stream,
+            "%s v%d.%d.%d\n",
+            EXAM_CLI_NAME,
+            EXAM_VERSION_MAJOR,
+            EXAM_VERSION_MINOR,
+            EXAM_VERSION_PATCH);
 }
 
 static void exam_internal_cli_on_start(void)
