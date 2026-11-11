@@ -2519,7 +2519,7 @@ static void exam_internal_cli_usage(FILE *stream)
            "    -h, --help          show this message\n"
            "    --verbose           show more logs\n"
            "    --version           show version\n"
-           "filters (combine them to narrow the selection):\n"
+           "filters:\n"
            "    -n, --name NAME          test name\n"
            "    -c, --category CATEGORY  category name\n",
            (double)EXAM_DEFAULT_TIMEOUT_MS / 1000.0);
@@ -3249,6 +3249,7 @@ EXAM_DEFINE_FIXTURE_TEARDOWN(exam_unit_fx_order)
 {
     EXAM_ASSERT_EQ_INT(exam_unit_fx_seq, 2);
     EXAM_ASSERT_EQ_INT(exam_fixture->value, 43);
+    exam_unit_fx_seq = 0;
 }
 
 EXAM_DEFINE_FIXTURE_TEST_IN(exam_unit_fx_order, exam, fixture_order_first)
