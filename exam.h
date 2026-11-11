@@ -1715,10 +1715,10 @@ void exam_assert_neq_str(const char *a, const char *b, const char *file, size_t 
 
 void exam_assert_eq_mem(const void *a, const void *b, size_t size, const char *file, size_t line)
 {
-    if (size == 0 || memcmp(a, b, size) == 0)
-        return;
     if (size > 0 && (a == NULL || b == NULL))
         exam_fail_test(file, line, "invalid memory assertion arguments");
+    if (size == 0 || memcmp(a, b, size) == 0)
+        return;
 
     const unsigned char *expected = (const unsigned char *)a;
     const unsigned char *actual = (const unsigned char *)b;
