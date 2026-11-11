@@ -407,6 +407,7 @@ DOCUMENTATION
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h>
 
 #define EXAM_VERSION_MAJOR 1
 #define EXAM_VERSION_MINOR 0
@@ -824,7 +825,6 @@ extern void exam_register_unit_tests(void);
 
 #ifdef EXAM_IMPLEMENTATION
 #include <stdio.h>
-#include <string.h>
 #include <stdarg.h>
 #include <errno.h>
 #include <math.h>
@@ -3267,7 +3267,7 @@ EXAM_DEFINE_FIXTURE_TEST_IN(exam_unit_fx_order, exam, fixture_order_second)
     exam_fixture->value = 43;
 }
 
-#ifdef __cplusplus
+#if defined(__cplusplus) && !defined(EXAM_NO_STL)
 #include <vector>
 #include <list>
 #include <map>
@@ -3344,7 +3344,7 @@ EXAM_DEFINE_TEST(exam, assert_key_val_not_in_map)
     };
     EXAM_ASSERT_KEY_VAL_NOT_IN_MAP(2, std::string("four"), values);
 }
-#endif // __cplusplus
+#endif // defined(__cplusplus) && !defined(EXAM_NO_STL)
 
 #ifdef EXAM_NO_AUTO_REGISTRATION
 void exam_register_unit_tests(void)
